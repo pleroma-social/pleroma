@@ -70,6 +70,8 @@ server {
         client_max_body_size 16m;
     }
 
+    rewrite ^/proxy/(.*)/(.*)/.* /proxy/$1/$2 last;
+
     location ~ ^/(media|proxy) {
         proxy_cache pleroma_media_cache;
         proxy_cache_key    $host$uri$is_args$args;
