@@ -68,10 +68,12 @@ defmodule Pleroma.Web.MastodonAPI.StatusViewTest do
   end
 
   test "a note activity" do
-    note = insert(:note_activity)
-    user = User.get_cached_by_ap_id(note.data["actor"])
+    user = insert(:user)
+    {:ok, note} = CommonAPI.post(user, %{"status" => "cool test :firefox: #yeah", "spoiler_text" => "<script>alert('alerta')</script>test"})
 
     status = StatusView.render("status.json", %{activity: note})
+
+    user = User.get_cached_by_ap_id(user.ap_id)
 
     created_at =
       (note.data["object"]["published"] || "")
@@ -86,7 +88,7 @@ defmodule Pleroma.Web.MastodonAPI.StatusViewTest do
       in_reply_to_account_id: nil,
       card: nil,
       reblog: nil,
-      content: HtmlSanitizeEx.basic_html(note.data["object"]["content"]),
+      content: "cool test :firefox: <a class=\"hashtag\" data-tag=\"yeah\" href=\"http://localhost:4001/tag/yeah\">#yeah</a>",
       created_at: created_at,
       reblogs_count: 0,
       replies_count: 0,
@@ -97,10 +99,10 @@ defmodule Pleroma.Web.MastodonAPI.StatusViewTest do
       muted: false,
       pinned: false,
       sensitive: false,
-      spoiler_text: note.data["object"]["summary"],
+      spoiler_text: "test",
       visibility: "public",
       media_attachments: [],
-      mentions: [],
+      mentions: [AccountView.render("mention.json", %{user: user})],
       tags: [
         %{
           name: "#{note.data["object"]["tag"]}",
@@ -114,10 +116,10 @@ defmodule Pleroma.Web.MastodonAPI.StatusViewTest do
       language: nil,
       emojis: [
         %{
-          shortcode: "2hu",
-          url: "corndog.png",
-          static_url: "corndog.png",
-          visible_in_picker: false
+          visible_in_picker: false,
+          shortcode: "firefox",
+          static_url: "http://localhost:4001/emoji/Firefox.gif",
+          url: "http://localhost:4001/emoji/Firefox.gif"
         }
       ]
     }
