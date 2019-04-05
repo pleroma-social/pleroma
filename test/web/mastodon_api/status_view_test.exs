@@ -69,7 +69,12 @@ defmodule Pleroma.Web.MastodonAPI.StatusViewTest do
 
   test "a note activity" do
     user = insert(:user)
-    {:ok, note} = CommonAPI.post(user, %{"status" => "cool test :firefox: #yeah", "spoiler_text" => "<script>alert('alerta')</script>test"})
+
+    {:ok, note} =
+      CommonAPI.post(user, %{
+        "status" => "cool test :firefox: #yeah",
+        "spoiler_text" => "<script>alert('alerta')</script>test"
+      })
 
     status = StatusView.render("status.json", %{activity: note})
 
@@ -88,7 +93,8 @@ defmodule Pleroma.Web.MastodonAPI.StatusViewTest do
       in_reply_to_account_id: nil,
       card: nil,
       reblog: nil,
-      content: "cool test :firefox: <a class=\"hashtag\" data-tag=\"yeah\" href=\"http://localhost:4001/tag/yeah\">#yeah</a>",
+      content:
+        "cool test :firefox: <a class=\"hashtag\" data-tag=\"yeah\" href=\"http://localhost:4001/tag/yeah\">#yeah</a>",
       created_at: created_at,
       reblogs_count: 0,
       replies_count: 0,
@@ -99,7 +105,7 @@ defmodule Pleroma.Web.MastodonAPI.StatusViewTest do
       muted: false,
       pinned: false,
       sensitive: false,
-      spoiler_text: "test",
+      spoiler_text: "alert('alerta')test",
       visibility: "public",
       media_attachments: [],
       mentions: [AccountView.render("mention.json", %{user: user})],
