@@ -6,6 +6,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ## [0.9.99999] - 2019-05-31
 ### Security
 - Mastodon API: Fix lists leaking private posts
+- HTML escaping: Lock down allowed class attributes to only those related to microformats
 
 ## [0.9.9999] - 2019-04-05
 ### Security
