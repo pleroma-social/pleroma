@@ -23,7 +23,7 @@ Client applications that are known to work well:
 * Tootle (iOS, No Streaming)
 * Whalebird (Windows + Mac + Linux)
 
-This is the 0.9.9999 release.
+This is the 0.9.99999 release.
 
 If you want to run your own server, feel free to contact us in our dev chat at #pleroma on freenode or via matrix at <https://matrix.heldscal.la/#/room/#freenode_#pleroma:matrix.org>.
 

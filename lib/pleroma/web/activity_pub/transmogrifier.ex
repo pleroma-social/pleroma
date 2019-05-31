@@ -121,7 +121,10 @@ defmodule Pleroma.Web.ActivityPub.Transmogrifier do
       object
       |> Utils.determine_explicit_mentions()
 
-    explicit_mentions = explicit_mentions ++ ["https://www.w3.org/ns/activitystreams#Public"]
+    follower_collection = User.get_cached_by_ap_id(get_actor(object)).follower_address
+
+    explicit_mentions =
+      explicit_mentions ++ ["https://www.w3.org/ns/activitystreams#Public", follower_collection]
 
     object
     |> fix_explicit_addressing(explicit_mentions)
@@ -366,6 +369,9 @@ defmodule Pleroma.Web.ActivityPub.Transmogrifier do
   def handle_incoming(%{"type" => "Create", "object" => %{"type" => objtype} = object} = data)
       when objtype in ["Article", "Note", "Video", "Page"] do
     actor = get_actor(data)
+
+    # Temporary to make 0.99999 hotfix work
+    User.get_or_fetch_by_ap_id(actor)
 
     data =
       Map.put(data, "actor", actor)

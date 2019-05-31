@@ -94,7 +94,7 @@ defmodule Pleroma.Web.MastodonAPI.StatusViewTest do
       card: nil,
       reblog: nil,
       content:
-        "cool test :firefox: <a class=\"hashtag\" data-tag=\"yeah\" href=\"http://localhost:4001/tag/yeah\">#yeah</a>",
+        "cool test :firefox: <a class=\"hashtag\" data-tag=\"yeah\" href=\"http://localhost:4001/tag/yeah\" rel=\"tag\">#yeah</a>",
       created_at: created_at,
       reblogs_count: 0,
       replies_count: 0,
