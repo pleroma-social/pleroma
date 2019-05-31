@@ -370,6 +370,9 @@ defmodule Pleroma.Web.ActivityPub.Transmogrifier do
       when objtype in ["Article", "Note", "Video", "Page"] do
     actor = get_actor(data)
 
+    # Temporary to make 0.99999 hotfix work
+    User.get_or_fetch_by_ap_id(actor)
+
     data =
       Map.put(data, "actor", actor)
       |> fix_addressing
