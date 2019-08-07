@@ -65,7 +65,7 @@ defmodule Pleroma.HTTP do
   end
 
   def process_request_options(options) do
-    Keyword.merge(Pleroma.HTTP.Connection.hackney_options([]), options)
+    Keyword.merge(Pleroma.HTTP.Connection.options([]), options)
   end
 
   @doc """

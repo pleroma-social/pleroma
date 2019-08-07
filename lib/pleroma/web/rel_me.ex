@@ -3,7 +3,7 @@
 # SPDX-License-Identifier: AGPL-3.0-only
 
 defmodule Pleroma.Web.RelMe do
-  @hackney_options [
+  @options [
     pool: :media,
     recv_timeout: 2_000,
     max_body: 2_000_000,
@@ -25,7 +25,7 @@ defmodule Pleroma.Web.RelMe do
   def parse(_), do: {:error, "No URL provided"}
 
   defp parse_url(url) do
-    {:ok, %Tesla.Env{body: html}} = Pleroma.HTTP.get(url, [], adapter: @hackney_options)
+    {:ok, %Tesla.Env{body: html}} = Pleroma.HTTP.get(url, [], adapter: @options)
 
     data =
       Floki.attribute(html, "link[rel~=me]", "href") ++
