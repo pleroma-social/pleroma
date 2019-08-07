@@ -7,8 +7,10 @@ defmodule Pleroma.HTTP.Connection do
   Connection for http-requests.
   """
 
-  @hackney_options [
+  @options [
     connect_timeout: 10_000,
+    protocols: [:http],
+    timeout: 20_000,
     recv_timeout: 20_000,
     follow_redirect: true,
     force_redirect: true,
@@ -25,17 +27,18 @@ defmodule Pleroma.HTTP.Connection do
   """
   @spec new(Keyword.t()) :: Tesla.Env.client()
   def new(opts \\ []) do
-    Tesla.client([], {@adapter, hackney_options(opts)})
+    middleware = [Tesla.Middleware.FollowRedirects]
+    Tesla.client(middleware, {@adapter, options(opts)})
   end
 
-  # fetch Hackney options
+  # fetch http options
   #
-  def hackney_options(opts) do
+  def options(opts) do
     options = Keyword.get(opts, :adapter, [])
     adapter_options = Pleroma.Config.get([:http, :adapter], [])
     proxy_url = Pleroma.Config.get([:http, :proxy_url], nil)
 
-    @hackney_options
+    @options
     |> Keyword.merge(adapter_options)
     |> Keyword.merge(options)
     |> Keyword.merge(proxy: proxy_url)

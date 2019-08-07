@@ -11,7 +11,7 @@ defmodule Pleroma.Web.ActivityPub.MRF.MediaProxyWarmingPolicy do
 
   require Logger
 
-  @hackney_options [
+  @options [
     pool: :media,
     recv_timeout: 10_000
   ]
@@ -21,7 +21,7 @@ defmodule Pleroma.Web.ActivityPub.MRF.MediaProxyWarmingPolicy do
 
     url
     |> MediaProxy.url()
-    |> HTTP.get([], adapter: @hackney_options)
+    |> HTTP.get([], adapter: @options)
   end
 
   def perform(:preload, %{"object" => %{"attachment" => attachments}} = _message) do
