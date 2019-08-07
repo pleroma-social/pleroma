@@ -95,7 +95,7 @@ defmodule Pleroma.Object.Fetcher do
         date: date
       })
 
-    [{:Signature, signature}]
+    [{"signature", signature}]
   end
 
   defp sign_fetch(headers, id, date) do
@@ -108,7 +108,7 @@ defmodule Pleroma.Object.Fetcher do
 
   defp maybe_date_fetch(headers, date) do
     if Pleroma.Config.get([:activitypub, :sign_object_fetches]) do
-      headers ++ [{:Date, date}]
+      headers ++ [{"date", date}]
     else
       headers
     end
@@ -122,7 +122,7 @@ defmodule Pleroma.Object.Fetcher do
       |> Timex.format!("{WDshort}, {0D} {Mshort} {YYYY} {h24}:{m}:{s} GMT")
 
     headers =
-      [{:Accept, "application/activity+json"}]
+      [{"accept", "application/activity+json"}]
       |> maybe_date_fetch(date)
       |> sign_fetch(id, date)
 

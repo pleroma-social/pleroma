@@ -7,6 +7,7 @@ defmodule Pleroma.Web.WebFinger.WebFingerControllerTest do
 
   import Pleroma.Factory
   import Tesla.Mock
+  import ExUnit.CaptureLog
 
   setup do
     mock(fn env -> apply(HttpRequestMock, :request, [env]) end)
@@ -77,11 +78,13 @@ defmodule Pleroma.Web.WebFinger.WebFingerControllerTest do
   test "Sends a 404 when invalid format" do
     user = insert(:user)
 
-    assert_raise Phoenix.NotAcceptableError, fn ->
-      build_conn()
-      |> put_req_header("accept", "text/html")
-      |> get("/.well-known/webfinger?resource=acct:#{user.nickname}@localhost")
-    end
+    assert capture_log(fn ->
+             assert_raise Phoenix.NotAcceptableError, fn ->
+               build_conn()
+               |> put_req_header("accept", "text/html")
+               |> get("/.well-known/webfinger?resource=acct:#{user.nickname}@localhost")
+             end
+           end) =~ "Internal server error:"
   end
 
   test "Sends a 400 when resource param is missing" do

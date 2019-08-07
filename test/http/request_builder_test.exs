@@ -20,7 +20,7 @@ defmodule Pleroma.HTTP.RequestBuilderTest do
       end)
 
       assert RequestBuilder.headers(%{}, []) == %{
-               headers: [{"User-Agent", Pleroma.Application.user_agent()}]
+               headers: [{"user-agent", Pleroma.Application.user_agent()}]
              }
     end
   end

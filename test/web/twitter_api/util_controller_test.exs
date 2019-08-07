@@ -11,6 +11,7 @@ defmodule Pleroma.Web.TwitterAPI.UtilControllerTest do
   alias Pleroma.Web.CommonAPI
   import Pleroma.Factory
   import Mock
+  import ExUnit.CaptureLog
 
   setup do
     Tesla.Mock.mock(fn env -> apply(HttpRequestMock, :request, [env]) end)
@@ -377,15 +378,18 @@ defmodule Pleroma.Web.TwitterAPI.UtilControllerTest do
       assert html_response(response, 200) =~ "Remote follow"
     end
 
-    test "show follow page with error when user cannot fecth by `acct` link", %{conn: conn} do
+    test "show follow page with error when user cannot fetch by `acct` link", %{conn: conn} do
       user = insert(:user)
 
-      response =
-        conn
-        |> assign(:user, user)
-        |> get("/ostatus_subscribe?acct=https://mastodon.social/users/not_found")
+      assert capture_log(fn ->
+               response =
+                 conn
+                 |> assign(:user, user)
+                 |> get("/ostatus_subscribe?acct=https://mastodon.social/users/not_found")
 
-      assert html_response(response, 200) =~ "Error fetching user"
+               assert html_response(response, 200) =~ "Error fetching user"
+             end) =~
+               "Could not decode user at fetch https://mastodon.social/users/not_found, {:error, \"Object has been deleted\"}"
     end
   end
 
