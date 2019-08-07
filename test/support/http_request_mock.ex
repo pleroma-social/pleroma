@@ -88,7 +88,7 @@ defmodule HttpRequestMock do
         "https://osada.macgirvin.com/.well-known/webfinger?resource=acct:mike@osada.macgirvin.com",
         _,
         _,
-        Accept: "application/xrd+xml,application/jrd+json"
+        [{"accept", "application/xrd+xml,application/jrd+json"}]
       ) do
     {:ok,
      %Tesla.Env{
@@ -101,7 +101,7 @@ defmodule HttpRequestMock do
         "https://social.heldscal.la/.well-known/webfinger?resource=https://social.heldscal.la/user/29191",
         _,
         _,
-        Accept: "application/xrd+xml,application/jrd+json"
+        [{"accept", "application/xrd+xml,application/jrd+json"}]
       ) do
     {:ok,
      %Tesla.Env{
@@ -122,7 +122,7 @@ defmodule HttpRequestMock do
         "https://pawoo.net/.well-known/webfinger?resource=acct:https://pawoo.net/users/pekorino",
         _,
         _,
-        Accept: "application/xrd+xml,application/jrd+json"
+        [{"accept", "application/xrd+xml,application/jrd+json"}]
       ) do
     {:ok,
      %Tesla.Env{
@@ -148,7 +148,7 @@ defmodule HttpRequestMock do
         "https://social.stopwatchingus-heidelberg.de/.well-known/webfinger?resource=acct:https://social.stopwatchingus-heidelberg.de/user/18330",
         _,
         _,
-        Accept: "application/xrd+xml,application/jrd+json"
+        [{"accept", "application/xrd+xml,application/jrd+json"}]
       ) do
     {:ok,
      %Tesla.Env{
@@ -169,7 +169,7 @@ defmodule HttpRequestMock do
         "https://mamot.fr/.well-known/webfinger?resource=acct:https://mamot.fr/users/Skruyb",
         _,
         _,
-        Accept: "application/xrd+xml,application/jrd+json"
+        [{"accept", "application/xrd+xml,application/jrd+json"}]
       ) do
     {:ok,
      %Tesla.Env{
@@ -182,7 +182,7 @@ defmodule HttpRequestMock do
         "https://social.heldscal.la/.well-known/webfinger?resource=nonexistant@social.heldscal.la",
         _,
         _,
-        Accept: "application/xrd+xml,application/jrd+json"
+        [{"accept", "application/xrd+xml,application/jrd+json"}]
       ) do
     {:ok,
      %Tesla.Env{
@@ -195,7 +195,7 @@ defmodule HttpRequestMock do
         "https://squeet.me/xrd/?uri=lain@squeet.me",
         _,
         _,
-        Accept: "application/xrd+xml,application/jrd+json"
+        [{"accept", "application/xrd+xml,application/jrd+json"}]
       ) do
     {:ok,
      %Tesla.Env{
@@ -208,7 +208,7 @@ defmodule HttpRequestMock do
         "https://mst3k.interlinked.me/users/luciferMysticus",
         _,
         _,
-        Accept: "application/activity+json"
+        [{"accept", "application/activity+json"}]
       ) do
     {:ok,
      %Tesla.Env{
@@ -229,7 +229,7 @@ defmodule HttpRequestMock do
         "https://hubzilla.example.org/channel/kaniini",
         _,
         _,
-        Accept: "application/activity+json"
+        [{"accept", "application/activity+json"}]
       ) do
     {:ok,
      %Tesla.Env{
@@ -238,7 +238,7 @@ defmodule HttpRequestMock do
      }}
   end
 
-  def get("https://niu.moe/users/rye", _, _, Accept: "application/activity+json") do
+  def get("https://niu.moe/users/rye", _, _, [{"accept", "application/activity+json"}]) do
     {:ok,
      %Tesla.Env{
        status: 200,
@@ -246,7 +246,7 @@ defmodule HttpRequestMock do
      }}
   end
 
-  def get("https://n1u.moe/users/rye", _, _, Accept: "application/activity+json") do
+  def get("https://n1u.moe/users/rye", _, _, [{"accept", "application/activity+json"}]) do
     {:ok,
      %Tesla.Env{
        status: 200,
@@ -265,7 +265,7 @@ defmodule HttpRequestMock do
      }}
   end
 
-  def get("https://puckipedia.com/", _, _, Accept: "application/activity+json") do
+  def get("https://puckipedia.com/", _, _, [{"accept", "application/activity+json"}]) do
     {:ok,
      %Tesla.Env{
        status: 200,
@@ -321,7 +321,9 @@ defmodule HttpRequestMock do
      }}
   end
 
-  def get("http://mastodon.example.org/users/admin", _, _, Accept: "application/activity+json") do
+  def get("http://mastodon.example.org/users/admin", _, _, [
+        {"accept", "application/activity+json"}
+      ]) do
     {:ok,
      %Tesla.Env{
        status: 200,
@@ -329,7 +331,9 @@ defmodule HttpRequestMock do
      }}
   end
 
-  def get("http://mastodon.example.org/users/gargron", _, _, Accept: "application/activity+json") do
+  def get("http://mastodon.example.org/users/gargron", _, _, [
+        {"accept", "application/activity+json"}
+      ]) do
     {:error, :nxdomain}
   end
 
@@ -337,7 +341,7 @@ defmodule HttpRequestMock do
         "http://mastodon.example.org/@admin/99541947525187367",
         _,
         _,
-        Accept: "application/activity+json"
+        [{"accept", "application/activity+json"}]
       ) do
     {:ok,
      %Tesla.Env{
@@ -354,7 +358,7 @@ defmodule HttpRequestMock do
      }}
   end
 
-  def get("https://mstdn.io/users/mayuutann", _, _, Accept: "application/activity+json") do
+  def get("https://mstdn.io/users/mayuutann", _, _, [{"accept", "application/activity+json"}]) do
     {:ok,
      %Tesla.Env{
        status: 200,
@@ -366,7 +370,7 @@ defmodule HttpRequestMock do
         "https://mstdn.io/users/mayuutann/statuses/99568293732299394",
         _,
         _,
-        Accept: "application/activity+json"
+        [{"accept", "application/activity+json"}]
       ) do
     {:ok,
      %Tesla.Env{
@@ -386,7 +390,7 @@ defmodule HttpRequestMock do
      }}
   end
 
-  def get(url, _, _, Accept: "application/xrd+xml,application/jrd+json")
+  def get(url, _, _, [{"accept", "application/xrd+xml,application/jrd+json"}])
       when url in [
              "https://pleroma.soykaf.com/.well-known/webfinger?resource=acct:https://pleroma.soykaf.com/users/lain",
              "https://pleroma.soykaf.com/.well-known/webfinger?resource=https://pleroma.soykaf.com/users/lain"
@@ -413,7 +417,7 @@ defmodule HttpRequestMock do
         "https://shitposter.club/.well-known/webfinger?resource=https://shitposter.club/user/1",
         _,
         _,
-        Accept: "application/xrd+xml,application/jrd+json"
+        [{"accept", "application/xrd+xml,application/jrd+json"}]
       ) do
     {:ok,
      %Tesla.Env{
@@ -457,7 +461,7 @@ defmodule HttpRequestMock do
         "https://shitposter.club/.well-known/webfinger?resource=https://shitposter.club/user/5381",
         _,
         _,
-        Accept: "application/xrd+xml,application/jrd+json"
+        [{"accept", "application/xrd+xml,application/jrd+json"}]
       ) do
     {:ok,
      %Tesla.Env{
@@ -510,7 +514,7 @@ defmodule HttpRequestMock do
         "https://social.sakamoto.gq/.well-known/webfinger?resource=https://social.sakamoto.gq/users/eal",
         _,
         _,
-        Accept: "application/xrd+xml,application/jrd+json"
+        [{"accept", "application/xrd+xml,application/jrd+json"}]
       ) do
     {:ok,
      %Tesla.Env{
@@ -523,7 +527,7 @@ defmodule HttpRequestMock do
         "https://social.sakamoto.gq/objects/0ccc1a2c-66b0-4305-b23a-7f7f2b040056",
         _,
         _,
-        Accept: "application/atom+xml"
+        [{"accept", "application/atom+xml"}]
       ) do
     {:ok, %Tesla.Env{status: 200, body: File.read!("test/fixtures/tesla_mock/sakamoto.atom")}}
   end
@@ -540,7 +544,7 @@ defmodule HttpRequestMock do
         "https://mastodon.social/.well-known/webfinger?resource=https://mastodon.social/users/lambadalambda",
         _,
         _,
-        Accept: "application/xrd+xml,application/jrd+json"
+        [{"accept", "application/xrd+xml,application/jrd+json"}]
       ) do
     {:ok,
      %Tesla.Env{
@@ -562,7 +566,7 @@ defmodule HttpRequestMock do
         "http://gs.example.org/.well-known/webfinger?resource=http://gs.example.org:4040/index.php/user/1",
         _,
         _,
-        Accept: "application/xrd+xml,application/jrd+json"
+        [{"accept", "application/xrd+xml,application/jrd+json"}]
       ) do
     {:ok,
      %Tesla.Env{
@@ -576,7 +580,7 @@ defmodule HttpRequestMock do
         "http://gs.example.org:4040/index.php/user/1",
         _,
         _,
-        Accept: "application/activity+json"
+        [{"accept", "application/activity+json"}]
       ) do
     {:ok, %Tesla.Env{status: 406, body: ""}}
   end
@@ -612,7 +616,7 @@ defmodule HttpRequestMock do
         "https://squeet.me/xrd?uri=lain@squeet.me",
         _,
         _,
-        Accept: "application/xrd+xml,application/jrd+json"
+        [{"accept", "application/xrd+xml,application/jrd+json"}]
       ) do
     {:ok,
      %Tesla.Env{
@@ -625,7 +629,7 @@ defmodule HttpRequestMock do
         "https://social.heldscal.la/.well-known/webfinger?resource=shp@social.heldscal.la",
         _,
         _,
-        Accept: "application/xrd+xml,application/jrd+json"
+        [{"accept", "application/xrd+xml,application/jrd+json"}]
       ) do
     {:ok,
      %Tesla.Env{
@@ -638,7 +642,7 @@ defmodule HttpRequestMock do
         "https://social.heldscal.la/.well-known/webfinger?resource=invalid_content@social.heldscal.la",
         _,
         _,
-        Accept: "application/xrd+xml,application/jrd+json"
+        [{"accept", "application/xrd+xml,application/jrd+json"}]
       ) do
     {:ok, %Tesla.Env{status: 200, body: ""}}
   end
@@ -655,7 +659,7 @@ defmodule HttpRequestMock do
         "http://framatube.org/main/xrd?uri=framasoft@framatube.org",
         _,
         _,
-        Accept: "application/xrd+xml,application/jrd+json"
+        [{"accept", "application/xrd+xml,application/jrd+json"}]
       ) do
     {:ok,
      %Tesla.Env{
@@ -677,7 +681,7 @@ defmodule HttpRequestMock do
         "http://gnusocial.de/main/xrd?uri=winterdienst@gnusocial.de",
         _,
         _,
-        Accept: "application/xrd+xml,application/jrd+json"
+        [{"accept", "application/xrd+xml,application/jrd+json"}]
       ) do
     {:ok,
      %Tesla.Env{
@@ -714,7 +718,7 @@ defmodule HttpRequestMock do
         "https://gerzilla.de/xrd/?uri=kaniini@gerzilla.de",
         _,
         _,
-        Accept: "application/xrd+xml,application/jrd+json"
+        [{"accept", "application/xrd+xml,application/jrd+json"}]
       ) do
     {:ok,
      %Tesla.Env{
@@ -772,7 +776,7 @@ defmodule HttpRequestMock do
     {:ok, %Tesla.Env{status: 200, body: File.read!("test/fixtures/lambadalambda.json")}}
   end
 
-  def get("https://social.heldscal.la/user/23211", _, _, Accept: "application/activity+json") do
+  def get("https://social.heldscal.la/user/23211", _, _, [{"accept", "application/activity+json"}]) do
     {:ok, Tesla.Mock.json(%{"id" => "https://social.heldscal.la/user/23211"}, status: 200)}
   end
 
@@ -889,7 +893,7 @@ defmodule HttpRequestMock do
         "https://zetsubou.xn--q9jyb4c/.well-known/webfinger?resource=lain@zetsubou.xn--q9jyb4c",
         _,
         _,
-        Accept: "application/xrd+xml,application/jrd+json"
+        [{"accept", "application/xrd+xml,application/jrd+json"}]
       ) do
     {:ok,
      %Tesla.Env{
@@ -902,7 +906,7 @@ defmodule HttpRequestMock do
         "https://zetsubou.xn--q9jyb4c/.well-known/webfinger?resource=https://zetsubou.xn--q9jyb4c/users/lain",
         _,
         _,
-        Accept: "application/xrd+xml,application/jrd+json"
+        [{"accept", "application/xrd+xml,application/jrd+json"}]
       ) do
     {:ok,
      %Tesla.Env{
@@ -924,7 +928,9 @@ defmodule HttpRequestMock do
      }}
   end
 
-  def get("https://info.pleroma.site/activity.json", _, _, Accept: "application/activity+json") do
+  def get("https://info.pleroma.site/activity.json", _, _, [
+        {"accept", "application/activity+json"}
+      ]) do
     {:ok,
      %Tesla.Env{
        status: 200,
@@ -936,7 +942,9 @@ defmodule HttpRequestMock do
     {:ok, %Tesla.Env{status: 404, body: ""}}
   end
 
-  def get("https://info.pleroma.site/activity2.json", _, _, Accept: "application/activity+json") do
+  def get("https://info.pleroma.site/activity2.json", _, _, [
+        {"accept", "application/activity+json"}
+      ]) do
     {:ok,
      %Tesla.Env{
        status: 200,
@@ -948,7 +956,9 @@ defmodule HttpRequestMock do
     {:ok, %Tesla.Env{status: 404, body: ""}}
   end
 
-  def get("https://info.pleroma.site/activity3.json", _, _, Accept: "application/activity+json") do
+  def get("https://info.pleroma.site/activity3.json", _, _, [
+        {"accept", "application/activity+json"}
+      ]) do
     {:ok,
      %Tesla.Env{
        status: 200,

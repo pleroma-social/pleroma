@@ -48,7 +48,7 @@ defmodule Pleroma.HTTP.RequestBuilder do
   def headers(request, header_list) do
     header_list =
       if Pleroma.Config.get([:http, :send_user_agent]) do
-        header_list ++ [{"User-Agent", Pleroma.Application.user_agent()}]
+        header_list ++ [{"user-agent", Pleroma.Application.user_agent()}]
       else
         header_list
       end
