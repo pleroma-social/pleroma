@@ -26,14 +26,14 @@ defmodule Pleroma.ReverseProxy.Client.Tesla do
     end
   end
 
-  defp read_chunk!(client) do
+  defp read_chunk!(%{pid: pid, stream: stream, opts: opts}) do
     adapter = Application.get_env(:tesla, :adapter)
 
     unless adapter in @adapters do
       raise "#{adapter} doesn't support reading body in chunks"
     end
 
-    adapter.read_chunk(client)
+    adapter.read_chunk(pid, stream, opts)
   end
 
   def close(client) do
