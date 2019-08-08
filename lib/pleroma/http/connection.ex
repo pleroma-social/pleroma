@@ -10,11 +10,7 @@ defmodule Pleroma.HTTP.Connection do
   @options [
     connect_timeout: 10_000,
     protocols: [:http],
-    timeout: 20_000,
-    recv_timeout: 20_000,
-    follow_redirect: true,
-    force_redirect: true,
-    pool: :federation
+    timeout: 20_000
   ]
   @adapter Application.get_env(:tesla, :adapter)
 
