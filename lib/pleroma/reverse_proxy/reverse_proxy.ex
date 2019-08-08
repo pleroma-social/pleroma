@@ -61,7 +61,7 @@ defmodule Pleroma.ReverseProxy do
   * `http`: options for [hackney](https://github.com/benoitc/hackney).
 
   """
-  @default_hackney_options [pool: :media]
+  @default_options [pool: :media]
 
   @inline_content_types [
     "image/gif",
@@ -93,9 +93,9 @@ defmodule Pleroma.ReverseProxy do
   def call(_conn, _url, _opts \\ [])
 
   def call(conn = %{method: method}, url, opts) when method in @methods do
-    hackney_opts =
+    client_opts =
       Pleroma.HTTP.Connection.options([])
-      |> Keyword.merge(@default_hackney_options)
+      |> Keyword.merge(@default_options)
       |> Keyword.merge(Keyword.get(opts, :http, []))
       |> HTTP.process_request_options()
 
@@ -108,7 +108,7 @@ defmodule Pleroma.ReverseProxy do
         opts
       end
 
-    with {:ok, code, headers, client} <- request(method, url, req_headers, hackney_opts),
+    with {:ok, code, headers, client} <- request(method, url, req_headers, client_opts),
          :ok <-
            header_length_constraint(
              headers,
@@ -201,7 +201,7 @@ defmodule Pleroma.ReverseProxy do
              duration,
              Keyword.get(opts, :max_read_duration, @max_read_duration)
            ),
-         {:ok, data} <- client().stream_body(client),
+         {:ok, data, client} <- client().stream_body(client),
          {:ok, duration} <- increase_read_duration(duration),
          sent_so_far = sent_so_far + byte_size(data),
          :ok <-

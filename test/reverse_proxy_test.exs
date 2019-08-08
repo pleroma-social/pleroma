@@ -29,11 +29,11 @@ defmodule Pleroma.ReverseProxyTest do
          {"content-length", byte_size(json) |> to_string()}
        ], %{url: url}}
     end)
-    |> expect(:stream_body, invokes, fn %{url: url} ->
+    |> expect(:stream_body, invokes, fn %{url: url} = client ->
       case Registry.lookup(Pleroma.ReverseProxy.ClientMock, url) do
         [{_, 0}] ->
           Registry.update_value(Pleroma.ReverseProxy.ClientMock, url, &(&1 + 1))
-          {:ok, json}
+          {:ok, json, client}
 
         [{_, 1}] ->
           Registry.unregister(Pleroma.ReverseProxy.ClientMock, url)
@@ -64,6 +64,38 @@ defmodule Pleroma.ReverseProxyTest do
 
     conn = ReverseProxy.call(conn, "/closed")
     assert conn.halted
+  end
+
+  defp stream_mock(invokes, with_close? \\ false) do
+    ClientMock
+    |> expect(:request, fn :get, "/stream-bytes/" <> length, _, _, _ ->
+      Registry.register(Pleroma.ReverseProxy.ClientMock, "/stream-bytes/" <> length, 0)
+
+      {:ok, 200, [{"content-type", "application/octet-stream"}],
+       %{url: "/stream-bytes/" <> length}}
+    end)
+    |> expect(:stream_body, invokes, fn %{url: "/stream-bytes/" <> length} = client ->
+      max = String.to_integer(length)
+
+      case Registry.lookup(Pleroma.ReverseProxy.ClientMock, "/stream-bytes/" <> length) do
+        [{_, current}] when current < max ->
+          Registry.update_value(
+            Pleroma.ReverseProxy.ClientMock,
+            "/stream-bytes/" <> length,
+            &(&1 + 10)
+          )
+
+          {:ok, "0123456789", client}
+
+        [{_, ^max}] ->
+          Registry.unregister(Pleroma.ReverseProxy.ClientMock, "/stream-bytes/" <> length)
+          :done
+      end
+    end)
+
+    if with_close? do
+      expect(ClientMock, :close, fn _ -> :ok end)
+    end
   end
 
   describe "max_body " do
@@ -179,12 +211,12 @@ defmodule Pleroma.ReverseProxyTest do
       Registry.register(Pleroma.ReverseProxy.ClientMock, "/headers", 0)
       {:ok, 200, [{"content-type", "application/json"}], %{url: "/headers", headers: headers}}
     end)
-    |> expect(:stream_body, 2, fn %{url: url, headers: headers} ->
+    |> expect(:stream_body, 2, fn %{url: url, headers: headers} = client ->
       case Registry.lookup(Pleroma.ReverseProxy.ClientMock, url) do
         [{_, 0}] ->
           Registry.update_value(Pleroma.ReverseProxy.ClientMock, url, &(&1 + 1))
           headers = for {k, v} <- headers, into: %{}, do: {String.capitalize(k), v}
-          {:ok, Jason.encode!(%{headers: headers})}
+          {:ok, Jason.encode!(%{headers: headers}), client}
 
         [{_, 1}] ->
           Registry.unregister(Pleroma.ReverseProxy.ClientMock, url)
@@ -261,11 +293,11 @@ defmodule Pleroma.ReverseProxyTest do
 
       {:ok, 200, headers, %{url: "/disposition"}}
     end)
-    |> expect(:stream_body, 2, fn %{url: "/disposition"} ->
+    |> expect(:stream_body, 2, fn %{url: "/disposition"} = client ->
       case Registry.lookup(Pleroma.ReverseProxy.ClientMock, "/disposition") do
         [{_, 0}] ->
           Registry.update_value(Pleroma.ReverseProxy.ClientMock, "/disposition", &(&1 + 1))
-          {:ok, ""}
+          {:ok, "", client}
 
         [{_, 1}] ->
           Registry.unregister(Pleroma.ReverseProxy.ClientMock, "/disposition")
