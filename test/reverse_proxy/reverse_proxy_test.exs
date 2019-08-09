@@ -329,4 +329,8 @@ defmodule Pleroma.ReverseProxyTest do
       assert {"content-disposition", "attachment; filename=\"filename.jpg\""} in conn.resp_headers
     end
   end
+
+  describe "integration tests" do
+    @describetag :integration
+  end
 end
