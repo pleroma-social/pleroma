@@ -12,7 +12,6 @@ defmodule Pleroma.HTTP.Connection do
     protocols: [:http],
     timeout: 20_000
   ]
-  @adapter Application.get_env(:tesla, :adapter)
 
   @doc """
   Configure a client connection
@@ -24,7 +23,8 @@ defmodule Pleroma.HTTP.Connection do
   @spec new(Keyword.t()) :: Tesla.Env.client()
   def new(opts \\ []) do
     middleware = [Tesla.Middleware.FollowRedirects]
-    Tesla.client(middleware, {@adapter, options(opts)})
+    adapter = Application.get_env(:tesla, :adapter)
+    Tesla.client(middleware, {adapter, options(opts)})
   end
 
   # fetch http options
