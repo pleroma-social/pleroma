@@ -2,7 +2,6 @@ defmodule Pleroma.ReverseProxy.Client.Tesla do
   @behaviour Pleroma.ReverseProxy.Client
 
   @adapters [Tesla.Adapter.Gun]
-  alias Pleroma.HTTP
 
   def request(method, url, headers, body, opts \\ []) do
     adapter_opts =
@@ -10,8 +9,16 @@ defmodule Pleroma.ReverseProxy.Client.Tesla do
       |> Keyword.put(:chunks_response, true)
 
     with {:ok, response} <-
-           HTTP.request(method, url, body, headers, Keyword.put(opts, :adapter, adapter_opts)) do
-      {:ok, response.status, response.headers, response.body}
+           Pleroma.HTTP.request(
+             method,
+             url,
+             body,
+             headers,
+             Keyword.put(opts, :adapter, adapter_opts)
+           ) do
+      if is_map(response.body),
+        do: {:ok, response.status, response.headers, response.body},
+        else: {:ok, response.status, response.headers}
     else
       {:error, error} -> {:error, error}
     end
@@ -23,6 +30,7 @@ defmodule Pleroma.ReverseProxy.Client.Tesla do
     case read_chunk!(client) do
       {:fin, body} -> {:ok, body, Map.put(client, :fin, true)}
       {:nofin, part} -> {:ok, part, client}
+      {:error, error} -> {:error, error}
     end
   end
 
