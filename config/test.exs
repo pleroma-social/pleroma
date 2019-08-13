@@ -85,6 +85,8 @@ config :joken, default_signer: "yU8uHKq+yyAkZ11Hx//jcdacWc8yQ1bxAAGrplzB0Zwwjkp3
 
 config :pleroma, Pleroma.ReverseProxy.Client, Pleroma.ReverseProxy.ClientMock
 
+config :pleroma, Pleroma.Gun.API, Pleroma.Gun.API.Mock
+
 try do
   import_config "test.secret.exs"
 rescue

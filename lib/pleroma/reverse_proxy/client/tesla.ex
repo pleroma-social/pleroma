@@ -1,3 +1,7 @@
+# Pleroma: A lightweight social networking server
+# Copyright © 2017-2019 Pleroma Authors <https://pleroma.social/>
+# SPDX-License-Identifier: AGPL-3.0-onl
+
 defmodule Pleroma.ReverseProxy.Client.Tesla do
   @behaviour Pleroma.ReverseProxy.Client
 
@@ -6,7 +10,7 @@ defmodule Pleroma.ReverseProxy.Client.Tesla do
   def request(method, url, headers, body, opts \\ []) do
     adapter_opts =
       Keyword.get(opts, :adapter, [])
-      |> Keyword.put(:chunks_response, true)
+      |> Keyword.put(:body_as, :chunks)
 
     with {:ok, response} <-
            Pleroma.HTTP.request(
@@ -44,13 +48,13 @@ defmodule Pleroma.ReverseProxy.Client.Tesla do
     adapter.read_chunk(pid, stream, opts)
   end
 
-  def close(client) do
+  def close(pid) do
     adapter = Application.get_env(:tesla, :adapter)
 
     unless adapter in @adapters do
       raise "#{adapter} doesn't support closing connection"
     end
 
-    adapter.close(client)
+    adapter.close(pid)
   end
 end

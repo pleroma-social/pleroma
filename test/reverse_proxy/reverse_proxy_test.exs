@@ -300,5 +300,38 @@ defmodule Pleroma.ReverseProxyTest do
 
   describe "integration tests" do
     @describetag :integration
+
+    test "with hackney client", %{conn: conn} do
+      client = Pleroma.Config.get([Pleroma.ReverseProxy.Client])
+      Pleroma.Config.put([Pleroma.ReverseProxy.Client], Pleroma.ReverseProxy.Client.Hackney)
+
+      on_exit(fn ->
+        Pleroma.Config.put([Pleroma.ReverseProxy.Client], client)
+      end)
+
+      conn = ReverseProxy.call(conn, "http://httpbin.org/stream-bytes/10")
+
+      assert byte_size(conn.resp_body) == 10
+      assert conn.state == :chunked
+      assert conn.status == 200
+    end
+
+    test "with tesla client with gun adapter", %{conn: conn} do
+      client = Pleroma.Config.get([Pleroma.ReverseProxy.Client])
+      Pleroma.Config.put([Pleroma.ReverseProxy.Client], Pleroma.ReverseProxy.Client.Tesla)
+      adapter = Application.get_env(:tesla, :adapter)
+      Application.put_env(:tesla, :adapter, Tesla.Adapter.Gun)
+
+      conn = ReverseProxy.call(conn, "http://httpbin.org/stream-bytes/10")
+
+      assert byte_size(conn.resp_body) == 10
+      assert conn.state == :chunked
+      assert conn.status == 200
+
+      on_exit(fn ->
+        Pleroma.Config.put([Pleroma.ReverseProxy.Client], client)
+        Application.put_env(:tesla, :adapter, adapter)
+      end)
+    end
   end
 end
