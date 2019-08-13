@@ -9,7 +9,6 @@ defmodule Pleroma.HTTP.Connection do
 
   @options [
     connect_timeout: 10_000,
-    protocols: [:http],
     timeout: 20_000
   ]
 

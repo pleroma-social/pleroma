@@ -28,6 +28,6 @@ defmodule Pleroma.ReverseProxy.Client do
   def close(ref), do: client().close(ref)
 
   defp client do
-    Pleroma.Config.get([Pleroma.ReverseProxy.Client], Pleroma.ReverseProxy.Client.Hackney)
+    Pleroma.Config.get([Pleroma.ReverseProxy.Client], Pleroma.ReverseProxy.Client.Tesla)
   end
 end
