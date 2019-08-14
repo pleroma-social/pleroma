@@ -3,7 +3,7 @@
 # SPDX-License-Identifier: AGPL-3.0-only
 
 defmodule Pleroma.ReverseProxyTest do
-  use Pleroma.Web.ConnCase, async: true
+  use Pleroma.Web.ConnCase
   import ExUnit.CaptureLog
   import Mox
   alias Pleroma.ReverseProxy
@@ -322,6 +322,10 @@ defmodule Pleroma.ReverseProxyTest do
       adapter = Application.get_env(:tesla, :adapter)
       Application.put_env(:tesla, :adapter, Tesla.Adapter.Gun)
 
+      api = Pleroma.Config.get([Pleroma.Gun.API])
+      Pleroma.Config.put([Pleroma.Gun.API], :gun)
+      {:ok, _} = Pleroma.Gun.Connections.start_link(Pleroma.Gun.Connections)
+
       conn = ReverseProxy.call(conn, "http://httpbin.org/stream-bytes/10")
 
       assert byte_size(conn.resp_body) == 10
@@ -331,6 +335,7 @@ defmodule Pleroma.ReverseProxyTest do
       on_exit(fn ->
         Pleroma.Config.put([Pleroma.ReverseProxy.Client], client)
         Application.put_env(:tesla, :adapter, adapter)
+        Pleroma.Config.put([Pleroma.Gun.API], api)
       end)
     end
   end

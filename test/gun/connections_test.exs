@@ -3,23 +3,56 @@
 # SPDX-License-Identifier: AGPL-3.0-only
 
 defmodule Gun.ConnectionsTest do
-  use ExUnit.Case, async: true
+  use ExUnit.Case
   alias Pleroma.Gun.{Connections, Conn, API}
 
   setup do
     name = :test_gun_connections
+    adapter = Application.get_env(:tesla, :adapter)
+    Application.put_env(:tesla, :adapter, Tesla.Adapter.Gun)
+    on_exit(fn -> Application.put_env(:tesla, :adapter, adapter) end)
     {:ok, pid} = Connections.start_link(name)
 
     {:ok, name: name, pid: pid}
   end
 
+  describe "alive?/2" do
+    test "is alive", %{name: name} do
+      assert Connections.alive?(name)
+    end
+
+    test "returns false if not started" do
+      refute Connections.alive?(:some_random_name)
+    end
+  end
+
+  test "try_to_get_gun_conn/1 returns conn", %{name: name, pid: pid} do
+    conn = Connections.try_to_get_gun_conn("http://some-domain.com", [genserver_pid: pid], name)
+    assert is_pid(conn)
+    assert Process.alive?(conn)
+
+    reused_conn = Connections.get_conn("http://some-domain.com", [genserver_pid: pid], name)
+
+    assert conn == reused_conn
+
+    %Connections{
+      conns: %{
+        "some-domain.com:80" => %Conn{
+          conn: ^conn,
+          state: :up,
+          waiting_pids: []
+        }
+      }
+    } = Connections.get_state(name)
+  end
+
   test "opens connection and reuse it on next request", %{name: name, pid: pid} do
-    conn = Connections.get_conn(name, "http://some-domain.com", genserver_pid: pid)
+    conn = Connections.get_conn("http://some-domain.com", [genserver_pid: pid], name)
 
     assert is_pid(conn)
     assert Process.alive?(conn)
 
-    reused_conn = Connections.get_conn(name, "http://some-domain.com", genserver_pid: pid)
+    reused_conn = Connections.get_conn("http://some-domain.com", [genserver_pid: pid], name)
 
     assert conn == reused_conn
 
@@ -35,15 +68,15 @@ defmodule Gun.ConnectionsTest do
   end
 
   test "reuses connection based on protocol", %{name: name, pid: pid} do
-    conn = Connections.get_conn(name, "http://some-domain.com", genserver_pid: pid)
+    conn = Connections.get_conn("http://some-domain.com", [genserver_pid: pid], name)
     assert is_pid(conn)
     assert Process.alive?(conn)
 
-    https_conn = Connections.get_conn(name, "https://some-domain.com", genserver_pid: pid)
+    https_conn = Connections.get_conn("https://some-domain.com", [genserver_pid: pid], name)
 
     refute conn == https_conn
 
-    reused_https = Connections.get_conn(name, "https://some-domain.com", genserver_pid: pid)
+    reused_https = Connections.get_conn("https://some-domain.com", [genserver_pid: pid], name)
 
     refute conn == reused_https
 
@@ -66,7 +99,7 @@ defmodule Gun.ConnectionsTest do
   end
 
   test "process gun_down message", %{name: name, pid: pid} do
-    conn = Connections.get_conn(name, "http://gun_down.com", genserver_pid: pid)
+    conn = Connections.get_conn("http://gun_down.com", [genserver_pid: pid], name)
 
     refute conn
 
@@ -82,7 +115,7 @@ defmodule Gun.ConnectionsTest do
   end
 
   test "process gun_down message and then gun_up", %{name: name, pid: pid} do
-    conn = Connections.get_conn(name, "http://gun_down_and_up.com", genserver_pid: pid)
+    conn = Connections.get_conn("http://gun_down_and_up.com", [genserver_pid: pid], name)
 
     refute conn
 
@@ -96,7 +129,7 @@ defmodule Gun.ConnectionsTest do
       }
     } = Connections.get_state(name)
 
-    conn = Connections.get_conn(name, "http://gun_down_and_up.com", genserver_pid: pid)
+    conn = Connections.get_conn("http://gun_down_and_up.com", [genserver_pid: pid], name)
 
     assert is_pid(conn)
     assert Process.alive?(conn)
@@ -116,7 +149,7 @@ defmodule Gun.ConnectionsTest do
     tasks =
       for _ <- 1..5 do
         Task.async(fn ->
-          Connections.get_conn(name, "http://some-domain.com", genserver_pid: pid)
+          Connections.get_conn("http://some-domain.com", [genserver_pid: pid], name)
         end)
       end
 
@@ -149,12 +182,12 @@ defmodule Gun.ConnectionsTest do
       api = Pleroma.Config.get([API])
       Pleroma.Config.put([API], :gun)
       on_exit(fn -> Pleroma.Config.put([API], api) end)
-      conn = Connections.get_conn(name, "http://httpbin.org")
+      conn = Connections.get_conn("http://httpbin.org", [], name)
 
       assert is_pid(conn)
       assert Process.alive?(conn)
 
-      reused_conn = Connections.get_conn(name, "http://httpbin.org")
+      reused_conn = Connections.get_conn("http://httpbin.org", [], name)
 
       assert conn == reused_conn
 
