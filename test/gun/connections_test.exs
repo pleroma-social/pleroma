@@ -201,5 +201,29 @@ defmodule Gun.ConnectionsTest do
         }
       } = Connections.get_state(name)
     end
+
+    test "opens ssl connection and reuse it on next request", %{name: name} do
+      api = Pleroma.Config.get([API])
+      Pleroma.Config.put([API], :gun)
+      on_exit(fn -> Pleroma.Config.put([API], api) end)
+      conn = Connections.get_conn("https://httpbin.org", [], name)
+
+      assert is_pid(conn)
+      assert Process.alive?(conn)
+
+      reused_conn = Connections.get_conn("https://httpbin.org", [], name)
+
+      assert conn == reused_conn
+
+      %Connections{
+        conns: %{
+          "httpbin.org:443" => %Conn{
+            conn: ^conn,
+            state: :up,
+            waiting_pids: []
+          }
+        }
+      } = Connections.get_state(name)
+    end
   end
 end
