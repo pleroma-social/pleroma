@@ -3,7 +3,7 @@
 # SPDX-License-Identifier: AGPL-3.0-only
 
 defmodule Pleroma.HTTP.RequestBuilderTest do
-  use ExUnit.Case, async: true
+  use ExUnit.Case
   use Pleroma.Tests.Helpers
   alias Pleroma.HTTP.RequestBuilder
 
@@ -19,6 +19,17 @@ defmodule Pleroma.HTTP.RequestBuilderTest do
 
       assert RequestBuilder.headers(%{}, []) == %{
                headers: [{"user-agent", Pleroma.Application.user_agent()}]
+             }
+    end
+
+    test "it adds host header for gun adapter" do
+      adapter = Application.get_env(:tesla, :adapter)
+      Application.put_env(:tesla, :adapter, Tesla.Adapter.Gun)
+      on_exit(fn -> Application.put_env(:tesla, :adapter, adapter) end)
+
+      assert RequestBuilder.headers(%{url: "https://example.com"}, []) == %{
+               headers: [{"host", "example.com"}],
+               url: "https://example.com"
              }
     end
   end

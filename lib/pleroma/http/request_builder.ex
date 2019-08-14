@@ -53,6 +53,15 @@ defmodule Pleroma.HTTP.RequestBuilder do
         header_list
       end
 
+    # TODO: maybe we need this header for all adapters, so we won't fail on adapter change
+    header_list =
+      if Application.get_env(:tesla, :adapter) == Tesla.Adapter.Gun do
+        %{host: host} = URI.parse(request.url)
+        header_list ++ [{"host", host}]
+      else
+        header_list
+      end
+
     Map.put_new(request, :headers, header_list)
   end
 
