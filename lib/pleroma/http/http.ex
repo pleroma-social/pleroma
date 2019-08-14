@@ -70,6 +70,7 @@ defmodule Pleroma.HTTP do
         adapter_opts =
           Keyword.get(options, :adapter, [])
           |> Keyword.put(:conn, conn)
+          |> Keyword.put(:close_conn, false)
 
         Keyword.put(options, :adapter, adapter_opts)
     end
