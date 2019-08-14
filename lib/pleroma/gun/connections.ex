@@ -69,10 +69,6 @@ defmodule Pleroma.Gun.Connections do
   def handle_call({:conn, %{opts: opts, uri: uri}}, from, state) do
     key = compose_key(uri)
 
-    IO.inspect(state)
-
-    IO.inspect(key)
-
     case state.conns[key] do
       %{conn: conn, state: conn_state} when conn_state == :up ->
         {:reply, conn, state}
@@ -91,7 +87,6 @@ defmodule Pleroma.Gun.Connections do
             protocol: String.to_atom(uri.scheme)
           })
 
-        IO.inspect(state)
         {:noreply, state}
     end
   end
