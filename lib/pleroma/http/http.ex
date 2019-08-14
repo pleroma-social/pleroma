@@ -62,7 +62,7 @@ defmodule Pleroma.HTTP do
   end
 
   defp get_conn_for_gun(url, options) do
-    case Pleroma.Gun.Connections.try_to_get_gun_conn(url) do
+    case Pleroma.Gun.Connections.get_conn(url) do
       nil ->
         options
 
