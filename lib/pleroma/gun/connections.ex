@@ -26,8 +26,8 @@ defmodule Pleroma.Gun.Connections do
     {:ok, %__MODULE__{conns: %{}}}
   end
 
-  @spec get_conn(atom(), String.t(), keyword()) :: pid()
-  def get_conn(name \\ __MODULE__, url, opts \\ []) do
+  @spec get_conn(String.t(), keyword(), atom()) :: pid()
+  def get_conn(url, opts \\ [], name \\ __MODULE__) do
     opts = Enum.into(opts, %{})
     uri = URI.parse(url)
 
@@ -37,6 +37,27 @@ defmodule Pleroma.Gun.Connections do
       name,
       {:conn, %{opts: opts, uri: uri}}
     )
+  end
+
+  # TODO: only for testing, add this parameter to the config
+  @spec try_to_get_gun_conn(String.t(), keyword(), atom()) :: nil | pid()
+  def try_to_get_gun_conn(url, opts \\ [], name \\ __MODULE__),
+    do: try_to_get_gun_conn(url, opts, name, 0)
+
+  @spec try_to_get_gun_conn(String.t(), keyword(), atom(), pos_integer()) :: nil | pid()
+  def try_to_get_gun_conn(_url, _, _, 3), do: nil
+
+  def try_to_get_gun_conn(url, opts, name, acc) do
+    case Pleroma.Gun.Connections.get_conn(url, opts, name) do
+      nil -> try_to_get_gun_conn(url, acc + 1)
+      conn -> conn
+    end
+  end
+
+  @spec alive?(atom()) :: boolean()
+  def alive?(name \\ __MODULE__) do
+    pid = Process.whereis(name)
+    if pid, do: Process.alive?(pid), else: false
   end
 
   @spec get_state(atom()) :: t()

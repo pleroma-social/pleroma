@@ -32,6 +32,15 @@ defmodule Pleroma.HTTP do
         process_request_options(options)
         |> process_sni_options(url)
 
+      adapter_gun? = Application.get_env(:tesla, :adapter) == Tesla.Adapter.Gun
+
+      options =
+        if adapter_gun? and Pleroma.Gun.Connections.alive?() do
+          get_conn_for_gun(url, options)
+        else
+          options
+        end
+
       params = Keyword.get(options, :params, [])
 
       %{}
@@ -49,6 +58,20 @@ defmodule Pleroma.HTTP do
     catch
       :exit, e ->
         {:error, e}
+    end
+  end
+
+  defp get_conn_for_gun(url, options) do
+    case Pleroma.Gun.Connections.try_to_get_gun_conn(url) do
+      nil ->
+        options
+
+      conn ->
+        adapter_opts =
+          Keyword.get(options, :adapter, [])
+          |> Keyword.put(:conn, conn)
+
+        Keyword.put(options, :adapter, adapter_opts)
     end
   end
 
