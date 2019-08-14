@@ -12,8 +12,6 @@ defmodule Pleroma.ReverseProxy.Client.Tesla do
       Keyword.get(opts, :adapter, [])
       |> Keyword.put(:body_as, :chunks)
 
-    IO.inspect(adapter_opts)
-
     with {:ok, response} <-
            Pleroma.HTTP.request(
              method,
