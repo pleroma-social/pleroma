@@ -9,8 +9,7 @@ defmodule Pleroma.HTTP.Connection do
 
   @options [
     connect_timeout: 10_000,
-    timeout: 20_000,
-    protocols: [:http]
+    timeout: 20_000
   ]
 
   @doc """
@@ -24,8 +23,7 @@ defmodule Pleroma.HTTP.Connection do
   def new(opts \\ []) do
     middleware = [Tesla.Middleware.FollowRedirects]
     adapter = Application.get_env(:tesla, :adapter)
-    options = options(opts)
-    Tesla.client(middleware, {adapter, options})
+    Tesla.client(middleware, {adapter, options(opts)})
   end
 
   # fetch http options

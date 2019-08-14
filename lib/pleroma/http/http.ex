@@ -45,9 +45,9 @@ defmodule Pleroma.HTTP do
 
       %{}
       |> Builder.method(method)
+      |> Builder.url(url)
       |> Builder.headers(headers)
       |> Builder.opts(options)
-      |> Builder.url(url)
       |> Builder.add_param(:body, :body, body)
       |> Builder.add_param(:query, :query, params)
       |> Enum.into([])
