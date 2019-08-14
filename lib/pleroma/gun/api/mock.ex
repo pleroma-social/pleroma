@@ -13,7 +13,7 @@ defmodule Pleroma.Gun.API.Mock do
 
   def open('some-domain.com', 443, %{genserver_pid: genserver_pid}) do
     {:ok, conn_pid} = Task.start_link(fn -> Process.sleep(1_000) end)
-    send(genserver_pid, {:gun_up, conn_pid, :https})
+    send(genserver_pid, {:gun_up, conn_pid, :http2})
     {:ok, conn_pid}
   end
 

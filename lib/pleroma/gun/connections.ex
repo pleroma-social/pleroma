@@ -100,8 +100,8 @@ defmodule Pleroma.Gun.Connections do
   def handle_call({:state}, _from, state), do: {:reply, state, state}
 
   @impl true
-  def handle_info({:gun_up, conn_pid, protocol}, state) do
-    {key, conn} = find_conn(state.conns, conn_pid, protocol)
+  def handle_info({:gun_up, conn_pid, _protocol}, state) do
+    {key, conn} = find_conn(state.conns, conn_pid)
 
     # Send to all waiting processes connection pid
     Enum.each(conn.waiting_pids, fn waiting_pid -> GenServer.reply(waiting_pid, conn_pid) end)
@@ -113,8 +113,8 @@ defmodule Pleroma.Gun.Connections do
 
   @impl true
   # Do we need to do something with killed & unprocessed references?
-  def handle_info({:gun_down, conn_pid, protocol, _reason, _killed, _unprocessed}, state) do
-    {key, conn} = find_conn(state.conns, conn_pid, protocol)
+  def handle_info({:gun_down, conn_pid, _protocol, _reason, _killed, _unprocessed}, state) do
+    {key, conn} = find_conn(state.conns, conn_pid)
 
     # We don't want to block requests to GenServer if gun send down message, return nil, so we can make some retries, while connection is not up
     Enum.each(conn.waiting_pids, fn waiting_pid -> GenServer.reply(waiting_pid, nil) end)
@@ -125,6 +125,10 @@ defmodule Pleroma.Gun.Connections do
 
   defp compose_key(uri), do: uri.host <> ":" <> to_string(uri.port)
 
-  defp find_conn(conns, conn_pid, protocol),
-    do: Enum.find(conns, fn {_, conn} -> conn.conn == conn_pid and conn.protocol == protocol end)
+  defp find_conn(conns, conn_pid) do
+    Enum.find(conns, fn {key, conn} ->
+      protocol = if String.ends_with?(key, ":443"), do: :https, else: :http
+      conn.conn == conn_pid and conn.protocol == protocol
+    end)
+  end
 end
