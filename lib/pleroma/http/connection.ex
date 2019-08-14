@@ -23,7 +23,9 @@ defmodule Pleroma.HTTP.Connection do
   def new(opts \\ []) do
     middleware = [Tesla.Middleware.FollowRedirects]
     adapter = Application.get_env(:tesla, :adapter)
-    Tesla.client(middleware, {adapter, options(opts)})
+    options = options(opts)
+    IO.inspect(options)
+    Tesla.client(middleware, {adapter, options})
   end
 
   # fetch http options
