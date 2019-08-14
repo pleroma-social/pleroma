@@ -41,8 +41,6 @@ defmodule Pleroma.HTTP do
           options
         end
 
-      IO.inspect(options)
-
       params = Keyword.get(options, :params, [])
 
       %{}
