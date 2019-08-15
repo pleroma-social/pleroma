@@ -67,10 +67,13 @@ defmodule Pleroma.HTTP do
         options
 
       conn ->
+        %{host: host, port: port} = URI.parse(url)
+
         adapter_opts =
           Keyword.get(options, :adapter, [])
           |> Keyword.put(:conn, conn)
           |> Keyword.put(:close_conn, false)
+          |> Keyword.put(:original, "#{host}:#{port}")
 
         Keyword.put(options, :adapter, adapter_opts)
     end
