@@ -113,7 +113,7 @@ defmodule Pleroma.Mixfile do
       {:poison, "~> 3.0", override: true},
       {:tesla,
        github: "alex-strizhakov/tesla",
-       ref: "99856638d0b8f382eb22e704b76bc30b4c4c379d",
+       ref: "82dd3ace650b93d6699cf379b1a238d891f45cfb",
        override: true},
       {:cowlib, "~> 2.6.0", override: true},
       {:gun, "~> 1.3"},
