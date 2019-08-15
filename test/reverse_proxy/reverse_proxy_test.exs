@@ -361,5 +361,28 @@ defmodule Pleroma.ReverseProxyTest do
         Pleroma.Config.put([Pleroma.Gun.API], api)
       end)
     end
+
+    test "tesla client with gun client follow redirects", %{conn: conn} do
+      client = Pleroma.Config.get([Pleroma.ReverseProxy.Client])
+      Pleroma.Config.put([Pleroma.ReverseProxy.Client], Pleroma.ReverseProxy.Client.Tesla)
+      adapter = Application.get_env(:tesla, :adapter)
+      Application.put_env(:tesla, :adapter, Tesla.Adapter.Gun)
+
+      api = Pleroma.Config.get([Pleroma.Gun.API])
+      Pleroma.Config.put([Pleroma.Gun.API], :gun)
+      {:ok, _} = Pleroma.Gun.Connections.start_link(Pleroma.Gun.Connections)
+
+      conn = ReverseProxy.call(conn, "https://httpbin.org/redirect/7")
+
+      assert byte_size(conn.resp_body) == 10
+      assert conn.state == :chunked
+      assert conn.status == 200
+
+      on_exit(fn ->
+        Pleroma.Config.put([Pleroma.ReverseProxy.Client], client)
+        Application.put_env(:tesla, :adapter, adapter)
+        Pleroma.Config.put([Pleroma.Gun.API], api)
+      end)
+    end
   end
 end
