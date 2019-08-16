@@ -11,20 +11,6 @@ defmodule Pleroma.Gun.Connections do
           conns: %{domain() => conn()}
         }
 
-  @gun_keys [
-    :connect_timeout,
-    :http_opts,
-    :http2_opts,
-    :protocols,
-    :retry,
-    :retry_timeout,
-    :trace,
-    :transport,
-    :tls_opts,
-    :tcp_opts,
-    :ws_opts
-  ]
-
   defstruct conns: %{}
 
   def start_link(name \\ __MODULE__) do
@@ -95,8 +81,7 @@ defmodule Pleroma.Gun.Connections do
         {:noreply, state}
 
       nil ->
-        {:ok, conn} =
-          Pleroma.Gun.API.open(to_charlist(uri.host), uri.port, Map.take(opts, @gun_keys))
+        {:ok, conn} = Pleroma.Gun.API.open(to_charlist(uri.host), uri.port, opts)
 
         state =
           put_in(state.conns[key], %Pleroma.Gun.Conn{
