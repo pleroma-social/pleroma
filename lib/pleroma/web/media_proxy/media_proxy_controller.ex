@@ -13,9 +13,6 @@ defmodule Pleroma.Web.MediaProxy.MediaProxyController do
     with config <- Pleroma.Config.get([:media_proxy], []),
          true <- Keyword.get(config, :enabled, false),
          {:ok, url} <- MediaProxy.decode_url(sig64, url64),
-         IO.inspect(sig64),
-         IO.inspect(url64),
-         IO.inspect(url),
          :ok <- filename_matches(params, conn.request_path, url) do
       ReverseProxy.call(conn, url, Keyword.get(config, :proxy_opts, @default_proxy_opts))
     else

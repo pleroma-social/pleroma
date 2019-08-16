@@ -355,7 +355,7 @@ defmodule Pleroma.ReverseProxyTest do
       Application.put_env(:tesla, :adapter, Tesla.Adapter.Gun)
 
       api = Pleroma.Config.get([Pleroma.Gun.API])
-      Pleroma.Config.put([Pleroma.Gun.API], :gun)
+      Pleroma.Config.put([Pleroma.Gun.API], Pleroma.Gun.API.Gun)
       {:ok, _} = Pleroma.Gun.Connections.start_link(Pleroma.Gun.Connections)
 
       conn = ReverseProxy.call(conn, "http://httpbin.org/stream-bytes/10")
@@ -378,7 +378,7 @@ defmodule Pleroma.ReverseProxyTest do
       Application.put_env(:tesla, :adapter, Tesla.Adapter.Gun)
 
       api = Pleroma.Config.get([Pleroma.Gun.API])
-      Pleroma.Config.put([Pleroma.Gun.API], :gun)
+      Pleroma.Config.put([Pleroma.Gun.API], Pleroma.Gun.API.Gun)
       {:ok, _} = Pleroma.Gun.Connections.start_link(Pleroma.Gun.Connections)
 
       conn = ReverseProxy.call(conn, "https://httpbin.org/stream-bytes/10")
@@ -401,7 +401,7 @@ defmodule Pleroma.ReverseProxyTest do
       Application.put_env(:tesla, :adapter, Tesla.Adapter.Gun)
 
       api = Pleroma.Config.get([Pleroma.Gun.API])
-      Pleroma.Config.put([Pleroma.Gun.API], :gun)
+      Pleroma.Config.put([Pleroma.Gun.API], Pleroma.Gun.API.Gun)
       {:ok, _} = Pleroma.Gun.Connections.start_link(Pleroma.Gun.Connections)
 
       conn = ReverseProxy.call(conn, "https://httpbin.org/redirect/5")
