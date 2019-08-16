@@ -180,7 +180,7 @@ defmodule Gun.ConnectionsTest do
 
     test "opens connection and reuse it on next request", %{name: name} do
       api = Pleroma.Config.get([API])
-      Pleroma.Config.put([API], :gun)
+      Pleroma.Config.put([API], API.Gun)
       on_exit(fn -> Pleroma.Config.put([API], api) end)
       conn = Connections.get_conn("http://httpbin.org", [], name)
 
@@ -204,7 +204,7 @@ defmodule Gun.ConnectionsTest do
 
     test "opens ssl connection and reuse it on next request", %{name: name} do
       api = Pleroma.Config.get([API])
-      Pleroma.Config.put([API], :gun)
+      Pleroma.Config.put([API], API.Gun)
       on_exit(fn -> Pleroma.Config.put([API], api) end)
       conn = Connections.get_conn("https://httpbin.org", [], name)
 
