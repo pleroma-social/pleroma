@@ -90,7 +90,7 @@ defmodule Pleroma.HTTP do
         tls_opts =
           Keyword.get(options, :tls_opts, [])
           |> Keyword.put(:server_name_indication, host)
-          |> Keyword.put(:versions, ['tlsv1.2', 'tlsv1.1', :tlsv1])
+          |> Keyword.put(:versions, [:"tlsv1.2", :"tlsv1.1", :tlsv1])
 
         Keyword.put(options, :tls_opts, tls_opts) ++ [ssl: [server_name_indication: host]]
 
