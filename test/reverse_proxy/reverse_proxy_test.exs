@@ -372,9 +372,8 @@ defmodule Pleroma.ReverseProxyTest do
       Pleroma.Config.put([Pleroma.Gun.API], :gun)
       {:ok, _} = Pleroma.Gun.Connections.start_link(Pleroma.Gun.Connections)
 
-      conn = ReverseProxy.call(conn, "https://httpbin.org/redirect/7")
+      conn = ReverseProxy.call(conn, "https://httpbin.org/redirect/5")
 
-      assert byte_size(conn.resp_body) == 10
       assert conn.state == :chunked
       assert conn.status == 200
 
