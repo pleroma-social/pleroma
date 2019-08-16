@@ -62,7 +62,7 @@ defmodule Pleroma.HTTP do
   end
 
   defp get_conn_for_gun(url, options) do
-    case Pleroma.Gun.Connections.get_conn(url) do
+    case Pleroma.Gun.Connections.get_conn(url, options) do
       nil ->
         options
 
@@ -86,8 +86,15 @@ defmodule Pleroma.HTTP do
     host = uri.host |> to_charlist()
 
     case uri.scheme do
-      "https" -> options ++ [ssl: [server_name_indication: host]]
-      _ -> options
+      "https" ->
+        tls_opts =
+          Keyword.get(options, :tls_opts, [])
+          |> Keyword.put(:server_name_indication, host)
+
+        Keyword.put(options, :tls_opts, tls_opts) ++ [ssl: [server_name_indication: host]]
+
+      _ ->
+        options
     end
   end
 
