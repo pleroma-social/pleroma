@@ -10,6 +10,6 @@ defmodule Pleroma.Gun.API do
   end
 
   defp api do
-    Pleroma.Config.get([Pleroma.Gun.API], :gun)
+    Pleroma.Config.get([Pleroma.Gun.API], Pleroma.Gun.API.Gun)
   end
 end
