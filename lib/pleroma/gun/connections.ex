@@ -31,7 +31,10 @@ defmodule Pleroma.Gun.Connections do
     opts = Enum.into(opts, %{})
     uri = URI.parse(url)
 
-    opts = if uri.scheme == "https", do: Map.put(opts, :transport, :tls), else: opts
+    opts =
+      if uri.scheme == "https" and uri.port != 443,
+        do: Map.put(opts, :transport, :tls),
+        else: opts
 
     GenServer.call(
       name,
