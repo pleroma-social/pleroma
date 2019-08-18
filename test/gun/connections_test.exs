@@ -4,7 +4,9 @@
 
 defmodule Gun.ConnectionsTest do
   use ExUnit.Case
-  alias Pleroma.Gun.{Connections, Conn, API}
+  alias Pleroma.Gun.API
+  alias Pleroma.Gun.Conn
+  alias Pleroma.Gun.Connections
 
   setup do
     name = :test_gun_connections
