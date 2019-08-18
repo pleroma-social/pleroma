@@ -114,7 +114,9 @@ defmodule Pleroma.Gun.Connections do
   def handle_info({:gun_down, conn_pid, _protocol, _reason, _killed, _unprocessed}, state) do
     {key, conn} = find_conn(state.conns, conn_pid)
 
-    # We don't want to block requests to GenServer if gun send down message, return nil, so we can make some retries, while connection is not up
+    # We don't want to block requests to GenServer.
+    # If gun sends a down message, return nil, so we can make some
+    # retries, while the connection is not up.
     Enum.each(conn.waiting_pids, fn waiting_pid -> GenServer.reply(waiting_pid, nil) end)
 
     state = put_in(state.conns[key].state, :down)
