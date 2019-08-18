@@ -13,9 +13,9 @@ defmodule Pleroma.Gun.Connections do
 
   defstruct conns: %{}
 
-  def start_link(name \\ __MODULE__) do
+  def start_link(_) do
     if Application.get_env(:tesla, :adapter) == Tesla.Adapter.Gun do
-      GenServer.start_link(__MODULE__, [], name: name)
+      GenServer.start_link(__MODULE__, [])
     else
       :ignore
     end
