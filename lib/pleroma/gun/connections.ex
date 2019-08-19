@@ -15,6 +15,8 @@ defmodule Pleroma.Gun.Connections do
 
   defstruct conns: %{}, opts: []
 
+  alias Pleroma.Gun.API
+
   @spec start_link({atom(), keyword()}) :: {:ok, pid()} | :ignore
   def start_link({name, opts}) do
     if Application.get_env(:tesla, :adapter) == Tesla.Adapter.Gun do
@@ -42,21 +44,6 @@ defmodule Pleroma.Gun.Connections do
       name,
       {:conn, %{opts: opts, uri: uri}}
     )
-  end
-
-  # TODO: only for testing, add this parameter to the config
-  @spec try_to_get_gun_conn(String.t(), keyword(), atom()) :: nil | pid()
-  def try_to_get_gun_conn(url, opts \\ [], name \\ :default),
-    do: try_to_get_gun_conn(url, opts, name, 0)
-
-  @spec try_to_get_gun_conn(String.t(), keyword(), atom(), pos_integer()) :: nil | pid()
-  def try_to_get_gun_conn(_url, _, _, 3), do: nil
-
-  def try_to_get_gun_conn(url, opts, name, acc) do
-    case Pleroma.Gun.Connections.get_conn(url, opts, name) do
-      nil -> try_to_get_gun_conn(url, acc + 1)
-      conn -> conn
-    end
   end
 
   @spec alive?(atom()) :: boolean()
@@ -91,7 +78,7 @@ defmodule Pleroma.Gun.Connections do
         else
           [{close_key, least_used} | _conns] = Enum.sort_by(state.conns, fn {_k, v} -> v.used end)
 
-          :ok = Pleroma.Gun.API.close(least_used.conn)
+          :ok = API.close(least_used.conn)
 
           state =
             put_in(
@@ -128,12 +115,10 @@ defmodule Pleroma.Gun.Connections do
   end
 
   @impl true
-  # Do we need to do something with killed & unprocessed references?
   def handle_info({:gun_down, conn_pid, _protocol, _reason, _killed, _unprocessed}, state) do
     conn_key = compose_key_gun_info(conn_pid)
     {key, conn} = find_conn(state.conns, conn_pid, conn_key)
 
-    # We don't want to block requests to GenServer if gun send down message, return nil, so we can make some retries, while connection is not up
     Enum.each(conn.waiting_pids, fn waiting_pid -> GenServer.reply(waiting_pid, nil) end)
 
     state = put_in(state.conns[key].state, :down)
@@ -143,7 +128,7 @@ defmodule Pleroma.Gun.Connections do
   defp compose_key(uri), do: "#{uri.scheme}:#{uri.host}:#{uri.port}"
 
   defp compose_key_gun_info(pid) do
-    info = Pleroma.Gun.API.info(pid)
+    info = API.info(pid)
     "#{info.origin_scheme}:#{info.origin_host}:#{info.origin_port}"
   end
 
@@ -154,7 +139,7 @@ defmodule Pleroma.Gun.Connections do
   end
 
   defp open_conn(key, uri, from, state, opts) do
-    {:ok, conn} = Pleroma.Gun.API.open(to_charlist(uri.host), uri.port, opts)
+    {:ok, conn} = API.open(to_charlist(uri.host), uri.port, opts)
 
     state =
       put_in(state.conns[key], %Pleroma.Gun.Conn{

@@ -34,9 +34,11 @@ defmodule Pleroma.HTTP do
 
       adapter_gun? = Application.get_env(:tesla, :adapter) == Tesla.Adapter.Gun
 
+      pool = options[:adapter][:pool]
+
       options =
-        if adapter_gun? and Pleroma.Gun.Connections.alive?() do
-          get_conn_for_gun(url, options)
+        if adapter_gun? and not is_nil(pool) and Pleroma.Gun.Connections.alive?(pool) do
+          get_conn_for_gun(url, options, pool)
         else
           options
         end
@@ -61,10 +63,8 @@ defmodule Pleroma.HTTP do
     end
   end
 
-  defp get_conn_for_gun(url, options) do
-    pool = if options[:adapter][:pool], do: options[:adapter][:pool], else: :default
-
-    case Pleroma.Gun.Connections.try_to_get_gun_conn(url, options, pool) do
+  defp get_conn_for_gun(url, options, pool) do
+    case Pleroma.Gun.Connections.get_conn(url, options, pool) do
       nil ->
         options
 

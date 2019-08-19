@@ -31,27 +31,6 @@ defmodule Gun.ConnectionsTest do
     end
   end
 
-  test "try_to_get_gun_conn/1 returns conn", %{name: name, pid: pid} do
-    conn = Connections.try_to_get_gun_conn("http://some-domain.com", [genserver_pid: pid], name)
-    assert is_pid(conn)
-    assert Process.alive?(conn)
-
-    reused_conn = Connections.get_conn("http://some-domain.com", [genserver_pid: pid], name)
-
-    assert conn == reused_conn
-
-    %Connections{
-      conns: %{
-        "http:some-domain.com:80" => %Conn{
-          conn: ^conn,
-          state: :up,
-          waiting_pids: [],
-          used: 2
-        }
-      }
-    } = Connections.get_state(name)
-  end
-
   test "opens connection and reuse it on next request", %{name: name, pid: pid} do
     conn = Connections.get_conn("http://some-domain.com", [genserver_pid: pid], name)
 

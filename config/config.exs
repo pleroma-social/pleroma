@@ -562,10 +562,6 @@ config :pleroma, :gun_pools,
   upload: [
     max_connections: 25,
     timeout: 300_000
-  ],
-  default: [
-    max_connections: 10,
-    timout: 20_000
   ]
 
 # Import environment specific config. This must remain at the bottom
