@@ -19,11 +19,7 @@ defmodule Pleroma.Gun.Connections do
 
   @spec start_link({atom(), keyword()}) :: {:ok, pid()} | :ignore
   def start_link({name, opts}) do
-    if Application.get_env(:tesla, :adapter) == Tesla.Adapter.Gun do
-      GenServer.start_link(__MODULE__, opts, name: name)
-    else
-      :ignore
-    end
+    GenServer.start_link(__MODULE__, opts, name: name)
   end
 
   @impl true
