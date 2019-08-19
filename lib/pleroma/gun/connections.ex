@@ -46,7 +46,7 @@ defmodule Pleroma.Gun.Connections do
 
   # TODO: only for testing, add this parameter to the config
   @spec try_to_get_gun_conn(String.t(), keyword(), atom()) :: nil | pid()
-  def try_to_get_gun_conn(url, opts \\ [], name \\ __MODULE__),
+  def try_to_get_gun_conn(url, opts \\ [], name \\ :default),
     do: try_to_get_gun_conn(url, opts, name, 0)
 
   @spec try_to_get_gun_conn(String.t(), keyword(), atom(), pos_integer()) :: nil | pid()

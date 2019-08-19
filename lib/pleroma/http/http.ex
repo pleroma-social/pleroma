@@ -62,7 +62,9 @@ defmodule Pleroma.HTTP do
   end
 
   defp get_conn_for_gun(url, options) do
-    case Pleroma.Gun.Connections.get_conn(url, options) do
+    pool = if options[:adapter][:pool], do: options[:adapter][:pool], else: :default
+
+    case Pleroma.Gun.Connections.try_to_get_gun_conn(url, options, pool) do
       nil ->
         options
 

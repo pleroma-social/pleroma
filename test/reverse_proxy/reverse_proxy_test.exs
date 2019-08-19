@@ -356,7 +356,9 @@ defmodule Pleroma.ReverseProxyTest do
 
       api = Pleroma.Config.get([Pleroma.Gun.API])
       Pleroma.Config.put([Pleroma.Gun.API], Pleroma.Gun.API.Gun)
-      {:ok, _} = Pleroma.Gun.Connections.start_link(Pleroma.Gun.Connections)
+
+      {:ok, _} =
+        Pleroma.Gun.Connections.start_link({:media, [max_connections: 5, timeout: 5_000]})
 
       conn = ReverseProxy.call(conn, "http://httpbin.org/stream-bytes/10")
 
@@ -379,7 +381,9 @@ defmodule Pleroma.ReverseProxyTest do
 
       api = Pleroma.Config.get([Pleroma.Gun.API])
       Pleroma.Config.put([Pleroma.Gun.API], Pleroma.Gun.API.Gun)
-      {:ok, _} = Pleroma.Gun.Connections.start_link(Pleroma.Gun.Connections)
+
+      {:ok, _} =
+        Pleroma.Gun.Connections.start_link({:media, [max_connections: 5, timeout: 5_000]})
 
       conn = ReverseProxy.call(conn, "https://httpbin.org/stream-bytes/10")
 
@@ -402,7 +406,9 @@ defmodule Pleroma.ReverseProxyTest do
 
       api = Pleroma.Config.get([Pleroma.Gun.API])
       Pleroma.Config.put([Pleroma.Gun.API], Pleroma.Gun.API.Gun)
-      {:ok, _} = Pleroma.Gun.Connections.start_link(Pleroma.Gun.Connections)
+
+      {:ok, _} =
+        Pleroma.Gun.Connections.start_link({:media, [max_connections: 5, timeout: 5_000]})
 
       conn = ReverseProxy.call(conn, "https://httpbin.org/redirect/5")
 
