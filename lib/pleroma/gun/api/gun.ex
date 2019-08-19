@@ -19,4 +19,10 @@ defmodule Pleroma.Gun.API.Gun do
   def open(host, port, opts) do
     :gun.open(host, port, Map.take(opts, @gun_keys))
   end
+
+  @impl Pleroma.Gun.API
+  def info(pid), do: :gun.info(pid)
+
+  @impl Pleroma.Gun.API
+  def close(pid), do: :gun.close(pid)
 end

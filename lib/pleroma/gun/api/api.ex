@@ -4,9 +4,19 @@
 
 defmodule Pleroma.Gun.API do
   @callback open(charlist(), pos_integer(), map()) :: {:ok, pid()}
+  @callback info(pid()) :: map()
+  @callback close(pid()) :: :ok
 
   def open(host, port, opts) do
     api().open(host, port, opts)
+  end
+
+  def info(pid) do
+    api().info(pid)
+  end
+
+  def close(pid) do
+    api().close(pid)
   end
 
   defp api do
