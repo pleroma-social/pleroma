@@ -65,24 +65,6 @@ defmodule Pleroma.HTTP do
     end
   end
 
-  defp get_conn_for_gun(url, options) do
-    case Pleroma.Gun.Connections.get_conn(url, options) do
-      nil ->
-        options
-
-      conn ->
-        %{host: host, port: port} = URI.parse(url)
-
-        adapter_opts =
-          Keyword.get(options, :adapter, [])
-          |> Keyword.put(:conn, conn)
-          |> Keyword.put(:close_conn, false)
-          |> Keyword.put(:original, "#{host}:#{port}")
-
-        Keyword.put(options, :adapter, adapter_opts)
-    end
-  end
-
   defp process_sni_options(options, nil), do: options
 
   defp process_sni_options(options, url) do
