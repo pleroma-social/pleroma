@@ -10,8 +10,8 @@ defmodule Pleroma.Gun.Conn do
           conn: pid(),
           state: atom(),
           waiting_pids: [pid()],
-          protocol: atom()
+          used: pos_integer()
         }
 
-  defstruct conn: nil, state: :open, waiting_pids: [], protocol: :http
+  defstruct conn: nil, state: :open, waiting_pids: [], used: 0
 end

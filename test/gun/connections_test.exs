@@ -8,12 +8,17 @@ defmodule Gun.ConnectionsTest do
   alias Pleroma.Gun.Conn
   alias Pleroma.Gun.Connections
 
+  setup_all do
+    {:ok, _} = Registry.start_link(keys: :unique, name: API.Mock)
+    :ok
+  end
+
   setup do
     name = :test_gun_connections
     adapter = Application.get_env(:tesla, :adapter)
     Application.put_env(:tesla, :adapter, Tesla.Adapter.Gun)
     on_exit(fn -> Application.put_env(:tesla, :adapter, adapter) end)
-    {:ok, pid} = Connections.start_link(name)
+    {:ok, pid} = Connections.start_link({name, [max_connections: 2, timeout: 10]})
 
     {:ok, name: name, pid: pid}
   end
@@ -28,26 +33,6 @@ defmodule Gun.ConnectionsTest do
     end
   end
 
-  test "try_to_get_gun_conn/1 returns conn", %{name: name, pid: pid} do
-    conn = Connections.try_to_get_gun_conn("http://some-domain.com", [genserver_pid: pid], name)
-    assert is_pid(conn)
-    assert Process.alive?(conn)
-
-    reused_conn = Connections.get_conn("http://some-domain.com", [genserver_pid: pid], name)
-
-    assert conn == reused_conn
-
-    %Connections{
-      conns: %{
-        "some-domain.com:80" => %Conn{
-          conn: ^conn,
-          state: :up,
-          waiting_pids: []
-        }
-      }
-    } = Connections.get_state(name)
-  end
-
   test "opens connection and reuse it on next request", %{name: name, pid: pid} do
     conn = Connections.get_conn("http://some-domain.com", [genserver_pid: pid], name)
 
@@ -60,10 +45,11 @@ defmodule Gun.ConnectionsTest do
 
     %Connections{
       conns: %{
-        "some-domain.com:80" => %Conn{
+        "http:some-domain.com:80" => %Conn{
           conn: ^conn,
           state: :up,
-          waiting_pids: []
+          waiting_pids: [],
+          used: 2
         }
       }
     } = Connections.get_state(name)
@@ -86,12 +72,12 @@ defmodule Gun.ConnectionsTest do
 
     %Connections{
       conns: %{
-        "some-domain.com:80" => %Conn{
+        "http:some-domain.com:80" => %Conn{
           conn: ^conn,
           state: :up,
           waiting_pids: []
         },
-        "some-domain.com:443" => %Conn{
+        "https:some-domain.com:443" => %Conn{
           conn: ^https_conn,
           state: :up,
           waiting_pids: []
@@ -107,7 +93,7 @@ defmodule Gun.ConnectionsTest do
 
     %Connections{
       conns: %{
-        "gun_down.com:80" => %Conn{
+        "http:gun_down.com:80" => %Conn{
           conn: _,
           state: :down,
           waiting_pids: _
@@ -123,10 +109,11 @@ defmodule Gun.ConnectionsTest do
 
     %Connections{
       conns: %{
-        "gun_down_and_up.com:80" => %Conn{
+        "http:gun_down_and_up.com:80" => %Conn{
           conn: _,
           state: :down,
-          waiting_pids: _
+          waiting_pids: _,
+          used: 0
         }
       }
     } = Connections.get_state(name)
@@ -138,10 +125,11 @@ defmodule Gun.ConnectionsTest do
 
     %Connections{
       conns: %{
-        "gun_down_and_up.com:80" => %Conn{
+        "http:gun_down_and_up.com:80" => %Conn{
           conn: _,
           state: :up,
-          waiting_pids: []
+          waiting_pids: [],
+          used: 2
         }
       }
     } = Connections.get_state(name)
@@ -166,15 +154,62 @@ defmodule Gun.ConnectionsTest do
 
     %Connections{
       conns: %{
-        "some-domain.com:80" => %Conn{
+        "http:some-domain.com:80" => %Conn{
           conn: conn,
           state: :up,
-          waiting_pids: []
+          waiting_pids: [],
+          used: 5
         }
       }
     } = Connections.get_state(name)
 
     assert Enum.all?(conns, fn res -> res == conn end)
+  end
+
+  test "remove frequently used", %{name: name, pid: pid} do
+    Connections.get_conn("https://some-domain.com", [genserver_pid: pid], name)
+
+    for _ <- 1..4 do
+      Connections.get_conn("http://some-domain.com", [genserver_pid: pid], name)
+    end
+
+    %Connections{
+      conns: %{
+        "http:some-domain.com:80" => %Conn{
+          conn: _,
+          state: :up,
+          waiting_pids: [],
+          used: 4
+        },
+        "https:some-domain.com:443" => %Conn{
+          conn: _,
+          state: :up,
+          waiting_pids: [],
+          used: 1
+        }
+      },
+      opts: [max_connections: 2, timeout: 10]
+    } = Connections.get_state(name)
+
+    conn = Connections.get_conn("http://another-domain.com", [genserver_pid: pid], name)
+
+    %Connections{
+      conns: %{
+        "http:another-domain.com:80" => %Conn{
+          conn: ^conn,
+          state: :up,
+          waiting_pids: [],
+          used: 1
+        },
+        "http:some-domain.com:80" => %Conn{
+          conn: _,
+          state: :up,
+          waiting_pids: [],
+          used: 4
+        }
+      },
+      opts: [max_connections: 2, timeout: 10]
+    } = Connections.get_state(name)
   end
 
   describe "integration test" do
@@ -195,10 +230,11 @@ defmodule Gun.ConnectionsTest do
 
       %Connections{
         conns: %{
-          "httpbin.org:80" => %Conn{
+          "http:httpbin.org:80" => %Conn{
             conn: ^conn,
             state: :up,
-            waiting_pids: []
+            waiting_pids: [],
+            used: 2
           }
         }
       } = Connections.get_state(name)
@@ -219,12 +255,63 @@ defmodule Gun.ConnectionsTest do
 
       %Connections{
         conns: %{
-          "httpbin.org:443" => %Conn{
+          "https:httpbin.org:443" => %Conn{
             conn: ^conn,
             state: :up,
-            waiting_pids: []
+            waiting_pids: [],
+            used: 2
           }
         }
+      } = Connections.get_state(name)
+    end
+
+    test "remove frequently used", %{name: name, pid: pid} do
+      api = Pleroma.Config.get([API])
+      Pleroma.Config.put([API], API.Gun)
+      on_exit(fn -> Pleroma.Config.put([API], api) end)
+
+      Connections.get_conn("https://www.google.com", [genserver_pid: pid], name)
+
+      for _ <- 1..4 do
+        Connections.get_conn("https://httpbin.org", [genserver_pid: pid], name)
+      end
+
+      %Connections{
+        conns: %{
+          "https:httpbin.org:443" => %Conn{
+            conn: _,
+            state: :up,
+            waiting_pids: [],
+            used: 4
+          },
+          "https:www.google.com:443" => %Conn{
+            conn: _,
+            state: :up,
+            waiting_pids: [],
+            used: 1
+          }
+        },
+        opts: [max_connections: 2, timeout: 10]
+      } = Connections.get_state(name)
+
+      conn = Connections.get_conn("http://httpbin.org", [genserver_pid: pid], name)
+
+      %Connections{
+        conns: %{
+          "http:httpbin.org:80" => %Conn{
+            conn: ^conn,
+            state: :up,
+            waiting_pids: [],
+            used: 1
+          },
+          "https:httpbin.org:443" => %Conn{
+            conn: _,
+            state: :up,
+            waiting_pids: [],
+            used: 4
+          }
+        },
+        opts: [max_connections: 2, timeout: 10]
       } = Connections.get_state(name)
     end
   end

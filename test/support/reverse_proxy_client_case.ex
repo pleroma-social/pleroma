@@ -1,3 +1,7 @@
+# Pleroma: A lightweight social networking server
+# Copyright © 2017-2019 Pleroma Authors <https://pleroma.social/>
+# SPDX-License-Identifier: AGPL-3.0-only
+
 defmodule Pleroma.ReverseProxyClientCase do
   defmacro __using__(client: client) do
     quote do
@@ -51,7 +55,7 @@ defmodule Pleroma.ReverseProxyClientCase do
             assert headers != []
             check_ref(ref)
 
-            assert :ok = @client.close(ref)
+            assert :ok == close(ref)
 
           {:ok, status, headers} ->
             assert headers != []

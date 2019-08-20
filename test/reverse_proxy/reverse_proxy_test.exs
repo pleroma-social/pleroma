@@ -108,11 +108,11 @@ defmodule Pleroma.ReverseProxyTest do
                "[error] Elixir.Pleroma.ReverseProxy: request to \"/user-agent\" failed: :body_too_large"
     end
 
-    test "max_body_size returns error if streaming body more than that option", %{conn: conn} do
+    test "max_body_length returns error if streaming body more than that option", %{conn: conn} do
       stream_mock(3, true)
 
       assert capture_log(fn ->
-               ReverseProxy.call(conn, "/stream-bytes/50", max_body_size: 30)
+               ReverseProxy.call(conn, "/stream-bytes/50", max_body_length: 30)
              end) =~
                "[warn] Elixir.Pleroma.ReverseProxy request to /stream-bytes/50 failed while reading/chunking: :body_too_large"
     end
@@ -324,7 +324,6 @@ defmodule Pleroma.ReverseProxyTest do
 
       api = Pleroma.Config.get([Pleroma.Gun.API])
       Pleroma.Config.put([Pleroma.Gun.API], Pleroma.Gun.API.Gun)
-      {:ok, _} = Pleroma.Gun.Connections.start_link(Pleroma.Gun.Connections)
 
       conn = ReverseProxy.call(conn, "http://httpbin.org/stream-bytes/10")
 
@@ -347,7 +346,6 @@ defmodule Pleroma.ReverseProxyTest do
 
       api = Pleroma.Config.get([Pleroma.Gun.API])
       Pleroma.Config.put([Pleroma.Gun.API], Pleroma.Gun.API.Gun)
-      {:ok, _} = Pleroma.Gun.Connections.start_link(Pleroma.Gun.Connections)
 
       conn = ReverseProxy.call(conn, "https://httpbin.org/stream-bytes/10")
 
@@ -370,7 +368,6 @@ defmodule Pleroma.ReverseProxyTest do
 
       api = Pleroma.Config.get([Pleroma.Gun.API])
       Pleroma.Config.put([Pleroma.Gun.API], Pleroma.Gun.API.Gun)
-      {:ok, _} = Pleroma.Gun.Connections.start_link(Pleroma.Gun.Connections)
 
       conn = ReverseProxy.call(conn, "https://httpbin.org/redirect/5")
 

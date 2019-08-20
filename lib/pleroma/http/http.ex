@@ -35,8 +35,12 @@ defmodule Pleroma.HTTP do
       adapter_gun? = Application.get_env(:tesla, :adapter) == Tesla.Adapter.Gun
 
       options =
-        if adapter_gun? and Pleroma.Gun.Connections.alive?() do
-          get_conn_for_gun(url, options)
+        if adapter_gun? do
+          adapter_opts =
+            Keyword.get(options, :adapter, [])
+            |> Keyword.put(:url, url)
+
+          Keyword.put(options, :adapter, adapter_opts)
         else
           options
         end
@@ -87,12 +91,7 @@ defmodule Pleroma.HTTP do
 
     case uri.scheme do
       "https" ->
-        tls_opts =
-          Keyword.get(options, :tls_opts, [])
-          |> Keyword.put(:server_name_indication, host)
-          |> Keyword.put(:versions, [:"tlsv1.2", :"tlsv1.1", :tlsv1])
-
-        Keyword.put(options, :tls_opts, tls_opts) ++ [ssl: [server_name_indication: host]]
+        options ++ [ssl: [server_name_indication: host]]
 
       _ ->
         options

@@ -9,7 +9,9 @@ defmodule Pleroma.HTTP.Connection do
 
   @options [
     connect_timeout: 10_000,
-    timeout: 20_000
+    timeout: 20_000,
+    pool: :federation,
+    version: :master
   ]
 
   @doc """
@@ -33,9 +35,33 @@ defmodule Pleroma.HTTP.Connection do
     adapter_options = Pleroma.Config.get([:http, :adapter], [])
     proxy_url = Pleroma.Config.get([:http, :proxy_url], nil)
 
-    @options
-    |> Keyword.merge(adapter_options)
-    |> Keyword.merge(options)
-    |> Keyword.merge(proxy: proxy_url)
+    options =
+      @options
+      |> Keyword.merge(adapter_options)
+      |> Keyword.merge(options)
+      |> Keyword.merge(proxy: proxy_url)
+
+    pool = options[:pool]
+    url = options[:url]
+
+    if not is_nil(url) and not is_nil(pool) and Pleroma.Gun.Connections.alive?(pool) do
+      get_conn_for_gun(url, options, pool)
+    else
+      options
+    end
+  end
+
+  defp get_conn_for_gun(url, options, pool) do
+    case Pleroma.Gun.Connections.get_conn(url, options, pool) do
+      nil ->
+        options
+
+      conn ->
+        %{host: host, port: port} = URI.parse(url)
+
+        Keyword.put(options, :conn, conn)
+        |> Keyword.put(:close_conn, false)
+        |> Keyword.put(:original, "#{host}:#{port}")
+    end
   end
 end

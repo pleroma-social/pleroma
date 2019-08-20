@@ -56,4 +56,26 @@ defmodule Pleroma.HTTPTest do
              }
     end
   end
+
+  @tag :integration
+  test "get_conn_for_gun/3" do
+    adapter = Application.get_env(:tesla, :adapter)
+    Application.put_env(:tesla, :adapter, Tesla.Adapter.Gun)
+    api = Pleroma.Config.get([Pleroma.Gun.API])
+    Pleroma.Config.put([Pleroma.Gun.API], Pleroma.Gun.API.Gun)
+
+    on_exit(fn ->
+      Application.put_env(:tesla, :adapter, adapter)
+      Pleroma.Config.put([Pleroma.Gun.API], api)
+    end)
+
+    options = [adapter: [pool: :federation]]
+
+    assert {:ok, resp} =
+             Pleroma.HTTP.request(:get, "https://httpbin.org/user-agent", "", [], options)
+
+    adapter_opts = resp.opts[:adapter]
+
+    assert adapter_opts[:url] == "https://httpbin.org/user-agent"
+  end
 end

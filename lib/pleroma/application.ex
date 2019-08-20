@@ -40,6 +40,7 @@ defmodule Pleroma.Application do
       ] ++
         cachex_children() ++
         hackney_pool_children() ++
+        gun_pools() ++
         [
           Pleroma.Web.Federator.RetryQueue,
           Pleroma.Stats,
@@ -161,6 +162,19 @@ defmodule Pleroma.Application do
     for pool <- enabled_hackney_pools() do
       options = Pleroma.Config.get([:hackney_pools, pool])
       :hackney_pool.child_spec(pool, options)
+    end
+  end
+
+  defp gun_pools do
+    if Application.get_env(:tesla, :adapter) == Tesla.Adapter.Gun || Mix.env() == :test do
+      for {pool_name, opts} <- Pleroma.Config.get([:gun_pools]) do
+        %{
+          id: :"gun_pool_#{pool_name}",
+          start: {Pleroma.Gun.Connections, :start_link, [{pool_name, opts}]}
+        }
+      end
+    else
+      []
     end
   end
 

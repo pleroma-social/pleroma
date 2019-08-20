@@ -550,6 +550,20 @@ config :pleroma, :rate_limit,
   password_reset: {1_800_000, 5},
   account_confirmation_resend: {8_640_000, 5}
 
+config :pleroma, :gun_pools,
+  federation: [
+    max_connections: 50,
+    timeout: 150_000
+  ],
+  media: [
+    max_connections: 50,
+    timeout: 150_000
+  ],
+  upload: [
+    max_connections: 25,
+    timeout: 300_000
+  ]
+
 # Import environment specific config. This must remain at the bottom
 # of this file so it overrides the configuration defined above.
 import_config "#{Mix.env()}.exs"
