@@ -38,7 +38,6 @@ defmodule Pleroma.Application do
         Pleroma.ScheduledActivityWorker
       ] ++
         cachex_children() ++
-        hackney_pool_children() ++
         gun_pools() ++
         [
           Pleroma.Web.Federator.RetryQueue,
@@ -95,20 +94,6 @@ defmodule Pleroma.Application do
     Pleroma.Web.Endpoint.Instrumenter.setup()
   end
 
-  def enabled_hackney_pools do
-    [:media] ++
-      if Application.get_env(:tesla, :adapter) == Tesla.Adapter.Hackney do
-        [:federation]
-      else
-        []
-      end ++
-      if Pleroma.Config.get([Pleroma.Upload, :proxy_remote]) do
-        [:upload]
-      else
-        []
-      end
-  end
-
   defp cachex_children do
     [
       build_cachex("used_captcha", ttl_interval: seconds_valid_interval()),
@@ -156,13 +141,6 @@ defmodule Pleroma.Application do
   end
 
   defp chat_child(_, _), do: []
-
-  defp hackney_pool_children do
-    for pool <- enabled_hackney_pools() do
-      options = Pleroma.Config.get([:hackney_pools, pool])
-      :hackney_pool.child_spec(pool, options)
-    end
-  end
 
   defp gun_pools do
     if Application.get_env(:tesla, :adapter) == Tesla.Adapter.Gun || Mix.env() == :test do

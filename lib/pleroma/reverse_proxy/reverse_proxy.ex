@@ -58,7 +58,7 @@ defmodule Pleroma.ReverseProxy do
 
   * `req_headers`, `resp_headers` additional headers.
 
-  * `http`: options for [hackney](https://github.com/benoitc/hackney).
+  * `http`: options for [gun](https://github.com/ninenines/gun).
 
   """
   @default_options [pool: :media]
@@ -147,11 +147,11 @@ defmodule Pleroma.ReverseProxy do
     |> halt()
   end
 
-  defp request(method, url, headers, hackney_opts) do
+  defp request(method, url, headers, opts) do
     Logger.debug("#{__MODULE__} #{method} #{url} #{inspect(headers)}")
     method = method |> String.downcase() |> String.to_existing_atom()
 
-    case client().request(method, url, headers, "", hackney_opts) do
+    case client().request(method, url, headers, "", opts) do
       {:ok, code, headers, client} when code in @valid_resp_codes ->
         {:ok, code, downcase_headers(headers), client}
 

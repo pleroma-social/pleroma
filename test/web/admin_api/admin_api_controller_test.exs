@@ -1551,8 +1551,7 @@ defmodule Pleroma.Web.AdminAPI.AdminAPIControllerTest do
                 %{"tuple" => [":method", "Pleroma.Captcha.Kocaptcha"]},
                 %{"tuple" => [":seconds_valid", 60]},
                 %{"tuple" => [":path", ""]},
-                %{"tuple" => [":key1", nil]},
-                %{"tuple" => [":partial_chain", "&:hackney_connect.partial_chain/1"]}
+                %{"tuple" => [":key1", nil]}
               ]
             }
           ]
@@ -1568,8 +1567,7 @@ defmodule Pleroma.Web.AdminAPI.AdminAPIControllerTest do
                      %{"tuple" => [":method", "Pleroma.Captcha.Kocaptcha"]},
                      %{"tuple" => [":seconds_valid", 60]},
                      %{"tuple" => [":path", ""]},
-                     %{"tuple" => [":key1", nil]},
-                     %{"tuple" => [":partial_chain", "&:hackney_connect.partial_chain/1"]}
+                     %{"tuple" => [":key1", nil]}
                    ]
                  }
                ]
