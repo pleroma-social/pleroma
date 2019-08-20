@@ -76,8 +76,6 @@ defmodule Pleroma.HTTPTest do
 
     adapter_opts = resp.opts[:adapter]
 
-    assert adapter_opts[:original] == "httpbin.org:443"
-    refute adapter_opts[:close_conn]
-    assert adapter_opts[:pool] == :federation
+    assert adapter_opts[:url] == "https://httpbin.org/user-agent"
   end
 end
