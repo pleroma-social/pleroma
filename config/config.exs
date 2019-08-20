@@ -179,12 +179,6 @@ config :pleroma, :http,
   proxy_url: nil,
   send_user_agent: true,
   adapter: [
-    tls_opts: [
-      verify: :verify_peer,
-      cacerts: :certifi.cacerts(),
-      depth: 20,
-      reuse_sessions: false
-    ]
   ]
 
 config :pleroma, :instance,
