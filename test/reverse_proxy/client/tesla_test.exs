@@ -5,6 +5,13 @@
 defmodule Pleroma.ReverseProxy.Client.TeslaTest do
   use Pleroma.ReverseProxyClientCase, client: Pleroma.ReverseProxy.Client.Tesla
 
+  setup_all do
+    Pleroma.Config.put([Pleroma.Gun.API], Pleroma.Gun.API.Gun)
+    on_exit(fn ->
+      Pleroma.Config.put([Pleroma.Gun.API], Pleroma.Gun.API.Mock)
+    end)
+  end
+
   defp check_ref(%{pid: pid, stream: stream} = ref) do
     assert is_pid(pid)
     assert is_reference(stream)
