@@ -114,7 +114,7 @@ defmodule Pleroma.Mixfile do
       {
         :tesla,
         github: "alex-strizhakov/tesla",
-        ref: "a64f34a83b579d46cc4ec7bac2ef561cc8b03f1d",
+        ref: "245f75502052e53d45cdb44f6afb481f4bd0f576",
         override: true
       },
       {:cowlib, "~> 2.7.3", override: true},
