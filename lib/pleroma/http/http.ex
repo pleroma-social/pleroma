@@ -91,9 +91,8 @@ defmodule Pleroma.HTTP do
       "https" ->
         adapter_opts = Keyword.get(options, :adapter, [])
 
-        tls_opts =
-          Keyword.get(adapter_opts, :tls_opts, [])
-          |> Keyword.put(:server_name_indication, host)
+        tls_opts = Keyword.get(adapter_opts, :tls_opts, [])
+        # |> Keyword.put(:server_name_indication, host)
 
         adapter_opts = Keyword.put(adapter_opts, :tls_opts, tls_opts)
 
