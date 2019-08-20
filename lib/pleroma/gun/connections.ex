@@ -112,8 +112,8 @@ defmodule Pleroma.Gun.Connections do
 
   @impl true
   def handle_info({:gun_down, conn_pid, _protocol, _reason, _killed, _unprocessed}, state) do
-    conn_key = compose_key_gun_info(conn_pid)
-    {key, conn} = find_conn(state.conns, conn_pid, conn_key)
+    # we can't get info on this pid, because pid is dead
+    {key, conn} = find_conn(state.conns, conn_pid)
 
     Enum.each(conn.waiting_pids, fn waiting_pid -> GenServer.reply(waiting_pid, nil) end)
 
@@ -126,6 +126,12 @@ defmodule Pleroma.Gun.Connections do
   defp compose_key_gun_info(pid) do
     info = API.info(pid)
     "#{info.origin_scheme}:#{info.origin_host}:#{info.origin_port}"
+  end
+
+  defp find_conn(conns, conn_pid) do
+    Enum.find(conns, fn {_key, conn} ->
+      conn.conn == conn_pid
+    end)
   end
 
   defp find_conn(conns, conn_pid, conn_key) do
