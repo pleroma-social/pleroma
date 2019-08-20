@@ -34,11 +34,13 @@ defmodule Pleroma.HTTP do
 
       adapter_gun? = Application.get_env(:tesla, :adapter) == Tesla.Adapter.Gun
 
-      pool = options[:adapter][:pool]
-
       options =
-        if adapter_gun? and not is_nil(pool) and Pleroma.Gun.Connections.alive?(pool) do
-          get_conn_for_gun(url, options, pool)
+        if adapter_gun? do
+          adapter_opts =
+            Keyword.get(options, :adapter, [])
+            |> Keyword.put(:url, url)
+
+          Keyword.put(options, :adapter, adapter_opts)
         else
           options
         end
@@ -60,24 +62,6 @@ defmodule Pleroma.HTTP do
     catch
       :exit, e ->
         {:error, e}
-    end
-  end
-
-  defp get_conn_for_gun(url, options, pool) do
-    case Pleroma.Gun.Connections.get_conn(url, options, pool) do
-      nil ->
-        options
-
-      conn ->
-        %{host: host, port: port} = URI.parse(url)
-
-        adapter_opts =
-          Keyword.get(options, :adapter, [])
-          |> Keyword.put(:conn, conn)
-          |> Keyword.put(:close_conn, false)
-          |> Keyword.put(:original, "#{host}:#{port}")
-
-        Keyword.put(options, :adapter, adapter_opts)
     end
   end
 
