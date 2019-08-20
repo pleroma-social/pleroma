@@ -10,4 +10,8 @@ defmodule Pleroma.ReverseProxy.Client.TeslaTest do
     assert is_reference(stream)
     assert ref[:fin]
   end
+
+  defp close(%{pid: pid}) do
+    Pleroma.ReverseProxy.Client.Tesla.close(pid)
+  end
 end

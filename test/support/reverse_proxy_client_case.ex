@@ -55,7 +55,7 @@ defmodule Pleroma.ReverseProxyClientCase do
             assert headers != []
             check_ref(ref)
 
-            assert :ok = @client.close(ref)
+            assert :ok == close(ref)
 
           {:ok, status, headers} ->
             assert headers != []

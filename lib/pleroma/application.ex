@@ -165,7 +165,7 @@ defmodule Pleroma.Application do
   end
 
   defp gun_pools do
-    if Application.get_env(:tesla, :adapter) == Tesla.Adapter.Gun do
+    if Application.get_env(:tesla, :adapter) == Tesla.Adapter.Gun || Mix.env() == :test do
       for {pool_name, opts} <- Pleroma.Config.get([:gun_pools]) do
         %{
           id: :"gun_pool_#{pool_name}",

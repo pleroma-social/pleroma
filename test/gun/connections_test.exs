@@ -4,7 +4,9 @@
 
 defmodule Gun.ConnectionsTest do
   use ExUnit.Case
-  alias Pleroma.Gun.{Connections, Conn, API}
+  alias Pleroma.Gun.API
+  alias Pleroma.Gun.Conn
+  alias Pleroma.Gun.Connections
 
   setup_all do
     {:ok, _} = Registry.start_link(keys: :unique, name: API.Mock)
@@ -260,6 +262,56 @@ defmodule Gun.ConnectionsTest do
             used: 2
           }
         }
+      } = Connections.get_state(name)
+    end
+
+    test "remove frequently used", %{name: name, pid: pid} do
+      api = Pleroma.Config.get([API])
+      Pleroma.Config.put([API], API.Gun)
+      on_exit(fn -> Pleroma.Config.put([API], api) end)
+
+      Connections.get_conn("https://www.google.com", [genserver_pid: pid], name)
+
+      for _ <- 1..4 do
+        Connections.get_conn("https://httpbin.org", [genserver_pid: pid], name)
+      end
+
+      %Connections{
+        conns: %{
+          "https:httpbin.org:443" => %Conn{
+            conn: _,
+            state: :up,
+            waiting_pids: [],
+            used: 4
+          },
+          "https:www.google.com:443" => %Conn{
+            conn: _,
+            state: :up,
+            waiting_pids: [],
+            used: 1
+          }
+        },
+        opts: [max_connections: 2, timeout: 10]
+      } = Connections.get_state(name)
+
+      conn = Connections.get_conn("http://httpbin.org", [genserver_pid: pid], name)
+
+      %Connections{
+        conns: %{
+          "http:httpbin.org:80" => %Conn{
+            conn: ^conn,
+            state: :up,
+            waiting_pids: [],
+            used: 1
+          },
+          "https:httpbin.org:443" => %Conn{
+            conn: _,
+            state: :up,
+            waiting_pids: [],
+            used: 4
+          }
+        },
+        opts: [max_connections: 2, timeout: 10]
       } = Connections.get_state(name)
     end
   end

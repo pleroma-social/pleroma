@@ -89,11 +89,15 @@ defmodule Pleroma.HTTP do
 
     case uri.scheme do
       "https" ->
+        adapter_opts = Keyword.get(options, :adapter, [])
+
         tls_opts =
-          Keyword.get(options, :tls_opts, [])
+          Keyword.get(adapter_opts, :tls_opts, [])
           |> Keyword.put(:server_name_indication, host)
 
-        Keyword.put(options, :tls_opts, tls_opts) ++ [ssl: [server_name_indication: host]]
+        adapter_opts = Keyword.put(adapter_opts, :tls_opts, tls_opts)
+
+        Keyword.put(options, :adapter, adapter_opts) ++ [ssl: [server_name_indication: host]]
 
       _ ->
         options

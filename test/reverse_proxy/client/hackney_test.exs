@@ -8,4 +8,8 @@ defmodule Pleroma.ReverseProxy.Client.HackneyTest do
   defp check_ref(ref) do
     assert is_reference(ref)
   end
+
+  defp close(ref) do
+    Pleroma.ReverseProxy.Client.Hackney.close(ref)
+  end
 end
