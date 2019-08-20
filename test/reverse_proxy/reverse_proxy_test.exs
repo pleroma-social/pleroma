@@ -108,38 +108,6 @@ defmodule Pleroma.ReverseProxyTest do
                "[error] Elixir.Pleroma.ReverseProxy: request to \"/user-agent\" failed: :body_too_large"
     end
 
-    defp stream_mock(invokes, with_close? \\ false) do
-      ClientMock
-      |> expect(:request, fn :get, "/stream-bytes/" <> length, _, _, _ ->
-        Registry.register(Pleroma.ReverseProxy.ClientMock, "/stream-bytes/" <> length, 0)
-
-        {:ok, 200, [{"content-type", "application/octet-stream"}],
-         %{url: "/stream-bytes/" <> length}}
-      end)
-      |> expect(:stream_body, invokes, fn %{url: "/stream-bytes/" <> length} ->
-        max = String.to_integer(length)
-
-        case Registry.lookup(Pleroma.ReverseProxy.ClientMock, "/stream-bytes/" <> length) do
-          [{_, current}] when current < max ->
-            Registry.update_value(
-              Pleroma.ReverseProxy.ClientMock,
-              "/stream-bytes/" <> length,
-              &(&1 + 10)
-            )
-
-            {:ok, "0123456789"}
-
-          [{_, ^max}] ->
-            Registry.unregister(Pleroma.ReverseProxy.ClientMock, "/stream-bytes/" <> length)
-            :done
-        end
-      end)
-
-      if with_close? do
-        expect(ClientMock, :close, fn _ -> :ok end)
-      end
-    end
-
     test "max_body_length returns error if streaming body more than that option", %{conn: conn} do
       stream_mock(3, true)
 
