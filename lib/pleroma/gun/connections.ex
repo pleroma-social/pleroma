@@ -36,6 +36,19 @@ defmodule Pleroma.Gun.Connections do
         do: Map.put(opts, :transport, :tls),
         else: opts
 
+    opts =
+      if uri.scheme == "https" do
+        host = uri.host |> to_charlist()
+
+        tls_opts =
+          Map.get(opts, :tls_opts, [])
+          |> Keyword.put(:server_name_indication, host)
+
+        Map.put(opts, :tls_opts, tls_opts)
+      else
+        opts
+      end
+
     GenServer.call(
       name,
       {:conn, %{opts: opts, uri: uri}}
