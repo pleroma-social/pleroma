@@ -28,9 +28,7 @@ defmodule Pleroma.HTTP do
   """
   def request(method, url, body \\ "", headers \\ [], options \\ []) do
     try do
-      options =
-        process_request_options(options)
-        |> process_sni_options(url)
+      options = process_request_options(options)
 
       adapter_gun? = Application.get_env(:tesla, :adapter) == Tesla.Adapter.Gun
 
@@ -62,21 +60,6 @@ defmodule Pleroma.HTTP do
     catch
       :exit, e ->
         {:error, e}
-    end
-  end
-
-  defp process_sni_options(options, nil), do: options
-
-  defp process_sni_options(options, url) do
-    uri = URI.parse(url)
-    host = uri.host |> to_charlist()
-
-    case uri.scheme do
-      "https" ->
-        options ++ [ssl: [server_name_indication: host]]
-
-      _ ->
-        options
     end
   end
 
