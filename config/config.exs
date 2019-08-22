@@ -178,8 +178,7 @@ config :tesla, adapter: Tesla.Adapter.Gun
 config :pleroma, :http,
   proxy_url: nil,
   send_user_agent: true,
-  adapter: [
-  ]
+  adapter: []
 
 config :pleroma, :instance,
   name: "Pleroma",

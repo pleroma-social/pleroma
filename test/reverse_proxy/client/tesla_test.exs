@@ -7,6 +7,7 @@ defmodule Pleroma.ReverseProxy.Client.TeslaTest do
 
   setup_all do
     Pleroma.Config.put([Pleroma.Gun.API], Pleroma.Gun.API.Gun)
+
     on_exit(fn ->
       Pleroma.Config.put([Pleroma.Gun.API], Pleroma.Gun.API.Mock)
     end)
