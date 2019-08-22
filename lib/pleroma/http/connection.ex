@@ -59,9 +59,20 @@ defmodule Pleroma.HTTP.Connection do
       conn ->
         %{host: host, port: port} = URI.parse(url)
 
+        # verify sertificates opts for gun
+        tls_opts = [
+          verify: :verify_peer,
+          cacerts: :certifi.cacerts(),
+          depth: 20,
+          server_name_indication: to_charlist(host),
+          reuse_sessions: false,
+          verify_fun: {&:ssl_verify_hostname.verify_fun/3, [check_hostname: to_charlist(host)]}
+        ]
+
         Keyword.put(options, :conn, conn)
         |> Keyword.put(:close_conn, false)
         |> Keyword.put(:original, "#{host}:#{port}")
+        |> Keyword.put(:tls_opts, tls_opts)
     end
   end
 end
