@@ -17,6 +17,7 @@ defmodule Pleroma.Gun.Connections do
   defstruct conns: %{}, opts: []
 
   alias Pleroma.Gun.API
+  alias Pleroma.Gun.Conn
 
   @spec start_link({atom(), keyword()}) :: {:ok, pid()} | :ignore
   def start_link({name, opts}) do
@@ -154,71 +155,58 @@ defmodule Pleroma.Gun.Connections do
     end)
   end
 
+  defp open_conn(key, uri, _from, state, %{proxy: {proxy_host, proxy_port}} = opts) do
+    host = to_charlist(uri.host)
+    port = uri.port
+
+    tls_opts = Map.get(opts, :tls_opts, [])
+    connect_opts = %{host: host, port: port}
+
+    connect_opts =
+      if uri.scheme == "https" do
+        Map.put(connect_opts, :protocols, [:http2])
+        |> Map.put(:transport, :tls)
+        |> Map.put(:tls_opts, tls_opts)
+      else
+        connect_opts
+      end
+
+    with open_opts <- Map.delete(opts, :tls_opts),
+         {:ok, conn} <- API.open(proxy_host, proxy_port, open_opts),
+         {:ok, _} <- API.await_up(conn),
+         stream <- API.connect(conn, connect_opts),
+         {:response, :fin, 200, _} <- API.await(conn, stream) do
+      state =
+        put_in(state.conns[key], %Conn{
+          conn: conn,
+          waiting_pids: [],
+          used: 1,
+          state: :up
+        })
+
+      {:reply, conn, state}
+    else
+      error ->
+        Logger.warn(inspect(error))
+        {:reply, nil, state}
+    end
+  end
+
   defp open_conn(key, uri, from, state, opts) do
     host = to_charlist(uri.host)
     port = uri.port
 
-    result =
-      if opts[:proxy] do
-        tls_opts = Map.get(opts, :tls_opts, [])
-        connect_opts = %{host: host, port: port}
+    with {:ok, conn} <- API.open(host, port, opts) do
+      state =
+        put_in(state.conns[key], %Conn{
+          conn: conn,
+          waiting_pids: [from]
+        })
 
-        connect_opts =
-          if uri.scheme == "https" do
-            Map.put(connect_opts, :protocols, [:http2])
-            |> Map.put(:transport, :tls)
-            |> Map.put(:tls_opts, tls_opts)
-          else
-            connect_opts
-          end
-
-        with {proxy_host, proxy_port} <- opts[:proxy],
-             open_opts <- Map.delete(opts, :tls_opts),
-             {:ok, conn} <- API.open(proxy_host, proxy_port, open_opts),
-             {:ok, _} <- API.await_up(conn),
-             stream <- API.connect(conn, connect_opts),
-             {:response, :fin, 200, _} <- API.await(conn, stream) do
-          {:ok, conn, true}
-        else
-          {:error, error} ->
-            {:error, error}
-
-          error ->
-            Logger.warn(inspect(error))
-            {:error, :error_connection_to_proxy}
-        end
-      else
-        with {:ok, conn} <- API.open(host, port, opts) do
-          {:ok, conn, false}
-        else
-          {:error, error} ->
-            {:error, error}
-
-          error ->
-            Logger.warn(inspect(error))
-            {:error, :error_connection}
-        end
-      end
-
-    case result do
-      {:ok, conn, is_up} ->
-        {from_list, used, conn_state} = if is_up, do: {[], 1, :up}, else: {[from], 0, :open}
-
-        state =
-          put_in(state.conns[key], %Pleroma.Gun.Conn{
-            conn: conn,
-            waiting_pids: from_list,
-            used: used,
-            state: conn_state
-          })
-
-        if is_up do
-          {:reply, conn, state}
-        else
-          {:noreply, state}
-        end
-
-      {:error, _error} ->
+      {:noreply, state}
+    else
+      error ->
+        Logger.warn(inspect(error))
         {:reply, nil, state}
     end
   end
