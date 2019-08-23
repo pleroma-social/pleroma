@@ -315,4 +315,126 @@ defmodule Gun.ConnectionsTest do
       } = Connections.get_state(name)
     end
   end
+
+  describe "with proxy usage" do
+    test "proxy as ip", %{name: name, pid: pid} do
+      conn =
+        Connections.get_conn(
+          "http://proxy_string.com",
+          [genserver_pid: pid, proxy: {{127, 0, 0, 1}, 8123}],
+          name
+        )
+
+      %Connections{
+        conns: %{
+          "http:proxy_string.com:80" => %Conn{
+            conn: ^conn,
+            state: :up,
+            waiting_pids: [],
+            used: 1
+          }
+        },
+        opts: [max_connections: 2, timeout: 10]
+      } = Connections.get_state(name)
+
+      reused_conn =
+        Connections.get_conn(
+          "http://proxy_string.com",
+          [genserver_pid: pid, proxy: {{127, 0, 0, 1}, 8123}],
+          name
+        )
+
+      assert reused_conn == conn
+    end
+
+    test "proxy as host", %{name: name, pid: pid} do
+      conn =
+        Connections.get_conn(
+          "http://proxy_tuple_atom.com",
+          [genserver_pid: pid, proxy: {'localhost', 9050}],
+          name
+        )
+
+      %Connections{
+        conns: %{
+          "http:proxy_tuple_atom.com:80" => %Conn{
+            conn: ^conn,
+            state: :up,
+            waiting_pids: [],
+            used: 1
+          }
+        },
+        opts: [max_connections: 2, timeout: 10]
+      } = Connections.get_state(name)
+
+      reused_conn =
+        Connections.get_conn(
+          "http://proxy_tuple_atom.com",
+          [genserver_pid: pid, proxy: {'localhost', 9050}],
+          name
+        )
+
+      assert reused_conn == conn
+    end
+
+    test "proxy as ip and ssl", %{name: name, pid: pid} do
+      conn =
+        Connections.get_conn(
+          "https://proxy_string.com",
+          [genserver_pid: pid, proxy: {{127, 0, 0, 1}, 8123}],
+          name
+        )
+
+      %Connections{
+        conns: %{
+          "https:proxy_string.com:443" => %Conn{
+            conn: ^conn,
+            state: :up,
+            waiting_pids: [],
+            used: 1
+          }
+        },
+        opts: [max_connections: 2, timeout: 10]
+      } = Connections.get_state(name)
+
+      reused_conn =
+        Connections.get_conn(
+          "https://proxy_string.com",
+          [genserver_pid: pid, proxy: {{127, 0, 0, 1}, 8123}],
+          name
+        )
+
+      assert reused_conn == conn
+    end
+
+    test "proxy as host and ssl", %{name: name, pid: pid} do
+      conn =
+        Connections.get_conn(
+          "https://proxy_tuple_atom.com",
+          [genserver_pid: pid, proxy: {'localhost', 9050}],
+          name
+        )
+
+      %Connections{
+        conns: %{
+          "https:proxy_tuple_atom.com:443" => %Conn{
+            conn: ^conn,
+            state: :up,
+            waiting_pids: [],
+            used: 1
+          }
+        },
+        opts: [max_connections: 2, timeout: 10]
+      } = Connections.get_state(name)
+
+      reused_conn =
+        Connections.get_conn(
+          "https://proxy_tuple_atom.com",
+          [genserver_pid: pid, proxy: {'localhost', 9050}],
+          name
+        )
+
+      assert reused_conn == conn
+    end
+  end
 end

@@ -14,6 +14,8 @@ defmodule Pleroma.HTTP.Connection do
     version: :master
   ]
 
+  require Logger
+
   @doc """
   Configure a client connection
 
@@ -33,13 +35,20 @@ defmodule Pleroma.HTTP.Connection do
   def options(opts) do
     options = Keyword.get(opts, :adapter, [])
     adapter_options = Pleroma.Config.get([:http, :adapter], [])
+
     proxy_url = Pleroma.Config.get([:http, :proxy_url], nil)
+
+    proxy =
+      case parse_proxy(proxy_url) do
+        {:ok, proxy_host, proxy_port} -> {proxy_host, proxy_port}
+        _ -> nil
+      end
 
     options =
       @options
       |> Keyword.merge(adapter_options)
       |> Keyword.merge(options)
-      |> Keyword.merge(proxy: proxy_url)
+      |> Keyword.merge(proxy: proxy)
 
     pool = options[:pool]
     url = options[:url]
@@ -73,6 +82,51 @@ defmodule Pleroma.HTTP.Connection do
         |> Keyword.put(:close_conn, false)
         |> Keyword.put(:original, "#{host}:#{port}")
         |> Keyword.put(:tls_opts, tls_opts)
+    end
+  end
+
+  @spec parse_proxy(String.t() | tuple() | nil) ::
+          {tuple, pos_integer()} | {:error, atom()} | nil
+  def parse_proxy(nil), do: nil
+
+  def parse_proxy(proxy) when is_binary(proxy) do
+    with [host, port] <- String.split(proxy, ":"),
+         {port, ""} <- Integer.parse(port) do
+      {:ok, parse_host(host), port}
+    else
+      {_, _} ->
+        Logger.warn("parsing port in proxy fail #{inspect(proxy)}")
+        {:error, :error_parsing_port_in_proxy}
+
+      :error ->
+        Logger.warn("parsing port in proxy fail #{inspect(proxy)}")
+        {:error, :error_parsing_port_in_proxy}
+
+      _ ->
+        Logger.warn("parsing proxy fail #{inspect(proxy)}")
+        {:error, :error_parsing_proxy}
+    end
+  end
+
+  def parse_proxy(proxy) when is_tuple(proxy) do
+    with {_type, host, port} <- proxy do
+      {:ok, parse_host(host), port}
+    else
+      _ ->
+        Logger.warn("parsing proxy fail #{inspect(proxy)}")
+        {:error, :error_parsing_proxy}
+    end
+  end
+
+  @spec parse_host(String.t() | tuple()) :: charlist() | atom()
+  def parse_host(host) when is_atom(host), do: to_charlist(host)
+
+  def parse_host(host) when is_binary(host) do
+    host = to_charlist(host)
+
+    case :inet.parse_address(host) do
+      {:error, :einval} -> host
+      {:ok, ip} -> ip
     end
   end
 end

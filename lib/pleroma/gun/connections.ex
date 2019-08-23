@@ -4,6 +4,7 @@
 
 defmodule Pleroma.Gun.Connections do
   use GenServer
+  require Logger
 
   @type domain :: String.t()
   @type conn :: Pleroma.Gun.Conn.t()
@@ -154,14 +155,69 @@ defmodule Pleroma.Gun.Connections do
   end
 
   defp open_conn(key, uri, from, state, opts) do
-    {:ok, conn} = API.open(to_charlist(uri.host), uri.port, opts)
+    host = to_charlist(uri.host)
+    port = uri.port
 
-    state =
-      put_in(state.conns[key], %Pleroma.Gun.Conn{
-        conn: conn,
-        waiting_pids: [from]
-      })
+    result =
+      if opts[:proxy] do
+        with {proxy_host, proxy_port} <- opts[:proxy],
+             {:ok, conn} <- API.open(proxy_host, proxy_port, opts),
+             {:ok, _} <- API.await_up(conn) do
+          connect_opts = %{host: host, port: port}
 
-    {:noreply, state}
+          connect_opts =
+            if uri.scheme == "https" do
+              Map.put(connect_opts, :protocols, [:http2])
+              |> Map.put(:transport, :tls)
+            else
+              connect_opts
+            end
+
+          with stream <- API.connect(conn, connect_opts),
+               {:response, :fin, 200, _} <- API.await(conn, stream) do
+            {:ok, conn, true}
+          end
+        else
+          {:error, error} ->
+            {:error, error}
+
+          error ->
+            Logger.warn(inspect(error))
+            {:error, :error_connection_to_proxy}
+        end
+      else
+        with {:ok, conn} <- API.open(host, port, opts) do
+          {:ok, conn, false}
+        else
+          {:error, error} ->
+            {:error, error}
+
+          error ->
+            Logger.warn(inspect(error))
+            {:error, :error_connection}
+        end
+      end
+
+    case result do
+      {:ok, conn, is_up} ->
+        {from_list, used, conn_state} = if is_up, do: {[], 1, :up}, else: {[from], 0, :open}
+
+        state =
+          put_in(state.conns[key], %Pleroma.Gun.Conn{
+            conn: conn,
+            waiting_pids: from_list,
+            used: used,
+            state: conn_state
+          })
+
+        if is_up do
+          {:reply, conn, state}
+        else
+          {:noreply, state}
+        end
+
+      {:error, _error} ->
+        {:reply, nil, state}
+    end
   end
 end

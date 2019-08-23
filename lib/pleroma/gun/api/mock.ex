@@ -73,6 +73,41 @@ defmodule Pleroma.Gun.API.Mock do
   end
 
   @impl API
+  def open({127, 0, 0, 1}, 8123, _) do
+    Task.start_link(fn -> Process.sleep(1_000) end)
+  end
+
+  @impl API
+  def open('localhost', 9050, _) do
+    Task.start_link(fn -> Process.sleep(1_000) end)
+  end
+
+  @impl API
+  def await_up(_pid) do
+    {:ok, :http}
+  end
+
+  @impl API
+  def connect(pid, %{host: _, port: 80}) do
+    ref = make_ref()
+    Registry.register(API.Mock, ref, pid)
+    ref
+  end
+
+  @impl API
+  def connect(pid, %{host: _, port: 443, protocols: [:http2], transport: :tls}) do
+    ref = make_ref()
+    Registry.register(API.Mock, ref, pid)
+    ref
+  end
+
+  @impl API
+  def await(pid, ref) do
+    [{_, ^pid}] = Registry.lookup(API.Mock, ref)
+    {:response, :fin, 200, []}
+  end
+
+  @impl API
   def info(pid) do
     [{_, info}] = Registry.lookup(API.Mock, pid)
     info

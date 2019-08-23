@@ -31,4 +31,13 @@ defmodule Pleroma.Gun.API.Gun do
 
   @impl API
   def close(pid), do: :gun.close(pid)
+
+  @impl API
+  def await_up(pid), do: :gun.await_up(pid)
+
+  @impl API
+  def connect(pid, opts), do: :gun.connect(pid, opts)
+
+  @impl API
+  def await(pid, ref), do: :gun.await(pid, ref)
 end
