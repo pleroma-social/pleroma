@@ -161,7 +161,9 @@ defmodule Pleroma.Gun.Connections do
     result =
       if opts[:proxy] do
         with {proxy_host, proxy_port} <- opts[:proxy],
-             {:ok, conn} <- API.open(proxy_host, proxy_port, opts),
+             tls_opts <- Map.get(opts, :tls_opts, []),
+             open_opts <- Map.delete(opts, :tls_opts),
+             {:ok, conn} <- API.open(proxy_host, proxy_port, open_opts),
              {:ok, _} <- API.await_up(conn) do
           connect_opts = %{host: host, port: port}
 
@@ -169,6 +171,7 @@ defmodule Pleroma.Gun.Connections do
             if uri.scheme == "https" do
               Map.put(connect_opts, :protocols, [:http2])
               |> Map.put(:transport, :tls)
+              |> Map.put(:tls_opts, tls_opts)
             else
               connect_opts
             end
