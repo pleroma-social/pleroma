@@ -73,8 +73,20 @@ defmodule Pleroma.Gun.Connections do
     key = compose_key(uri)
 
     case state.conns[key] do
-      %{conn: conn, state: conn_state, used: used} when conn_state == :up ->
-        state = put_in(state.conns[key].used, used + 1)
+      %{conn: conn, state: conn_state, last_reference: reference, crf: last_crf} = current_conn
+      when conn_state == :up ->
+        time = current_time()
+        last_reference = time - reference
+
+        current_crf = crf(last_reference, 100, last_crf)
+
+        state =
+          put_in(state.conns[key], %{
+            current_conn
+            | last_reference: time,
+              crf: current_crf
+          })
+
         {:reply, conn, state}
 
       %{state: conn_state, waiting_pids: pids} when conn_state in [:open, :down] ->
@@ -87,7 +99,12 @@ defmodule Pleroma.Gun.Connections do
         if Enum.count(state.conns) < max_connections do
           open_conn(key, uri, from, state, opts)
         else
-          [{close_key, least_used} | _conns] = Enum.sort_by(state.conns, fn {_k, v} -> v.used end)
+          [{close_key, least_used} | _conns] =
+            state.conns
+            |> Enum.filter(fn {_k, v} -> v.waiting_pids == [] end)
+            |> Enum.sort(fn {_x_k, x}, {_y_k, y} ->
+              x.crf < y.crf and x.last_reference < y.last_reference
+            end)
 
           :ok = API.close(least_used.conn)
 
@@ -114,12 +131,17 @@ defmodule Pleroma.Gun.Connections do
     Enum.each(conn.waiting_pids, fn waiting_pid -> GenServer.reply(waiting_pid, conn_pid) end)
 
     # Update state of the current connection and set waiting_pids to empty list
+    time = current_time()
+    last_reference = time - conn.last_reference
+    current_crf = crf(last_reference, 100, conn.crf)
+
     state =
       put_in(state.conns[key], %{
         conn
         | state: :up,
           waiting_pids: [],
-          used: conn.used + length(conn.waiting_pids)
+          last_reference: time,
+          crf: current_crf
       })
 
     {:noreply, state}
@@ -180,7 +202,6 @@ defmodule Pleroma.Gun.Connections do
         put_in(state.conns[key], %Conn{
           conn: conn,
           waiting_pids: [],
-          used: 1,
           state: :up
         })
 
@@ -209,5 +230,13 @@ defmodule Pleroma.Gun.Connections do
         Logger.warn(inspect(error))
         {:reply, nil, state}
     end
+  end
+
+  defp current_time do
+    :os.system_time(:second)
+  end
+
+  def crf(current, steps, crf) do
+    1 + :math.pow(0.5, current / steps) * crf
   end
 end

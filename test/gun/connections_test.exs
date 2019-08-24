@@ -48,8 +48,7 @@ defmodule Gun.ConnectionsTest do
         "http:some-domain.com:80" => %Conn{
           conn: ^conn,
           state: :up,
-          waiting_pids: [],
-          used: 2
+          waiting_pids: []
         }
       }
     } = Connections.get_state(name)
@@ -112,8 +111,7 @@ defmodule Gun.ConnectionsTest do
         "http:gun_down_and_up.com:80" => %Conn{
           conn: _,
           state: :down,
-          waiting_pids: _,
-          used: 0
+          waiting_pids: _
         }
       }
     } = Connections.get_state(name)
@@ -128,8 +126,7 @@ defmodule Gun.ConnectionsTest do
         "http:gun_down_and_up.com:80" => %Conn{
           conn: _,
           state: :up,
-          waiting_pids: [],
-          used: 2
+          waiting_pids: []
         }
       }
     } = Connections.get_state(name)
@@ -157,8 +154,7 @@ defmodule Gun.ConnectionsTest do
         "http:some-domain.com:80" => %Conn{
           conn: conn,
           state: :up,
-          waiting_pids: [],
-          used: 5
+          waiting_pids: []
         }
       }
     } = Connections.get_state(name)
@@ -178,14 +174,12 @@ defmodule Gun.ConnectionsTest do
         "http:some-domain.com:80" => %Conn{
           conn: _,
           state: :up,
-          waiting_pids: [],
-          used: 4
+          waiting_pids: []
         },
         "https:some-domain.com:443" => %Conn{
           conn: _,
           state: :up,
-          waiting_pids: [],
-          used: 1
+          waiting_pids: []
         }
       },
       opts: [max_connections: 2, timeout: 10]
@@ -198,14 +192,12 @@ defmodule Gun.ConnectionsTest do
         "http:another-domain.com:80" => %Conn{
           conn: ^conn,
           state: :up,
-          waiting_pids: [],
-          used: 1
+          waiting_pids: []
         },
         "http:some-domain.com:80" => %Conn{
           conn: _,
           state: :up,
-          waiting_pids: [],
-          used: 4
+          waiting_pids: []
         }
       },
       opts: [max_connections: 2, timeout: 10]
@@ -233,8 +225,7 @@ defmodule Gun.ConnectionsTest do
           "http:httpbin.org:80" => %Conn{
             conn: ^conn,
             state: :up,
-            waiting_pids: [],
-            used: 2
+            waiting_pids: []
           }
         }
       } = Connections.get_state(name)
@@ -258,8 +249,7 @@ defmodule Gun.ConnectionsTest do
           "https:httpbin.org:443" => %Conn{
             conn: ^conn,
             state: :up,
-            waiting_pids: [],
-            used: 2
+            waiting_pids: []
           }
         }
       } = Connections.get_state(name)
@@ -281,14 +271,12 @@ defmodule Gun.ConnectionsTest do
           "https:httpbin.org:443" => %Conn{
             conn: _,
             state: :up,
-            waiting_pids: [],
-            used: 4
+            waiting_pids: []
           },
           "https:www.google.com:443" => %Conn{
             conn: _,
             state: :up,
-            waiting_pids: [],
-            used: 1
+            waiting_pids: []
           }
         },
         opts: [max_connections: 2, timeout: 10]
@@ -301,14 +289,60 @@ defmodule Gun.ConnectionsTest do
           "http:httpbin.org:80" => %Conn{
             conn: ^conn,
             state: :up,
-            waiting_pids: [],
-            used: 1
+            waiting_pids: []
           },
           "https:httpbin.org:443" => %Conn{
             conn: _,
             state: :up,
-            waiting_pids: [],
-            used: 4
+            waiting_pids: []
+          }
+        },
+        opts: [max_connections: 2, timeout: 10]
+      } = Connections.get_state(name)
+    end
+
+    test "remove earlier used", %{name: name, pid: pid} do
+      api = Pleroma.Config.get([API])
+      Pleroma.Config.put([API], API.Gun)
+      on_exit(fn -> Pleroma.Config.put([API], api) end)
+
+      Connections.get_conn("https://www.google.com", [genserver_pid: pid], name)
+      Connections.get_conn("https://www.google.com", [genserver_pid: pid], name)
+
+      Process.sleep(1_000)
+      Connections.get_conn("https://httpbin.org", [genserver_pid: pid], name)
+      Connections.get_conn("https://httpbin.org", [genserver_pid: pid], name)
+
+      %Connections{
+        conns: %{
+          "https:httpbin.org:443" => %Conn{
+            conn: _,
+            state: :up,
+            waiting_pids: []
+          },
+          "https:www.google.com:443" => %Conn{
+            conn: _,
+            state: :up,
+            waiting_pids: []
+          }
+        },
+        opts: [max_connections: 2, timeout: 10]
+      } = Connections.get_state(name)
+
+      Process.sleep(1_000)
+      conn = Connections.get_conn("http://httpbin.org", [genserver_pid: pid], name)
+
+      %Connections{
+        conns: %{
+          "http:httpbin.org:80" => %Conn{
+            conn: ^conn,
+            state: :up,
+            waiting_pids: []
+          },
+          "https:httpbin.org:443" => %Conn{
+            conn: _,
+            state: :up,
+            waiting_pids: []
           }
         },
         opts: [max_connections: 2, timeout: 10]
@@ -330,8 +364,7 @@ defmodule Gun.ConnectionsTest do
           "http:proxy_string.com:80" => %Conn{
             conn: ^conn,
             state: :up,
-            waiting_pids: [],
-            used: 1
+            waiting_pids: []
           }
         },
         opts: [max_connections: 2, timeout: 10]
@@ -360,8 +393,7 @@ defmodule Gun.ConnectionsTest do
           "http:proxy_tuple_atom.com:80" => %Conn{
             conn: ^conn,
             state: :up,
-            waiting_pids: [],
-            used: 1
+            waiting_pids: []
           }
         },
         opts: [max_connections: 2, timeout: 10]
@@ -390,8 +422,7 @@ defmodule Gun.ConnectionsTest do
           "https:proxy_string.com:443" => %Conn{
             conn: ^conn,
             state: :up,
-            waiting_pids: [],
-            used: 1
+            waiting_pids: []
           }
         },
         opts: [max_connections: 2, timeout: 10]
@@ -420,8 +451,7 @@ defmodule Gun.ConnectionsTest do
           "https:proxy_tuple_atom.com:443" => %Conn{
             conn: ^conn,
             state: :up,
-            waiting_pids: [],
-            used: 1
+            waiting_pids: []
           }
         },
         opts: [max_connections: 2, timeout: 10]
@@ -435,6 +465,53 @@ defmodule Gun.ConnectionsTest do
         )
 
       assert reused_conn == conn
+    end
+  end
+
+  describe "crf/3" do
+    setup do
+      crf = Connections.crf(1, 10, 1)
+      {:ok, crf: crf}
+    end
+
+    test "more used will have crf higher", %{crf: crf} do
+      # used 3 times
+      crf1 = Connections.crf(1, 10, crf)
+      crf1 = Connections.crf(1, 10, crf1)
+
+      # used 2 times
+      crf2 = Connections.crf(1, 10, crf)
+
+      assert crf1 > crf2
+    end
+
+    test "recently used will have crf higher on equal references", %{crf: crf} do
+      # used 4 sec ago
+      crf1 = Connections.crf(3, 10, crf)
+
+      # used 3 sec ago
+      crf2 = Connections.crf(4, 10, crf)
+
+      assert crf1 > crf2
+    end
+
+    test "equal crf on equal reference and time", %{crf: crf} do
+      # used 2 times
+      crf1 = Connections.crf(1, 10, crf)
+
+      # used 2 times
+      crf2 = Connections.crf(1, 10, crf)
+
+      assert crf1 == crf2
+    end
+
+    test "recently used will have higher crf", %{crf: crf} do
+      crf1 = Connections.crf(2, 10, crf)
+      crf1 = Connections.crf(1, 10, crf1)
+
+      crf2 = Connections.crf(3, 10, crf)
+      crf2 = Connections.crf(4, 10, crf2)
+      assert crf1 > crf2
     end
   end
 end

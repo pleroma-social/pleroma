@@ -10,8 +10,13 @@ defmodule Pleroma.Gun.Conn do
           conn: pid(),
           state: atom(),
           waiting_pids: [pid()],
-          used: pos_integer()
+          last_reference: pos_integer(),
+          crf: float()
         }
 
-  defstruct conn: nil, state: :open, waiting_pids: [], used: 0
+  defstruct conn: nil,
+            state: :open,
+            waiting_pids: [],
+            last_reference: :os.system_time(:second),
+            crf: 1
 end
