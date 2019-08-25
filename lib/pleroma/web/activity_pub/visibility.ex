@@ -5,7 +5,6 @@
 defmodule Pleroma.Web.ActivityPub.Visibility do
   alias Pleroma.Activity
   alias Pleroma.Object
-  alias Pleroma.Repo
   alias Pleroma.User
 
   require Pleroma.Constants
@@ -58,14 +57,21 @@ defmodule Pleroma.Web.ActivityPub.Visibility do
     visible_for_user?(activity, nil) || Enum.any?(x, &(&1 in y))
   end
 
-  def entire_thread_visible_for_user?(%Activity{} = activity, %User{} = user) do
-    {:ok, %{rows: [[result]]}} =
-      Ecto.Adapters.SQL.query(Repo, "SELECT thread_visibility($1, $2)", [
-        user.ap_id,
-        activity.data["id"]
-      ])
+  # XXX: Probably even more inefficient than the previous implementation intended to be a placeholder untill https://git.pleroma.social/pleroma/pleroma/merge_requests/971 is in develop
+  # credo:disable-for-previous-line Credo.Check.Readability.MaxLineLength
+  def entire_thread_visible_for_user?(
+        %Activity{} = tail,
+        # %Activity{data: %{"object" => %{"inReplyTo" => parent_id}}} = tail,
+        user
+      ) do
+    case Object.normalize(tail) do
+      %{data: %{"inReplyTo" => parent_id}} when is_binary(parent_id) ->
+        parent = Activity.get_in_reply_to_activity(tail)
+        visible_for_user?(tail, user) && entire_thread_visible_for_user?(parent, user)
 
-    result
+      _ ->
+        visible_for_user?(tail, user)
+    end
   end
 
   def get_visibility(object) do

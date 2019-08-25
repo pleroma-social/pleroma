@@ -604,25 +604,6 @@ defmodule Pleroma.Web.ActivityPub.ActivityPub do
 
   defp restrict_visibility(query, _visibility), do: query
 
-  defp restrict_thread_visibility(query, _, %{skip_thread_containment: true} = _),
-    do: query
-
-  defp restrict_thread_visibility(
-         query,
-         %{"user" => %User{info: %{skip_thread_containment: true}}},
-         _
-       ),
-       do: query
-
-  defp restrict_thread_visibility(query, %{"user" => %User{ap_id: ap_id}}, _) do
-    from(
-      a in query,
-      where: fragment("thread_visibility(?, (?)->>'id') = true", ^ap_id, a.data)
-    )
-  end
-
-  defp restrict_thread_visibility(query, _, _), do: query
-
   def fetch_user_activities(user, reading_user, params \\ %{}) do
     params =
       params
@@ -921,10 +902,6 @@ defmodule Pleroma.Web.ActivityPub.ActivityPub do
   defp maybe_order(query, _), do: query
 
   def fetch_activities_query(recipients, opts \\ %{}) do
-    config = %{
-      skip_thread_containment: Config.get([:instance, :skip_thread_containment])
-    }
-
     Activity
     |> maybe_preload_objects(opts)
     |> maybe_preload_bookmarks(opts)
@@ -944,7 +921,6 @@ defmodule Pleroma.Web.ActivityPub.ActivityPub do
     |> restrict_muted(opts)
     |> restrict_media(opts)
     |> restrict_visibility(opts)
-    |> restrict_thread_visibility(opts, config)
     |> restrict_replies(opts)
     |> restrict_reblogs(opts)
     |> restrict_pinned(opts)
