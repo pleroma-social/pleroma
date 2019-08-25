@@ -10,8 +10,7 @@ defmodule Pleroma.HTTP.Connection do
   @options [
     connect_timeout: 10_000,
     timeout: 20_000,
-    pool: :federation,
-    version: :master
+    pool: :federation
   ]
 
   require Logger
@@ -61,7 +60,7 @@ defmodule Pleroma.HTTP.Connection do
   end
 
   defp get_conn_for_gun(url, options, pool) do
-    case Pleroma.Gun.Connections.get_conn(url, options, pool) do
+    case Pleroma.Gun.Connections.checkin(url, options, pool) do
       nil ->
         options
 

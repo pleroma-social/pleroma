@@ -71,11 +71,18 @@ defmodule Pleroma.HTTPTest do
 
     options = [adapter: [pool: :federation]]
 
-    assert {:ok, resp} =
-             Pleroma.HTTP.request(:get, "https://httpbin.org/user-agent", "", [], options)
+    assert {:ok, resp} = Pleroma.HTTP.get("https://httpbin.org/user-agent", [], options)
 
     adapter_opts = resp.opts[:adapter]
 
+    assert resp.status == 200
+
     assert adapter_opts[:url] == "https://httpbin.org/user-agent"
+    state = Pleroma.Gun.Connections.get_state(:federation)
+    conn = state.conns["https:httpbin.org:443"]
+
+    assert conn.conn_state == :idle
+    assert conn.used_by == []
+    assert state.queue == []
   end
 end

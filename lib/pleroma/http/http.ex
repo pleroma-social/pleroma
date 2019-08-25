@@ -45,15 +45,27 @@ defmodule Pleroma.HTTP do
 
       params = Keyword.get(options, :params, [])
 
-      %{}
-      |> Builder.method(method)
-      |> Builder.url(url)
-      |> Builder.headers(headers)
-      |> Builder.opts(options)
-      |> Builder.add_param(:body, :body, body)
-      |> Builder.add_param(:query, :query, params)
-      |> Enum.into([])
-      |> (&Tesla.request(Connection.new(options), &1)).()
+      request =
+        %{}
+        |> Builder.method(method)
+        |> Builder.url(url)
+        |> Builder.headers(headers)
+        |> Builder.opts(options)
+        |> Builder.add_param(:body, :body, body)
+        |> Builder.add_param(:query, :query, params)
+        |> Enum.into([])
+
+      client = Connection.new(options)
+      response = Tesla.request(client, request)
+
+      if adapter_gun? do
+        %{adapter: {_, _, [adapter_options]}} = client
+        pool = adapter_options[:pool]
+        Pleroma.Gun.Connections.checkout(adapter_options[:conn], self(), pool)
+        Pleroma.Gun.Connections.process_queue(pool)
+      end
+
+      response
     rescue
       e ->
         {:error, e}

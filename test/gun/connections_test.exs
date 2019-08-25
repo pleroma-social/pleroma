@@ -34,12 +34,26 @@ defmodule Gun.ConnectionsTest do
   end
 
   test "opens connection and reuse it on next request", %{name: name, pid: pid} do
-    conn = Connections.get_conn("http://some-domain.com", [genserver_pid: pid], name)
+    conn = Connections.checkin("http://some-domain.com", [genserver_pid: pid], name)
 
     assert is_pid(conn)
     assert Process.alive?(conn)
 
-    reused_conn = Connections.get_conn("http://some-domain.com", [genserver_pid: pid], name)
+    self = self()
+
+    %Connections{
+      conns: %{
+        "http:some-domain.com:80" => %Conn{
+          conn: ^conn,
+          gun_state: :up,
+          waiting_pids: [],
+          used_by: [{^self, _}],
+          conn_state: :active
+        }
+      }
+    } = Connections.get_state(name)
+
+    reused_conn = Connections.checkin("http://some-domain.com", [genserver_pid: pid], name)
 
     assert conn == reused_conn
 
@@ -47,23 +61,53 @@ defmodule Gun.ConnectionsTest do
       conns: %{
         "http:some-domain.com:80" => %Conn{
           conn: ^conn,
-          state: :up,
-          waiting_pids: []
+          gun_state: :up,
+          waiting_pids: [],
+          used_by: [{^self, _}, {^self, _}],
+          conn_state: :active
+        }
+      }
+    } = Connections.get_state(name)
+
+    :ok = Connections.checkout(conn, self, name)
+
+    %Connections{
+      conns: %{
+        "http:some-domain.com:80" => %Conn{
+          conn: ^conn,
+          gun_state: :up,
+          waiting_pids: [],
+          used_by: [{^self, _}],
+          conn_state: :active
+        }
+      }
+    } = Connections.get_state(name)
+
+    :ok = Connections.checkout(conn, self, name)
+
+    %Connections{
+      conns: %{
+        "http:some-domain.com:80" => %Conn{
+          conn: ^conn,
+          gun_state: :up,
+          waiting_pids: [],
+          used_by: [],
+          conn_state: :idle
         }
       }
     } = Connections.get_state(name)
   end
 
   test "reuses connection based on protocol", %{name: name, pid: pid} do
-    conn = Connections.get_conn("http://some-domain.com", [genserver_pid: pid], name)
+    conn = Connections.checkin("http://some-domain.com", [genserver_pid: pid], name)
     assert is_pid(conn)
     assert Process.alive?(conn)
 
-    https_conn = Connections.get_conn("https://some-domain.com", [genserver_pid: pid], name)
+    https_conn = Connections.checkin("https://some-domain.com", [genserver_pid: pid], name)
 
     refute conn == https_conn
 
-    reused_https = Connections.get_conn("https://some-domain.com", [genserver_pid: pid], name)
+    reused_https = Connections.checkin("https://some-domain.com", [genserver_pid: pid], name)
 
     refute conn == reused_https
 
@@ -73,12 +117,12 @@ defmodule Gun.ConnectionsTest do
       conns: %{
         "http:some-domain.com:80" => %Conn{
           conn: ^conn,
-          state: :up,
+          gun_state: :up,
           waiting_pids: []
         },
         "https:some-domain.com:443" => %Conn{
           conn: ^https_conn,
-          state: :up,
+          gun_state: :up,
           waiting_pids: []
         }
       }
@@ -86,7 +130,7 @@ defmodule Gun.ConnectionsTest do
   end
 
   test "process gun_down message", %{name: name, pid: pid} do
-    conn = Connections.get_conn("http://gun_down.com", [genserver_pid: pid], name)
+    conn = Connections.checkin("http://gun_down.com", [genserver_pid: pid], name)
 
     refute conn
 
@@ -94,7 +138,7 @@ defmodule Gun.ConnectionsTest do
       conns: %{
         "http:gun_down.com:80" => %Conn{
           conn: _,
-          state: :down,
+          gun_state: :down,
           waiting_pids: _
         }
       }
@@ -102,7 +146,7 @@ defmodule Gun.ConnectionsTest do
   end
 
   test "process gun_down message and then gun_up", %{name: name, pid: pid} do
-    conn = Connections.get_conn("http://gun_down_and_up.com", [genserver_pid: pid], name)
+    conn = Connections.checkin("http://gun_down_and_up.com", [genserver_pid: pid], name)
 
     refute conn
 
@@ -110,13 +154,13 @@ defmodule Gun.ConnectionsTest do
       conns: %{
         "http:gun_down_and_up.com:80" => %Conn{
           conn: _,
-          state: :down,
+          gun_state: :down,
           waiting_pids: _
         }
       }
     } = Connections.get_state(name)
 
-    conn = Connections.get_conn("http://gun_down_and_up.com", [genserver_pid: pid], name)
+    conn = Connections.checkin("http://gun_down_and_up.com", [genserver_pid: pid], name)
 
     assert is_pid(conn)
     assert Process.alive?(conn)
@@ -125,7 +169,7 @@ defmodule Gun.ConnectionsTest do
       conns: %{
         "http:gun_down_and_up.com:80" => %Conn{
           conn: _,
-          state: :up,
+          gun_state: :up,
           waiting_pids: []
         }
       }
@@ -136,7 +180,7 @@ defmodule Gun.ConnectionsTest do
     tasks =
       for _ <- 1..5 do
         Task.async(fn ->
-          Connections.get_conn("http://some-domain.com", [genserver_pid: pid], name)
+          Connections.checkin("http://some-domain.com", [genserver_pid: pid], name)
         end)
       end
 
@@ -153,7 +197,7 @@ defmodule Gun.ConnectionsTest do
       conns: %{
         "http:some-domain.com:80" => %Conn{
           conn: conn,
-          state: :up,
+          gun_state: :up,
           waiting_pids: []
         }
       }
@@ -162,41 +206,49 @@ defmodule Gun.ConnectionsTest do
     assert Enum.all?(conns, fn res -> res == conn end)
   end
 
-  test "remove frequently used", %{name: name, pid: pid} do
-    Connections.get_conn("https://some-domain.com", [genserver_pid: pid], name)
+  test "remove frequently used and idle", %{name: name, pid: pid} do
+    self = self()
+    conn1 = Connections.checkin("https://some-domain.com", [genserver_pid: pid], name)
 
-    for _ <- 1..4 do
-      Connections.get_conn("http://some-domain.com", [genserver_pid: pid], name)
-    end
+    [conn2 | _conns] =
+      for _ <- 1..4 do
+        Connections.checkin("http://some-domain.com", [genserver_pid: pid], name)
+      end
 
     %Connections{
       conns: %{
         "http:some-domain.com:80" => %Conn{
-          conn: _,
-          state: :up,
-          waiting_pids: []
+          conn: ^conn2,
+          gun_state: :up,
+          waiting_pids: [],
+          conn_state: :active,
+          used_by: [{^self, _}, {^self, _}, {^self, _}, {^self, _}]
         },
         "https:some-domain.com:443" => %Conn{
-          conn: _,
-          state: :up,
-          waiting_pids: []
+          conn: ^conn1,
+          gun_state: :up,
+          waiting_pids: [],
+          conn_state: :active,
+          used_by: [{^self, _}]
         }
       },
       opts: [max_connections: 2, timeout: 10]
     } = Connections.get_state(name)
 
-    conn = Connections.get_conn("http://another-domain.com", [genserver_pid: pid], name)
+    :ok = Connections.checkout(conn1, self, name)
+
+    conn = Connections.checkin("http://another-domain.com", [genserver_pid: pid], name)
 
     %Connections{
       conns: %{
         "http:another-domain.com:80" => %Conn{
           conn: ^conn,
-          state: :up,
+          gun_state: :up,
           waiting_pids: []
         },
         "http:some-domain.com:80" => %Conn{
           conn: _,
-          state: :up,
+          gun_state: :up,
           waiting_pids: []
         }
       },
@@ -211,12 +263,12 @@ defmodule Gun.ConnectionsTest do
       api = Pleroma.Config.get([API])
       Pleroma.Config.put([API], API.Gun)
       on_exit(fn -> Pleroma.Config.put([API], api) end)
-      conn = Connections.get_conn("http://httpbin.org", [], name)
+      conn = Connections.checkin("http://httpbin.org", [], name)
 
       assert is_pid(conn)
       assert Process.alive?(conn)
 
-      reused_conn = Connections.get_conn("http://httpbin.org", [], name)
+      reused_conn = Connections.checkin("http://httpbin.org", [], name)
 
       assert conn == reused_conn
 
@@ -224,7 +276,7 @@ defmodule Gun.ConnectionsTest do
         conns: %{
           "http:httpbin.org:80" => %Conn{
             conn: ^conn,
-            state: :up,
+            gun_state: :up,
             waiting_pids: []
           }
         }
@@ -235,12 +287,12 @@ defmodule Gun.ConnectionsTest do
       api = Pleroma.Config.get([API])
       Pleroma.Config.put([API], API.Gun)
       on_exit(fn -> Pleroma.Config.put([API], api) end)
-      conn = Connections.get_conn("https://httpbin.org", [], name)
+      conn = Connections.checkin("https://httpbin.org", [], name)
 
       assert is_pid(conn)
       assert Process.alive?(conn)
 
-      reused_conn = Connections.get_conn("https://httpbin.org", [], name)
+      reused_conn = Connections.checkin("https://httpbin.org", [], name)
 
       assert conn == reused_conn
 
@@ -248,52 +300,54 @@ defmodule Gun.ConnectionsTest do
         conns: %{
           "https:httpbin.org:443" => %Conn{
             conn: ^conn,
-            state: :up,
+            gun_state: :up,
             waiting_pids: []
           }
         }
       } = Connections.get_state(name)
     end
 
-    test "remove frequently used", %{name: name, pid: pid} do
+    test "remove frequently used and idle", %{name: name, pid: pid} do
+      self = self()
       api = Pleroma.Config.get([API])
       Pleroma.Config.put([API], API.Gun)
       on_exit(fn -> Pleroma.Config.put([API], api) end)
 
-      Connections.get_conn("https://www.google.com", [genserver_pid: pid], name)
+      conn = Connections.checkin("https://www.google.com", [genserver_pid: pid], name)
 
       for _ <- 1..4 do
-        Connections.get_conn("https://httpbin.org", [genserver_pid: pid], name)
+        Connections.checkin("https://httpbin.org", [genserver_pid: pid], name)
       end
 
       %Connections{
         conns: %{
           "https:httpbin.org:443" => %Conn{
             conn: _,
-            state: :up,
+            gun_state: :up,
             waiting_pids: []
           },
           "https:www.google.com:443" => %Conn{
             conn: _,
-            state: :up,
+            gun_state: :up,
             waiting_pids: []
           }
         },
         opts: [max_connections: 2, timeout: 10]
       } = Connections.get_state(name)
 
-      conn = Connections.get_conn("http://httpbin.org", [genserver_pid: pid], name)
+      :ok = Connections.checkout(conn, self, name)
+      conn = Connections.checkin("http://httpbin.org", [genserver_pid: pid], name)
 
       %Connections{
         conns: %{
           "http:httpbin.org:80" => %Conn{
             conn: ^conn,
-            state: :up,
+            gun_state: :up,
             waiting_pids: []
           },
           "https:httpbin.org:443" => %Conn{
             conn: _,
-            state: :up,
+            gun_state: :up,
             waiting_pids: []
           }
         },
@@ -301,50 +355,164 @@ defmodule Gun.ConnectionsTest do
       } = Connections.get_state(name)
     end
 
-    test "remove earlier used", %{name: name, pid: pid} do
+    test "remove earlier used and idle", %{name: name, pid: pid} do
+      self = self()
       api = Pleroma.Config.get([API])
       Pleroma.Config.put([API], API.Gun)
       on_exit(fn -> Pleroma.Config.put([API], api) end)
 
-      Connections.get_conn("https://www.google.com", [genserver_pid: pid], name)
-      Connections.get_conn("https://www.google.com", [genserver_pid: pid], name)
+      Connections.checkin("https://www.google.com", [genserver_pid: pid], name)
+      conn = Connections.checkin("https://www.google.com", [genserver_pid: pid], name)
 
       Process.sleep(1_000)
-      Connections.get_conn("https://httpbin.org", [genserver_pid: pid], name)
-      Connections.get_conn("https://httpbin.org", [genserver_pid: pid], name)
+      Connections.checkin("https://httpbin.org", [genserver_pid: pid], name)
+      Connections.checkin("https://httpbin.org", [genserver_pid: pid], name)
 
       %Connections{
         conns: %{
           "https:httpbin.org:443" => %Conn{
             conn: _,
-            state: :up,
+            gun_state: :up,
             waiting_pids: []
           },
           "https:www.google.com:443" => %Conn{
-            conn: _,
-            state: :up,
+            conn: ^conn,
+            gun_state: :up,
             waiting_pids: []
           }
         },
         opts: [max_connections: 2, timeout: 10]
       } = Connections.get_state(name)
 
+      :ok = Connections.checkout(conn, self, name)
+      :ok = Connections.checkout(conn, self, name)
       Process.sleep(1_000)
-      conn = Connections.get_conn("http://httpbin.org", [genserver_pid: pid], name)
+      conn = Connections.checkin("http://httpbin.org", [genserver_pid: pid], name)
 
       %Connections{
         conns: %{
           "http:httpbin.org:80" => %Conn{
             conn: ^conn,
-            state: :up,
+            gun_state: :up,
             waiting_pids: []
           },
           "https:httpbin.org:443" => %Conn{
             conn: _,
-            state: :up,
+            gun_state: :up,
             waiting_pids: []
           }
         },
+        opts: [max_connections: 2, timeout: 10]
+      } = Connections.get_state(name)
+    end
+
+    test "doesn't drop active connections on pool overflow addinng new requests to the queue", %{
+      name: name,
+      pid: pid
+    } do
+      api = Pleroma.Config.get([API])
+      Pleroma.Config.put([API], API.Gun)
+      on_exit(fn -> Pleroma.Config.put([API], api) end)
+
+      self = self()
+      Connections.checkin("https://www.google.com", [genserver_pid: pid], name)
+      conn1 = Connections.checkin("https://www.google.com", [genserver_pid: pid], name)
+      conn2 = Connections.checkin("https://httpbin.org", [genserver_pid: pid], name)
+
+      %Connections{
+        conns: %{
+          "https:httpbin.org:443" => %Conn{
+            conn: ^conn2,
+            gun_state: :up,
+            waiting_pids: [],
+            conn_state: :active,
+            used_by: [{^self, _}]
+          },
+          "https:www.google.com:443" => %Conn{
+            conn: ^conn1,
+            gun_state: :up,
+            waiting_pids: [],
+            conn_state: :active,
+            used_by: [{^self, _}, {^self, _}]
+          }
+        },
+        opts: [max_connections: 2, timeout: 10]
+      } = Connections.get_state(name)
+
+      task =
+        Task.async(fn -> Connections.checkin("http://httpbin.org", [genserver_pid: pid], name) end)
+
+      task_pid = task.pid
+
+      :ok = Connections.checkout(conn1, self, name)
+
+      Process.sleep(1_000)
+
+      %Connections{
+        conns: %{
+          "https:httpbin.org:443" => %Conn{
+            conn: ^conn2,
+            gun_state: :up,
+            waiting_pids: [],
+            conn_state: :active,
+            used_by: [{^self, _}]
+          },
+          "https:www.google.com:443" => %Conn{
+            conn: ^conn1,
+            gun_state: :up,
+            waiting_pids: [],
+            conn_state: :active,
+            used_by: [{^self, _}]
+          }
+        },
+        queue: [{{^task_pid, _}, "http:httpbin.org:80", _, _}],
+        opts: [max_connections: 2, timeout: 10]
+      } = Connections.get_state(name)
+
+      :ok = Connections.checkout(conn1, self, name)
+
+      %Connections{
+        conns: %{
+          "https:httpbin.org:443" => %Conn{
+            conn: ^conn2,
+            gun_state: :up,
+            waiting_pids: [],
+            conn_state: :active,
+            used_by: [{^self, _}]
+          },
+          "https:www.google.com:443" => %Conn{
+            conn: ^conn1,
+            gun_state: :up,
+            waiting_pids: [],
+            conn_state: :idle,
+            used_by: []
+          }
+        },
+        queue: [{{^task_pid, _}, "http:httpbin.org:80", _, _}],
+        opts: [max_connections: 2, timeout: 10]
+      } = Connections.get_state(name)
+
+      :ok = Connections.process_queue(name)
+      conn = Task.await(task)
+
+      %Connections{
+        conns: %{
+          "https:httpbin.org:443" => %Conn{
+            conn: ^conn2,
+            gun_state: :up,
+            waiting_pids: [],
+            conn_state: :active,
+            used_by: [{^self, _}]
+          },
+          "http:httpbin.org:80" => %Conn{
+            conn: ^conn,
+            gun_state: :up,
+            waiting_pids: [],
+            conn_state: :active,
+            used_by: [{^task_pid, _}]
+          }
+        },
+        queue: [],
         opts: [max_connections: 2, timeout: 10]
       } = Connections.get_state(name)
     end
@@ -353,7 +521,7 @@ defmodule Gun.ConnectionsTest do
   describe "with proxy usage" do
     test "proxy as ip", %{name: name, pid: pid} do
       conn =
-        Connections.get_conn(
+        Connections.checkin(
           "http://proxy_string.com",
           [genserver_pid: pid, proxy: {{127, 0, 0, 1}, 8123}],
           name
@@ -363,7 +531,7 @@ defmodule Gun.ConnectionsTest do
         conns: %{
           "http:proxy_string.com:80" => %Conn{
             conn: ^conn,
-            state: :up,
+            gun_state: :up,
             waiting_pids: []
           }
         },
@@ -371,7 +539,7 @@ defmodule Gun.ConnectionsTest do
       } = Connections.get_state(name)
 
       reused_conn =
-        Connections.get_conn(
+        Connections.checkin(
           "http://proxy_string.com",
           [genserver_pid: pid, proxy: {{127, 0, 0, 1}, 8123}],
           name
@@ -382,7 +550,7 @@ defmodule Gun.ConnectionsTest do
 
     test "proxy as host", %{name: name, pid: pid} do
       conn =
-        Connections.get_conn(
+        Connections.checkin(
           "http://proxy_tuple_atom.com",
           [genserver_pid: pid, proxy: {'localhost', 9050}],
           name
@@ -392,7 +560,7 @@ defmodule Gun.ConnectionsTest do
         conns: %{
           "http:proxy_tuple_atom.com:80" => %Conn{
             conn: ^conn,
-            state: :up,
+            gun_state: :up,
             waiting_pids: []
           }
         },
@@ -400,7 +568,7 @@ defmodule Gun.ConnectionsTest do
       } = Connections.get_state(name)
 
       reused_conn =
-        Connections.get_conn(
+        Connections.checkin(
           "http://proxy_tuple_atom.com",
           [genserver_pid: pid, proxy: {'localhost', 9050}],
           name
@@ -411,7 +579,7 @@ defmodule Gun.ConnectionsTest do
 
     test "proxy as ip and ssl", %{name: name, pid: pid} do
       conn =
-        Connections.get_conn(
+        Connections.checkin(
           "https://proxy_string.com",
           [genserver_pid: pid, proxy: {{127, 0, 0, 1}, 8123}],
           name
@@ -421,7 +589,7 @@ defmodule Gun.ConnectionsTest do
         conns: %{
           "https:proxy_string.com:443" => %Conn{
             conn: ^conn,
-            state: :up,
+            gun_state: :up,
             waiting_pids: []
           }
         },
@@ -429,7 +597,7 @@ defmodule Gun.ConnectionsTest do
       } = Connections.get_state(name)
 
       reused_conn =
-        Connections.get_conn(
+        Connections.checkin(
           "https://proxy_string.com",
           [genserver_pid: pid, proxy: {{127, 0, 0, 1}, 8123}],
           name
@@ -440,7 +608,7 @@ defmodule Gun.ConnectionsTest do
 
     test "proxy as host and ssl", %{name: name, pid: pid} do
       conn =
-        Connections.get_conn(
+        Connections.checkin(
           "https://proxy_tuple_atom.com",
           [genserver_pid: pid, proxy: {'localhost', 9050}],
           name
@@ -450,7 +618,7 @@ defmodule Gun.ConnectionsTest do
         conns: %{
           "https:proxy_tuple_atom.com:443" => %Conn{
             conn: ^conn,
-            state: :up,
+            gun_state: :up,
             waiting_pids: []
           }
         },
@@ -458,7 +626,7 @@ defmodule Gun.ConnectionsTest do
       } = Connections.get_state(name)
 
       reused_conn =
-        Connections.get_conn(
+        Connections.checkin(
           "https://proxy_tuple_atom.com",
           [genserver_pid: pid, proxy: {'localhost', 9050}],
           name
