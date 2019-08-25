@@ -16,6 +16,8 @@ defmodule Pleroma.Web.ActivityPub.ActivityPubTest do
   import Tesla.Mock
   import Mock
 
+  require Pleroma.Constants
+
   setup do
     mock(fn env -> apply(HttpRequestMock, :request, [env]) end)
     :ok
@@ -276,6 +278,24 @@ defmodule Pleroma.Web.ActivityPub.ActivityPubTest do
       assert activity.data["to"] == ["user1", "user2"]
       assert activity.actor == user.ap_id
       assert activity.recipients == ["user1", "user2", user.ap_id]
+    end
+
+    test "recipient_users only contains AP IDs of actual users" do
+      user = insert(:user)
+
+      {:ok, activity} =
+        ActivityPub.create(%{
+          to: [Pleroma.Constants.as_public(), user.ap_id],
+          actor: user,
+          context: "",
+          object: %{
+            "to" => [Pleroma.Constants.as_public(), user.ap_id],
+            "type" => "Note",
+            "content" => "testing"
+          }
+        })
+
+      assert activity.recipient_users == [user.ap_id]
     end
 
     test "increases user note count only for public activities" do

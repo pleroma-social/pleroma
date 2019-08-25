@@ -39,6 +39,7 @@ defmodule Pleroma.Activity do
     field(:local, :boolean, default: true)
     field(:actor, :string)
     field(:recipients, {:array, :string}, default: [])
+    field(:recipient_users, {:array, :string}, default: [])
     field(:thread_muted?, :boolean, virtual: true)
     # This is a fake relation, do not use outside of with_preloaded_bookmark/get_bookmark
     has_one(:bookmark, Bookmark)

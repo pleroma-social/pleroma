@@ -61,6 +61,9 @@ defmodule Pleroma.Web.ActivityPub.ActivityPub do
     {recipients, to, cc}
   end
 
+  defp get_recipient_users(recipients),
+    do: Enum.filter(recipients, fn recipient -> !is_nil(User.get_cached_by_ap_id(recipient)) end)
+
   defp check_actor_is_active(actor) do
     if not is_nil(actor) do
       with user <- User.get_cached_by_ap_id(actor),
@@ -126,6 +129,7 @@ defmodule Pleroma.Web.ActivityPub.ActivityPub do
          {_, true} <- {:remote_limit_error, check_remote_limit(map)},
          {:ok, map} <- MRF.filter(map),
          {recipients, _, _} = get_recipients(map),
+         recipient_users <- get_recipient_users(recipients),
          {:fake, false, map, recipients} <- {:fake, fake, map, recipients},
          :ok <- Containment.contain_child(map),
          {:ok, map, object} <- insert_full_object(map) do
@@ -134,7 +138,8 @@ defmodule Pleroma.Web.ActivityPub.ActivityPub do
           data: map,
           local: local,
           actor: map["actor"],
-          recipients: recipients
+          recipients: recipients,
+          recipient_users: recipient_users
         })
 
       # Splice in the child object if we have one.
