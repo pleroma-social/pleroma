@@ -111,7 +111,15 @@ defmodule Pleroma.Mixfile do
       {:calendar, "~> 0.17.4"},
       {:cachex, "~> 3.0.2"},
       {:poison, "~> 3.0", override: true},
-      {:tesla, "~> 1.2"},
+      {
+        :tesla,
+        github: "alex-strizhakov/tesla",
+        ref: "199e77f6e4390495eef7c31f2d830da855571b64",
+        override: true
+      },
+      {:cowlib, "~> 2.7.3", override: true},
+      {:gun,
+       github: "ninenines/gun", ref: "491ddf58c0e14824a741852fdc522b390b306ae2", override: true},
       {:jason, "~> 1.0"},
       {:mogrify, "~> 0.6.1"},
       {:ex_aws, "~> 2.1"},

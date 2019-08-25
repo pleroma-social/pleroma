@@ -28,21 +28,44 @@ defmodule Pleroma.HTTP do
   """
   def request(method, url, body \\ "", headers \\ [], options \\ []) do
     try do
+      options = process_request_options(options)
+
+      adapter_gun? = Application.get_env(:tesla, :adapter) == Tesla.Adapter.Gun
+
       options =
-        process_request_options(options)
-        |> process_sni_options(url)
+        if adapter_gun? do
+          adapter_opts =
+            Keyword.get(options, :adapter, [])
+            |> Keyword.put(:url, url)
+
+          Keyword.put(options, :adapter, adapter_opts)
+        else
+          options
+        end
 
       params = Keyword.get(options, :params, [])
 
-      %{}
-      |> Builder.method(method)
-      |> Builder.headers(headers)
-      |> Builder.opts(options)
-      |> Builder.url(url)
-      |> Builder.add_param(:body, :body, body)
-      |> Builder.add_param(:query, :query, params)
-      |> Enum.into([])
-      |> (&Tesla.request(Connection.new(options), &1)).()
+      request =
+        %{}
+        |> Builder.method(method)
+        |> Builder.url(url)
+        |> Builder.headers(headers)
+        |> Builder.opts(options)
+        |> Builder.add_param(:body, :body, body)
+        |> Builder.add_param(:query, :query, params)
+        |> Enum.into([])
+
+      client = Connection.new(options)
+      response = Tesla.request(client, request)
+
+      if adapter_gun? do
+        %{adapter: {_, _, [adapter_options]}} = client
+        pool = adapter_options[:pool]
+        Pleroma.Gun.Connections.checkout(adapter_options[:conn], self(), pool)
+        Pleroma.Gun.Connections.process_queue(pool)
+      end
+
+      response
     rescue
       e ->
         {:error, e}
@@ -52,20 +75,8 @@ defmodule Pleroma.HTTP do
     end
   end
 
-  defp process_sni_options(options, nil), do: options
-
-  defp process_sni_options(options, url) do
-    uri = URI.parse(url)
-    host = uri.host |> to_charlist()
-
-    case uri.scheme do
-      "https" -> options ++ [ssl: [server_name_indication: host]]
-      _ -> options
-    end
-  end
-
   def process_request_options(options) do
-    Keyword.merge(Pleroma.HTTP.Connection.hackney_options([]), options)
+    Keyword.merge(Pleroma.HTTP.Connection.options([]), options)
   end
 
   @doc """

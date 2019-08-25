@@ -56,20 +56,6 @@ config :pleroma, Pleroma.Captcha,
   seconds_valid: 60,
   method: Pleroma.Captcha.Kocaptcha
 
-config :pleroma, :hackney_pools,
-  federation: [
-    max_connections: 50,
-    timeout: 150_000
-  ],
-  media: [
-    max_connections: 50,
-    timeout: 150_000
-  ],
-  upload: [
-    max_connections: 25,
-    timeout: 300_000
-  ]
-
 config :pleroma, Pleroma.Captcha.Kocaptcha, endpoint: "https://captcha.kotobank.ch"
 
 # Upload configuration
@@ -186,20 +172,13 @@ config :mime, :types, %{
   "application/ld+json" => ["activity+json"]
 }
 
-config :tesla, adapter: Tesla.Adapter.Hackney
+config :tesla, adapter: Tesla.Adapter.Gun
 
 # Configures http settings, upstream proxy etc.
 config :pleroma, :http,
   proxy_url: nil,
   send_user_agent: true,
-  adapter: [
-    ssl_options: [
-      # Workaround for remote server certificate chain issues
-      partial_chain: &:hackney_connect.partial_chain/1,
-      # We don't support TLS v1.3 yet
-      versions: [:tlsv1, :"tlsv1.1", :"tlsv1.2"]
-    ]
-  ]
+  adapter: []
 
 config :pleroma, :instance,
   name: "Pleroma",
@@ -568,6 +547,20 @@ config :pleroma, :rate_limit,
   ap_routes: {60_000, 15}
 
 config :pleroma, Pleroma.ActivityExpiration, enabled: true
+
+config :pleroma, :gun_pools,
+  federation: [
+    max_connections: 50,
+    timeout: 150_000
+  ],
+  media: [
+    max_connections: 50,
+    timeout: 150_000
+  ],
+  upload: [
+    max_connections: 25,
+    timeout: 300_000
+  ]
 
 # Import environment specific config. This must remain at the bottom
 # of this file so it overrides the configuration defined above.

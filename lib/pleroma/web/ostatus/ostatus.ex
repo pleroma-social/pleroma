@@ -373,7 +373,7 @@ defmodule Pleroma.Web.OStatus do
          {:ok, %{body: body, status: code}} when code in 200..299 <-
            HTTP.get(
              url,
-             [{:Accept, "application/atom+xml"}]
+             [{"accept", "application/atom+xml"}]
            ) do
       Logger.debug("Got document from #{url}, handling...")
       handle_incoming(body, options)
