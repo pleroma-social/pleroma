@@ -101,6 +101,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Admin API: changed json structure for saving config settings.
 - RichMedia: parsers and their order are configured in `rich_media` config.
 - RichMedia: add the rich media ttl based on image expiration time.
+- Thread Containment has been reworked in a more efficient way with a new `default_reply_visibility` setting.
 
 ### Removed
 - Emoji: Remove longfox emojis.
