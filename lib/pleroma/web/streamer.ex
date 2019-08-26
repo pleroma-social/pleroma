@@ -6,7 +6,6 @@ defmodule Pleroma.Web.Streamer do
   use GenServer
   require Logger
   alias Pleroma.Activity
-  alias Pleroma.Config
   alias Pleroma.Conversation.Participation
   alias Pleroma.Notification
   alias Pleroma.Object
@@ -309,10 +308,6 @@ defmodule Pleroma.Web.Streamer do
   defp thread_containment(_activity, %User{info: %{skip_thread_containment: true}}), do: true
 
   defp thread_containment(activity, user) do
-    if Config.get([:instance, :skip_thread_containment]) do
-      true
-    else
-      ActivityPub.contain_activity(activity, user)
-    end
+    ActivityPub.contain_activity(activity, user)
   end
 end

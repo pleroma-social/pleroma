@@ -1216,7 +1216,25 @@ defmodule Pleroma.Web.ActivityPub.ActivityPub do
 
   # do post-processing on a specific activity
   def contain_activity(%Activity{} = activity, %User{} = user) do
-    contain_broken_threads(activity, user)
+    strategy = Pleroma.Config.get([:instance, :default_reply_visibility])
+
+    case strategy do
+      "public" ->
+        Pleroma.Constants.as_public() in activity.recipients
+
+      "self" ->
+        user.ap_id in activity.recipients
+
+      "following" ->
+        friends = ([user.ap_id] ++ get_friend_ap_ids(user)) |> Enum.into(MapSet.new())
+
+        !(activity.recipients
+          |> Enum.into(MapSet.new())
+          |> MapSet.disjoint?(friends))
+
+      _ ->
+        true
+    end
   end
 
   def fetch_direct_messages_query do
