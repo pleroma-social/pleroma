@@ -527,7 +527,7 @@ defmodule Pleroma.Web.ActivityPub.ActivityPub do
     |> maybe_preload_bookmarks(opts)
     |> maybe_set_thread_muted_field(opts)
     |> restrict_blocked(opts)
-    |> restrict_recipients(recipients, opts["user"])
+    |> restrict_recipients(recipients, opts)
     |> where(
       [activity],
       fragment(
@@ -696,18 +696,71 @@ defmodule Pleroma.Web.ActivityPub.ActivityPub do
 
   defp restrict_tag(query, _), do: query
 
-  defp restrict_recipients(query, [], _user), do: query
-
-  defp restrict_recipients(query, recipients, nil) do
-    from(activity in query, where: fragment("? && ?", ^recipients, activity.recipients))
+  defp get_friend_ap_ids(%User{} = user) do
+    from(u in User.get_friends_query(user), select: u.ap_id)
+    |> Repo.all()
   end
 
-  defp restrict_recipients(query, recipients, user) do
+  defp restrict_recipients(query, [], _opts), do: query
+
+  defp restrict_recipients(query, recipients, %{
+         "user" => %User{} = user,
+         "reply_visibility" => visibility
+       })
+       when visibility in ["self", "following"] do
+    reply_recipients =
+      case visibility do
+        "self" -> [user.ap_id]
+        "following" -> [user.ap_id] ++ get_friend_ap_ids(user)
+      end
+
+    from(
+      [activity, object] in query,
+      where:
+        fragment(
+          "? && ? and (?->>'inReplyTo' is null or ? <@ ?)",
+          ^recipients,
+          activity.recipients,
+          object.data,
+          activity.recipient_users,
+          ^reply_recipients
+        )
+    )
+  end
+
+  defp restrict_recipients(query, recipients, %{
+         "user" => %User{} = user,
+         "reply_visibility" => "public"
+       }) do
+    reply_recipients = [user.ap_id] ++ get_friend_ap_ids(user)
+    public_recipients = [Pleroma.Constants.as_public()]
+
+    from(
+      [activity, object] in query,
+      where:
+        fragment(
+          "? && ? and (?->>'inReplyTo' is null or ? && ? or ? <@ ?)",
+          ^recipients,
+          activity.recipients,
+          object.data,
+          activity.recipients,
+          ^public_recipients,
+          activity.recipient_users,
+          ^reply_recipients
+        )
+    )
+  end
+
+  defp restrict_recipients(query, recipients, %{"user" => %User{} = user}) do
     from(
       activity in query,
       where: fragment("? && ?", ^recipients, activity.recipients),
       or_where: activity.actor == ^user.ap_id
     )
+  end
+
+  defp restrict_recipients(query, recipients, _opts) do
+    from(activity in query, where: fragment("? && ?", ^recipients, activity.recipients))
   end
 
   defp restrict_local(query, %{"local_only" => true}) do
@@ -907,12 +960,20 @@ defmodule Pleroma.Web.ActivityPub.ActivityPub do
   defp maybe_order(query, _), do: query
 
   def fetch_activities_query(recipients, opts \\ %{}) do
+    opts =
+      if !Map.has_key?(opts, "user") do
+        opts
+      else
+        default_vis = Pleroma.Config.get([:instance, :default_reply_visibility])
+        Map.put_new(opts, "reply_visibility", default_vis)
+      end
+
     Activity
     |> maybe_preload_objects(opts)
     |> maybe_preload_bookmarks(opts)
     |> maybe_set_thread_muted_field(opts)
     |> maybe_order(opts)
-    |> restrict_recipients(recipients, opts["user"])
+    |> restrict_recipients(recipients, opts)
     |> restrict_tag(opts)
     |> restrict_tag_reject(opts)
     |> restrict_tag_all(opts)

@@ -129,7 +129,6 @@ config :pleroma, Pleroma.Emails.Mailer,
 * `remote_post_retention_days`: The default amount of days to retain remote posts when pruning the database.
 * `user_bio_length`: A user bio maximum length (default: `5000`)
 * `user_name_length`: A user name maximum length (default: `100`)
-* `skip_thread_containment`: Skip filter out broken threads. The default is `false`.
 * `limit_to_local_content`: Limit unauthenticated users to search for local statutes and users only. Possible values: `:unauthenticated`, `:all` and `false`. The default is `:unauthenticated`.
 * `dynamic_configuration`: Allow transferring configuration to DB with the subsequent customization from Admin api.
 * `max_account_fields`: The maximum number of custom fields in the user profile (default: `10`)
@@ -137,7 +136,11 @@ config :pleroma, Pleroma.Emails.Mailer,
 * `account_field_name_length`: An account field name maximum length (default: `512`)
 * `account_field_value_length`: An account field value maximum length (default: `512`)
 * `external_user_synchronization`: Enabling following/followers counters synchronization for external users.
-
+* `default_reply_visibility`: The default reply visibility filter:
+  * "none": show all replies in timelines (like GNU Social)
+  * "public": show public replies in timelines (default)
+  * "following": show replies involving only people the user follows (like Mastodon)
+  * "self": show replies only from the user
 
 
 ## :logger

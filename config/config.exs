@@ -250,7 +250,6 @@ config :pleroma, :instance,
   safe_dm_mentions: false,
   healthcheck: false,
   remote_post_retention_days: 90,
-  skip_thread_containment: true,
   limit_to_local_content: :unauthenticated,
   dynamic_configuration: false,
   user_bio_length: 5000,
@@ -259,7 +258,8 @@ config :pleroma, :instance,
   max_remote_account_fields: 20,
   account_field_name_length: 512,
   account_field_value_length: 512,
-  external_user_synchronization: true
+  external_user_synchronization: true,
+  default_reply_visibility: "public"
 
 config :pleroma, :markup,
   # XXX - unfortunately, inline images must be enabled by default right now, because
