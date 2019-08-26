@@ -3440,7 +3440,7 @@ defmodule Pleroma.Web.MastodonAPI.MastodonAPIControllerTest do
     conn3 =
       conn
       |> assign(:user, user3)
-      |> get("api/v1/timelines/home")
+      |> get("api/v1/timelines/home?reply_visibility=none")
 
     [reblogged_activity] = json_response(conn3, 200)
 
