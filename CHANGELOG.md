@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ## [1.0.7] - 2019-09-27
 ### Fixed
 - Broken federation on Erlang 22 (previous versions of hackney http client were using an option that got deprecated)
+### Changed
+- ActivityPub: The first page in inboxes/outboxes is no longer embedded.
 
 ## [1.0.6] - 2019-08-14
 ### Fixed
