@@ -4,6 +4,7 @@ defmodule Pleroma.Web.ActivityPub.UserViewTest do
 
   alias Pleroma.User
   alias Pleroma.Web.ActivityPub.UserView
+  alias Pleroma.Web.CommonAPI
 
   test "Renders a user, including the public key" do
     user = insert(:user)
@@ -77,5 +78,36 @@ defmodule Pleroma.Web.ActivityPub.UserViewTest do
       refute result["endpoints"]["oauthRegistrationEndpoint"]
       refute result["endpoints"]["oauthTokenEndpoint"]
     end
+  end
+
+  test "activity collection page aginates correctly" do
+    user = insert(:user)
+
+    posts =
+      for i <- 0..25 do
+        {:ok, activity} = CommonAPI.post(user, %{"status" => "post #{i}"})
+        activity
+      end
+
+    # outbox sorts chronologically, newest first, with ten per page
+    posts = Enum.reverse(posts)
+
+    %{"next" => next_url} =
+      UserView.render("activity_collection_page.json", %{
+        iri: "#{user.ap_id}/outbox",
+        activities: Enum.take(posts, 10)
+      })
+
+    next_id = Enum.at(posts, 9).id
+    assert next_url =~ next_id
+
+    %{"next" => next_url} =
+      UserView.render("activity_collection_page.json", %{
+        iri: "#{user.ap_id}/outbox",
+        activities: Enum.take(Enum.drop(posts, 10), 10)
+      })
+
+    next_id = Enum.at(posts, 19).id
+    assert next_url =~ next_id
   end
 end

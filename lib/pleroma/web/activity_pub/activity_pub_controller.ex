@@ -144,12 +144,43 @@ defmodule Pleroma.Web.ActivityPub.ActivityPubController do
     end
   end
 
-  def outbox(conn, %{"nickname" => nickname} = params) do
+  def outbox(conn, %{"nickname" => nickname, "page" => page?} = params)
+      when page? in [true, "true"] do
+    with %User{} = user <- User.get_cached_by_nickname(nickname),
+         {:ok, user} <- User.ensure_keys_present(user) do
+      activities =
+        if params["max_id"] do
+          ActivityPub.fetch_user_activities(user, nil, %{
+            "max_id" => params["max_id"],
+            # This is a hack because postgres generates inefficient queries when filtering by
+            # 'Answer', poll votes will be hidden by the visibility filter in this case anyway
+            "include_poll_votes" => true,
+            "limit" => 10
+          })
+        else
+          ActivityPub.fetch_user_activities(user, nil, %{
+            "limit" => 10,
+            "include_poll_votes" => true
+          })
+        end
+
+      conn
+      |> put_resp_content_type("application/activity+json")
+      |> put_view(UserView)
+      |> render("activity_collection_page.json", %{
+        activities: activities,
+        iri: "#{user.ap_id}/outbox"
+      })
+    end
+  end
+
+  def outbox(conn, %{"nickname" => nickname}) do
     with %User{} = user <- User.get_cached_by_nickname(nickname),
          {:ok, user} <- User.ensure_keys_present(user) do
       conn
-      |> put_resp_header("content-type", "application/activity+json")
-      |> json(UserView.render("outbox.json", %{user: user, max_id: params["max_id"]}))
+      |> put_resp_content_type("application/activity+json")
+      |> put_view(UserView)
+      |> render("activity_collection.json", %{iri: "#{user.ap_id}/outbox"})
     end
   end
 
@@ -212,16 +243,61 @@ defmodule Pleroma.Web.ActivityPub.ActivityPubController do
 
   def whoami(_conn, _params), do: {:error, :not_found}
 
-  def read_inbox(%{assigns: %{user: user}} = conn, %{"nickname" => nickname} = params) do
-    if nickname == user.nickname do
+  def read_inbox(
+        %{assigns: %{user: %{nickname: nickname} = user}} = conn,
+        %{"nickname" => nickname, "page" => page?} = params
+      )
+      when page? in [true, "true"] do
+    activities =
+      if params["max_id"] do
+        ActivityPub.fetch_activities([user.ap_id | user.following], %{
+          "max_id" => params["max_id"],
+          "limit" => 10
+        })
+      else
+        ActivityPub.fetch_activities([user.ap_id | user.following], %{"limit" => 10})
+      end
+
+    conn
+    |> put_resp_content_type("application/activity+json")
+    |> put_view(UserView)
+    |> render("activity_collection_page.json", %{
+      activities: activities,
+      iri: "#{user.ap_id}/inbox"
+    })
+  end
+
+  def read_inbox(%{assigns: %{user: %{nickname: nickname} = user}} = conn, %{
+        "nickname" => nickname
+      }) do
+    with {:ok, user} <- User.ensure_keys_present(user) do
       conn
-      |> put_resp_header("content-type", "application/activity+json")
-      |> json(UserView.render("inbox.json", %{user: user, max_id: params["max_id"]}))
-    else
-      conn
-      |> put_status(:forbidden)
-      |> json("can't read inbox of #{nickname} as #{user.nickname}")
+      |> put_resp_content_type("application/activity+json")
+      |> put_view(UserView)
+      |> render("activity_collection.json", %{iri: "#{user.ap_id}/inbox"})
     end
+  end
+
+  def read_inbox(%{assigns: %{user: nil}} = conn, %{"nickname" => nickname}) do
+    err = dgettext("errors", "can't read inbox of %{nickname}", nickname: nickname)
+
+    conn
+    |> put_status(:forbidden)
+    |> json(err)
+  end
+
+  def read_inbox(%{assigns: %{user: %{nickname: as_nickname}}} = conn, %{
+        "nickname" => nickname
+      }) do
+    err =
+      dgettext("errors", "can't read inbox of %{nickname} as %{as_nickname}",
+        nickname: nickname,
+        as_nickname: as_nickname
+      )
+
+    conn
+    |> put_status(:forbidden)
+    |> json(err)
   end
 
   def handle_user_activity(user, %{"type" => "Create"} = params) do
