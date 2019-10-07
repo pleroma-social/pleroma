@@ -19,6 +19,7 @@ defmodule Pleroma.Object do
 
   schema "objects" do
     field(:data, :map)
+    field(:ap_id, :string)
 
     timestamps()
   end
