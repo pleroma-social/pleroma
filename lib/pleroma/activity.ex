@@ -70,8 +70,8 @@ defmodule Pleroma.Activity do
     join(query, join_type, [activity], o in Object,
       on:
         fragment(
-          "(?->>'id') = COALESCE(?->'object'->>'id', ?->>'object')",
-          o.data,
+          "? = COALESCE(?->'object'->>'id', ?->>'object')",
+          o.ap_id,
           activity.data,
           activity.data
         ),

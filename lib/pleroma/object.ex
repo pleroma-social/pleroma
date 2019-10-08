@@ -67,7 +67,7 @@ defmodule Pleroma.Object do
   def get_by_ap_id(nil), do: nil
 
   def get_by_ap_id(ap_id) do
-    Repo.one(from(object in Object, where: fragment("(?)->>'id' = ?", object.data, ^ap_id)))
+    Repo.one(from(object in Object, where: object.ap_id == ^ap_id))
   end
 
   defp warn_on_no_object_preloaded(ap_id) do
