@@ -143,7 +143,7 @@ defmodule Pleroma.Web.ActivityPub.Utils do
 
     with true <- is_nil(object),
          changeset <- Object.context_mapping(context),
-         {:ok, inserted_object} <- Repo.insert(changeset) do
+         {:ok, inserted_object} <- Object.insert(changeset) do
       inserted_object
     else
       _ ->

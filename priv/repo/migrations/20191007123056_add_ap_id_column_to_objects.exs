@@ -6,6 +6,6 @@ defmodule Pleroma.Repo.Migrations.AddApIdColumnToObjects do
       add :ap_id, :string
     end
 
-    create unique_index(:objects, [:ap_id], concurrently: true)
+    create unique_index(:objects, [:ap_id])
   end
 end

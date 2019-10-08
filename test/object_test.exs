@@ -19,6 +19,7 @@ defmodule Pleroma.ObjectTest do
 
   test "returns an object by it's AP id" do
     object = insert(:note)
+    object = Object.get_by_id(object.id)
     found_object = Object.get_by_ap_id(object.data["id"])
 
     assert object == found_object
@@ -32,11 +33,21 @@ defmodule Pleroma.ObjectTest do
 
       {:error, _result} = Repo.insert(cs)
     end
+
+    test "it automatically sets the ap_id field" do
+      {:ok, object} =
+        %Object{}
+        |> Object.change(%{data: %{id: "myid"}})
+        |> Object.insert()
+
+      assert object.ap_id == "myid"
+    end
   end
 
   describe "deletion function" do
     test "deletes an object" do
       object = insert(:note)
+      object = Object.get_by_id(object.id)
       found_object = Object.get_by_ap_id(object.data["id"])
 
       assert object == found_object
@@ -52,6 +63,7 @@ defmodule Pleroma.ObjectTest do
 
     test "ensures cache is cleared for the object" do
       object = insert(:note)
+      object = Object.get_by_id(object.id)
       cached_object = Object.get_cached_by_ap_id(object.data["id"])
 
       assert object == cached_object
