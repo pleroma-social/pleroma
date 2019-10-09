@@ -3,5 +3,6 @@ defmodule Pleroma.Repo.Migrations.FillObjectApIdField do
 
   def change do
     execute("update objects set ap_id = data->>'id'")
+    create unique_index(:objects, [:ap_id])
   end
 end
