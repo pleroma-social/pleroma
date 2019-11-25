@@ -496,6 +496,7 @@ defmodule Pleroma.Web.ActivityPub.ActivityPub do
     |> maybe_set_thread_muted_field(opts)
     |> restrict_blocked(opts)
     |> restrict_recipients(recipients, opts[:user])
+    |> restrict_filtered(opts)
     |> where(
       [activity],
       fragment(
@@ -1160,6 +1161,7 @@ defmodule Pleroma.Web.ActivityPub.ActivityPub do
     |> restrict_favorited_by(opts)
     |> restrict_blocked(restrict_blocked_opts)
     |> restrict_muted(restrict_muted_opts)
+    |> restrict_filtered(opts)
     |> restrict_media(opts)
     |> restrict_visibility(opts)
     |> restrict_thread_visibility(opts, config)

@@ -13,6 +13,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 <details>
   <summary>API Changes</summary>
 - **Breaking:** Emoji API: changed methods and renamed routes.
+- Mastodon API: Add `pleroma.unread_count` to the Marker entity.
 </details>
 
 ### Removed
@@ -40,6 +41,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Mastodon API: Support for `include_types` in `/api/v1/notifications`.
 - Mastodon API: Added `/api/v1/notifications/:id/dismiss` endpoint.
 - Mastodon API: Add support for filtering replies in public and home timelines
+- Mastodon API: Support irreversible property for filters.
 - Admin API: endpoints for create/update/delete OAuth Apps.
 - Admin API: endpoint for status view.
 - OTP: Add command to reload emoji packs
@@ -191,7 +193,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Mastodon API: `pleroma.thread_muted` to the Status entity
 - Mastodon API: Mark the direct conversation as read for the author when they send a new direct message
 - Mastodon API, streaming: Add `pleroma.direct_conversation_id` to the `conversation` stream event payload.
-- Mastodon API: Add `pleroma.unread_count` to the Marker entity
 - Admin API: Render whole status in grouped reports
 - Mastodon API: User timelines will now respect blocks, unless you are getting the user timeline of somebody you blocked (which would be empty otherwise).
 - Mastodon API: Favoriting / Repeating a post multiple times will now return the identical response every time. Before, executing that action twice would return an error ("already favorited") on the second try.
