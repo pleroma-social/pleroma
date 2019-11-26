@@ -925,7 +925,7 @@ defmodule Pleroma.UserTest do
       refute User.blocks?(user, good_eggo)
     end
 
-    test "takes precidence over domain blocks" do
+    test "takes precedence over domain blocks" do
       user = insert(:user)
       good_eggo = insert(:user, %{ap_id: "https://awful-and-rude-instance.com/user/cuteposter"})
 

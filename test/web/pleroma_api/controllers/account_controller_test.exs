@@ -391,4 +391,51 @@ defmodule Pleroma.Web.PleromaAPI.AccountControllerTest do
       assert %{"error" => "Record not found"} = json_response(conn, 404)
     end
   end
+
+  describe "whitelisting / unwhitelisting" do
+    test "whitelisting / unwhitelisting to a user", %{conn: conn} do
+      user = insert(:user)
+      whitelist_target = insert(:user)
+
+      conn =
+        conn
+        |> assign(:user, user)
+        |> post("/api/v1/pleroma/accounts/#{whitelist_target.id}/whitelist")
+
+      assert %{"id" => _id, "whitelisting" => true} = json_response(conn, 200)
+
+      conn =
+        build_conn()
+        |> assign(:user, user)
+        |> post("/api/v1/pleroma/accounts/#{whitelist_target.id}/unwhitelist")
+
+      assert %{"id" => _id, "whitelisting" => false} = json_response(conn, 200)
+    end
+  end
+
+  describe "whitelisting" do
+    test "returns 404 when whitelist_target not found", %{conn: conn} do
+      user = insert(:user)
+
+      conn =
+        conn
+        |> assign(:user, user)
+        |> post("/api/v1/pleroma/accounts/target_id/whitelist")
+
+      assert %{"error" => "Record not found"} = json_response(conn, 404)
+    end
+  end
+
+  describe "unwhitelisting" do
+    test "returns 404 when whitelist_target not found", %{conn: conn} do
+      user = insert(:user)
+
+      conn =
+        conn
+        |> assign(:user, user)
+        |> post("/api/v1/pleroma/accounts/target_id/unwhitelist")
+
+      assert %{"error" => "Record not found"} = json_response(conn, 404)
+    end
+  end
 end
