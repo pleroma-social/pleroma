@@ -43,7 +43,7 @@ defmodule Pleroma.Web.PleromaAPI.AccountController do
   )
 
   plug(RateLimiter, [name: :account_confirmation_resend] when action == :confirmation_resend)
-  plug(:assign_account_by_id when action in [:favourites, :subscribe, :unsubscribe])
+  plug(:assign_account_by_id when action in [:favourites, :subscribe, :unsubscribe, :whitelist, :unwhitelist])
   plug(:put_view, Pleroma.Web.MastodonAPI.AccountView)
 
   @doc "POST /api/v1/pleroma/accounts/confirmation_resend"
@@ -155,6 +155,24 @@ defmodule Pleroma.Web.PleromaAPI.AccountController do
   def unsubscribe(%{assigns: %{user: user, account: subscription_target}} = conn, _params) do
     with {:ok, subscription_target} <- User.unsubscribe(user, subscription_target) do
       render(conn, "relationship.json", user: user, target: subscription_target)
+    else
+      {:error, message} -> json_response(conn, :forbidden, %{error: message})
+    end
+  end
+
+  @doc "POST /api/v1/pleroma/accounts/:id/whitelist"
+  def whitelist(%{assigns: %{user: user, account: whitelist_target}} = conn, _params) do
+    with {:ok, user} <- User.whitelist(user, whitelist_target) do
+      render(conn, "relationship.json", user: user, target: whitelist_target)
+    else
+      {:error, message} -> json_response(conn, :forbidden, %{error: message})
+    end
+  end
+
+  @doc "POST /api/v1/pleroma/accounts/:id/unwhitelist"
+  def unwhitelist(%{assigns: %{user: user, account: whitelist_target}} = conn, _params) do
+    with {:ok, user} <- User.unwhitelist(user, whitelist_target) do
+      render(conn, "relationship.json", user: user, target: whitelist_target)
     else
       {:error, message} -> json_response(conn, :forbidden, %{error: message})
     end

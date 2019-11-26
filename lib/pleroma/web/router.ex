@@ -310,6 +310,8 @@ defmodule Pleroma.Web.Router do
 
       post("/accounts/:id/subscribe", AccountController, :subscribe)
       post("/accounts/:id/unsubscribe", AccountController, :unsubscribe)
+      post("/accounts/:id/whitelist", AccountController, :whitelist)
+      post("/accounts/:id/unwhitelist", AccountController, :unwhitelist)
     end
 
     post("/accounts/confirmation_resend", AccountController, :confirmation_resend)

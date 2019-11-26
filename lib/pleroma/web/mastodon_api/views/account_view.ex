@@ -55,6 +55,7 @@ defmodule Pleroma.Web.MastodonAPI.AccountView do
       muting: User.mutes?(user, target),
       muting_notifications: User.muted_notifications?(user, target),
       subscribing: User.subscribed_to?(user, target),
+      whitelisting: User.whitelists?(user, target),
       requested: requested,
       domain_blocking: User.blocks_domain?(user, target),
       showing_reblogs: User.showing_reblogs?(user, target),
