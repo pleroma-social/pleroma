@@ -816,6 +816,19 @@ defmodule Pleroma.UserTest do
       refute User.subscribed_to?(blocker, blocked)
       refute User.subscribed_to?(blocked, blocker)
     end
+
+    test "blocks tear down whitelister->whitelisted relationship" do
+      blocker = insert(:user)
+      blocked = insert(:user)
+
+      {:ok, blocker} = User.whitelist(blocker, blocked)
+      assert User.whitelists?(blocker, blocked)
+      refute User.whitelists?(blocked, blocker)
+
+      {:ok, blocker} = User.block(blocker, blocked)
+      assert User.blocks?(blocker, blocked)
+      refute User.whitelists?(blocker, blocked)
+    end
   end
 
   describe "domain blocking" do
@@ -878,6 +891,49 @@ defmodule Pleroma.UserTest do
       {:ok, user} = User.unblock_domain(user, "awful-and-rude-instance.com")
 
       refute User.blocks?(user, collateral_user)
+    end
+  end
+
+  describe "whitelists" do
+    test "whitelists user" do
+      user = insert(:user)
+      good_eggo = insert(:user)
+
+      {:ok, user} = User.whitelist(user, good_eggo)
+
+      assert User.whitelists?(user, good_eggo)
+    end
+
+    test "unwhitelists user" do
+      user = insert(:user)
+      good_eggo = insert(:user)
+
+      {:ok, user} = User.whitelist(user, good_eggo)
+      {:ok, user} = User.unwhitelist(user, good_eggo)
+
+      refute User.whitelists?(user, good_eggo)
+    end
+
+    test "undoes any block" do
+      user = insert(:user)
+      good_eggo = insert(:user)
+
+      {:ok, user} = User.block(user, good_eggo)
+      {:ok, user} = User.whitelist(user, good_eggo)
+
+      assert User.whitelists?(user, good_eggo)
+      refute User.blocks?(user, good_eggo)
+    end
+
+    test "takes precidence over domain blocks" do
+      user = insert(:user)
+      good_eggo = insert(:user, %{ap_id: "https://awful-and-rude-instance.com/user/cuteposter"})
+
+      {:ok, user} = User.block_domain(user, "awful-and-rude-instance.com")
+      {:ok, user} = User.whitelist(user, good_eggo)
+
+      assert User.whitelists?(user, good_eggo)
+      refute User.blocks?(user, good_eggo)
     end
   end
 
