@@ -193,6 +193,7 @@ defmodule Pleroma.Web.MastodonAPI.AccountViewTest do
       {:ok, other_user} = User.subscribe(user, other_user)
       {:ok, user} = User.mute(user, other_user, true)
       {:ok, user} = CommonAPI.hide_reblogs(user, other_user)
+      {:ok, user} = User.whitelist(user, other_user)
 
       expected = %{
         id: to_string(other_user.id),
@@ -206,6 +207,7 @@ defmodule Pleroma.Web.MastodonAPI.AccountViewTest do
         requested: false,
         domain_blocking: false,
         showing_reblogs: false,
+        whitelisting: true,
         endorsed: false
       }
 
@@ -234,6 +236,7 @@ defmodule Pleroma.Web.MastodonAPI.AccountViewTest do
         requested: false,
         domain_blocking: false,
         showing_reblogs: true,
+        whitelisting: false,
         endorsed: false
       }
 
@@ -271,6 +274,7 @@ defmodule Pleroma.Web.MastodonAPI.AccountViewTest do
         requested: true,
         domain_blocking: false,
         showing_reblogs: true,
+        whitelisting: false,
         endorsed: false
       }
 
@@ -344,6 +348,7 @@ defmodule Pleroma.Web.MastodonAPI.AccountViewTest do
           requested: false,
           domain_blocking: false,
           showing_reblogs: true,
+          whitelisting: false,
           endorsed: false
         },
         skip_thread_containment: false
