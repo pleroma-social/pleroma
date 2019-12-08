@@ -34,6 +34,18 @@ defmodule Pleroma.Config do
     end
   end
 
+  defmacro compile_get!(key) do
+    if function_exported?(Application, :__compile_env__!, 3) do
+      quote do
+        Application.compile_env!(:pleroma, unquote(key))
+      end
+    else
+      quote do
+        get(unquote(key))
+      end
+    end
+  end
+
   def put([key], value), do: put(key, value)
 
   def put([parent_key | keys], value) do

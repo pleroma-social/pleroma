@@ -105,11 +105,11 @@ defmodule Pleroma.HTML.Scrubber.TwitterText do
   An HTML scrubbing policy which limits to twitter-style text.  Only
   paragraphs, breaks and links are allowed through the filter.
   """
-
-  @valid_schemes Pleroma.Config.get([:uri_schemes, :valid_schemes], [])
-
   require FastSanitize.Sanitizer.Meta
+  require Pleroma.Config
   alias FastSanitize.Sanitizer.Meta
+
+  @valid_schemes Pleroma.Config.compile_get!([:uri_schemes, :valid_schemes])
 
   Meta.strip_comments()
 
@@ -142,7 +142,8 @@ defmodule Pleroma.HTML.Scrubber.TwitterText do
   Meta.allow_tag_with_these_attributes(:span, [])
 
   # allow inline images for custom emoji
-  if Pleroma.Config.get([:markup, :allow_inline_images]) do
+  @allow_inline_images Pleroma.Config.compile_get!([:markup, :allow_inline_images])
+  if @allow_inline_images do
     # restrict img tags to http/https only, because of MediaProxy.
     Meta.allow_tag_with_uri_attributes(:img, ["src"], ["http", "https"])
 
@@ -162,12 +163,13 @@ defmodule Pleroma.HTML.Scrubber.Default do
   @doc "The default HTML scrubbing policy: no "
 
   require FastSanitize.Sanitizer.Meta
+  require Pleroma.Config
   alias FastSanitize.Sanitizer.Meta
 
   # credo:disable-for-previous-line
   # No idea how to fix this one…
 
-  @valid_schemes Pleroma.Config.get([:uri_schemes, :valid_schemes], [])
+  @valid_schemes Pleroma.Config.compile_get!([:uri_schemes, :valid_schemes])
 
   Meta.strip_comments()
 
@@ -213,7 +215,7 @@ defmodule Pleroma.HTML.Scrubber.Default do
   Meta.allow_tag_with_this_attribute_values(:span, "class", ["h-card"])
   Meta.allow_tag_with_these_attributes(:span, [])
 
-  @allow_inline_images Pleroma.Config.get([:markup, :allow_inline_images])
+  @allow_inline_images Pleroma.Config.compile_get!([:markup, :allow_inline_images])
 
   if @allow_inline_images do
     # restrict img tags to http/https only, because of MediaProxy.
@@ -228,7 +230,9 @@ defmodule Pleroma.HTML.Scrubber.Default do
     ])
   end
 
-  if Pleroma.Config.get([:markup, :allow_tables]) do
+  @allow_tables Pleroma.Config.compile_get!([:markup, :allow_tables])
+
+  if @allow_tables do
     Meta.allow_tag_with_these_attributes(:table, [])
     Meta.allow_tag_with_these_attributes(:tbody, [])
     Meta.allow_tag_with_these_attributes(:td, [])
@@ -237,7 +241,8 @@ defmodule Pleroma.HTML.Scrubber.Default do
     Meta.allow_tag_with_these_attributes(:tr, [])
   end
 
-  if Pleroma.Config.get([:markup, :allow_headings]) do
+  @allow_headings Pleroma.Config.compile_get!([:markup, :allow_headings])
+  if @allow_headings do
     Meta.allow_tag_with_these_attributes(:h1, [])
     Meta.allow_tag_with_these_attributes(:h2, [])
     Meta.allow_tag_with_these_attributes(:h3, [])
@@ -245,7 +250,8 @@ defmodule Pleroma.HTML.Scrubber.Default do
     Meta.allow_tag_with_these_attributes(:h5, [])
   end
 
-  if Pleroma.Config.get([:markup, :allow_fonts]) do
+  @allow_fonts Pleroma.Config.compile_get!([:markup, :allow_fonts])
+  if @allow_fonts do
     Meta.allow_tag_with_these_attributes(:font, ["face"])
   end
 
@@ -289,11 +295,11 @@ defmodule Pleroma.HTML.Scrubber.LinksOnly do
   @moduledoc """
   An HTML scrubbing policy which limits to links only.
   """
-
-  @valid_schemes Pleroma.Config.get([:uri_schemes, :valid_schemes], [])
-
   require FastSanitize.Sanitizer.Meta
+  require Pleroma.Config
   alias FastSanitize.Sanitizer.Meta
+
+  @valid_schemes Pleroma.Config.compile_get!([:uri_schemes, :valid_schemes])
 
   Meta.strip_comments()
 
