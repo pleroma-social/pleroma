@@ -105,6 +105,8 @@ defmodule Pleroma.Web.MastodonAPI.TimelineController do
       |> Map.put("tag", tags)
       |> Map.put("tag_all", tag_all)
       |> Map.put("tag_reject", tag_reject)
+      # Temporary fix until we get a proper solution in
+      |> Map.put("skip_order", true)
       |> ActivityPub.fetch_public_activities()
   end
 
