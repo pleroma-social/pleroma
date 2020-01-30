@@ -27,6 +27,33 @@ defmodule Pleroma.Web.MediaProxy.MediaProxyController do
     end
   end
 
+  def preview(conn, %{"sig" => sig64, "url" => url64} = params) do
+    with config <- Pleroma.Config.get([:media_proxy], []),
+         true <- Keyword.get(config, :enabled, false),
+         {:ok, url} <- MediaProxy.decode_url(sig64, url64),
+         :ok <- filename_matches(params, conn.request_path, url),
+         {:ok, %{body: body}} = _tesla <- Tesla.get(url) do
+      path = Mogrify.temporary_path_for(%{path: url})
+      File.write!(path, body)
+
+      Mogrify.open(path)
+      |> Mogrify.resize_to_limit("400x200")
+      |> Mogrify.save(in_place: true)
+
+      conn
+      |> send_file(200, path)
+    else
+      false ->
+        send_resp(conn, 404, Plug.Conn.Status.reason_phrase(404))
+
+      {:error, :invalid_signature} ->
+        send_resp(conn, 403, Plug.Conn.Status.reason_phrase(403))
+
+      {:wrong_filename, filename} ->
+        redirect(conn, external: MediaProxy.build_url(sig64, url64, filename))
+    end
+  end
+
   def filename_matches(%{"filename" => _} = _, path, url) do
     filename = MediaProxy.filename(url)
 

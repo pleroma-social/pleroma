@@ -640,6 +640,9 @@ defmodule Pleroma.Web.Router do
   scope "/proxy/", Pleroma.Web.MediaProxy do
     pipe_through(:remote_media)
 
+    get("/preview/:sig/:url", MediaProxyController, :preview)
+    get("/preview/:sig/:url/:filename", MediaProxyController, :preview)
+
     get("/:sig/:url", MediaProxyController, :remote)
     get("/:sig/:url/:filename", MediaProxyController, :remote)
   end
