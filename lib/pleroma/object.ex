@@ -83,20 +83,6 @@ defmodule Pleroma.Object do
     Repo.one(from(object in Object, where: fragment("(?)->>'id' = ?", object.data, ^ap_id)))
   end
 
-  @doc """
-  Get a single attachment by it's name and href
-  """
-  @spec get_attachment_by_name_and_href(String.t(), String.t()) :: Object.t() | nil
-  def get_attachment_by_name_and_href(name, href) do
-    query =
-      from(o in Object,
-        where: fragment("(?)->>'name' = ?", o.data, ^name),
-        where: fragment("(?)->>'href' = ?", o.data, ^href)
-      )
-
-    Repo.one(query)
-  end
-
   defp warn_on_no_object_preloaded(ap_id) do
     "Object.normalize() called without preloaded object (#{inspect(ap_id)}). Consider preloading the object"
     |> Logger.debug()
