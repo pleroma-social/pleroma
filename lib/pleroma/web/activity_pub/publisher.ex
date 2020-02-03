@@ -11,6 +11,7 @@ defmodule Pleroma.Web.ActivityPub.Publisher do
   alias Pleroma.Object
   alias Pleroma.Repo
   alias Pleroma.User
+  alias Pleroma.Web
   alias Pleroma.Web.ActivityPub.Relay
   alias Pleroma.Web.ActivityPub.Transmogrifier
 
@@ -267,7 +268,7 @@ defmodule Pleroma.Web.ActivityPub.Publisher do
       },
       %{
         "rel" => "http://ostatus.org/schema/1.0/subscribe",
-        "template" => "#{Pleroma.Web.base_url()}/ostatus_subscribe?acct={uri}"
+        "template" => Web.web_url(%{path: "/ostatus_subscribe", query: "acct={uri}"})
       }
     ]
   end

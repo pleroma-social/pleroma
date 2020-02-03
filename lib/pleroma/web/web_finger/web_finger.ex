@@ -13,8 +13,6 @@ defmodule Pleroma.Web.WebFinger do
   require Logger
 
   def host_meta do
-    base_url = Web.base_url()
-
     {
       :XRD,
       %{xmlns: "http://docs.oasis-open.org/ns/xri/xrd-1.0"},
@@ -23,7 +21,7 @@ defmodule Pleroma.Web.WebFinger do
         %{
           rel: "lrdd",
           type: "application/xrd+xml",
-          template: "#{base_url}/.well-known/webfinger?resource={uri}"
+          template: Web.web_url(%{path: "/.well-known/webfinger", query: "resource={uri}"})
         }
       }
     }
@@ -31,8 +29,8 @@ defmodule Pleroma.Web.WebFinger do
   end
 
   def webfinger(resource, fmt) when fmt in ["XML", "JSON"] do
-    host = Pleroma.Web.Endpoint.host()
-    regex = ~r/(acct:)?(?<username>[a-z0-9A-Z_\.-]+)@#{host}/
+    hosts = Enum.join(Pleroma.Web.domains(), "|")
+    regex = ~r/(acct:)?(?<username>[a-z0-9A-Z_\.-]+)@(#{hosts})/
 
     with %{"username" => username} <- Regex.named_captures(regex, resource),
          %User{} = user <- User.get_cached_by_nickname(username) do
@@ -62,7 +60,7 @@ defmodule Pleroma.Web.WebFinger do
     {:ok, user} = User.ensure_keys_present(user)
 
     %{
-      "subject" => "acct:#{user.nickname}@#{Pleroma.Web.Endpoint.host()}",
+      "subject" => acct_uri(user),
       "aliases" => [user.ap_id],
       "links" => gather_links(user)
     }
@@ -72,18 +70,20 @@ defmodule Pleroma.Web.WebFinger do
     {:ok, user} = User.ensure_keys_present(user)
 
     links =
-      gather_links(user)
+      user
+      |> gather_links()
       |> Enum.map(fn link -> {:Link, link} end)
 
     {
       :XRD,
       %{xmlns: "http://docs.oasis-open.org/ns/xri/xrd-1.0"},
-      [
-        {:Subject, "acct:#{user.nickname}@#{Pleroma.Web.Endpoint.host()}"},
-        {:Alias, user.ap_id}
-      ] ++ links
+      [{:Subject, acct_uri(user)}, {:Alias, user.ap_id}] ++ links
     }
     |> XmlBuilder.to_doc()
+  end
+
+  defp acct_uri(%User{nickname: nickname}) do
+    "acct:#{nickname}@#{Pleroma.Web.web_host()}"
   end
 
   defp get_magic_key("data:application/magic-public-key," <> magic_key) do

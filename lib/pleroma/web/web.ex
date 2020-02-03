@@ -20,6 +20,8 @@ defmodule Pleroma.Web do
   below.
   """
 
+  alias Pleroma.Web.Endpoint
+
   def controller do
     quote do
       use Phoenix.Controller, namespace: Pleroma.Web
@@ -103,7 +105,26 @@ defmodule Pleroma.Web do
     apply(__MODULE__, which, [])
   end
 
-  def base_url do
-    Pleroma.Web.Endpoint.url()
+  def base_url, do: Endpoint.url()
+
+  def web_url(map \\ %{}) do
+    Pleroma.Web.web_endpoint()
+    |> URI.parse()
+    |> Map.merge(map)
+    |> URI.to_string()
+  end
+
+  def web_endpoint do
+    Pleroma.Config.get([Endpoint, :web_endpoint], Endpoint.url())
+  end
+
+  def web_host do
+    Pleroma.Web.web_endpoint()
+    |> URI.parse()
+    |> Map.get(:host)
+  end
+
+  def domains do
+    Enum.uniq([Pleroma.Web.web_host(), Pleroma.Web.Endpoint.host()])
   end
 end

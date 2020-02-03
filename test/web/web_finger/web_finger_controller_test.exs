@@ -8,69 +8,140 @@ defmodule Pleroma.Web.WebFinger.WebFingerControllerTest do
   import ExUnit.CaptureLog
   import Pleroma.Factory
   import Tesla.Mock
+  import SweetXml
 
   setup do
     mock(fn env -> apply(HttpRequestMock, :request, [env]) end)
     :ok
   end
 
+  clear_config([Pleroma.Web.Endpoint, :web_endpoint])
+
   clear_config_all([:instance, :federating]) do
     Pleroma.Config.put([:instance, :federating], true)
   end
 
-  test "GET host-meta" do
-    response =
-      build_conn()
-      |> get("/.well-known/host-meta")
+  describe "GET /.well-known/host-meta" do
+    test "host-meta for set subdomain" do
+      Pleroma.Config.put([Pleroma.Web.Endpoint, :web_endpoint], "http://pleroma.localhost")
 
-    assert response.status == 200
+      response =
+        build_conn()
+        |> get("/.well-known/host-meta")
 
-    assert response.resp_body ==
-             ~s(<?xml version="1.0" encoding="UTF-8"?><XRD xmlns="http://docs.oasis-open.org/ns/xri/xrd-1.0"><Link rel="lrdd" template="#{
-               Pleroma.Web.base_url()
-             }/.well-known/webfinger?resource={uri}" type="application/xrd+xml" /></XRD>)
+      assert response.status == 200
+
+      assert response.resp_body ==
+               ~s(<?xml version="1.0" encoding="UTF-8"?><XRD xmlns="http://docs.oasis-open.org/ns/xri/xrd-1.0"><Link rel="lrdd" template="http://pleroma.localhost/.well-known/webfinger?resource={uri}" type="application/xrd+xml" /></XRD>)
+    end
+
+    test "host-meta for domain" do
+      response =
+        build_conn()
+        |> get("/.well-known/host-meta")
+
+      assert response.status == 200
+
+      assert response.resp_body ==
+               ~s(<?xml version="1.0" encoding="UTF-8"?><XRD xmlns="http://docs.oasis-open.org/ns/xri/xrd-1.0"><Link rel="lrdd" template="#{
+                 Pleroma.Web.web_url()
+               }/.well-known/webfinger?resource={uri}" type="application/xrd+xml" /></XRD>)
+    end
   end
 
-  test "Webfinger JRD" do
-    user = insert(:user)
+  describe "Webfinger JRD" do
+    test "main domain" do
+      user = insert(:user)
 
-    response =
-      build_conn()
-      |> put_req_header("accept", "application/jrd+json")
-      |> get("/.well-known/webfinger?resource=acct:#{user.nickname}@localhost")
+      response =
+        build_conn()
+        |> put_req_header("accept", "application/jrd+json")
+        |> get("/.well-known/webfinger?resource=acct:#{user.nickname}@localhost")
 
-    assert json_response(response, 200)["subject"] == "acct:#{user.nickname}@localhost"
+      assert json_response(response, 200)["subject"] == "acct:#{user.nickname}@localhost"
+    end
+
+    test "for subdomain" do
+      Pleroma.Config.put([Pleroma.Web.Endpoint, :web_endpoint], "http://pleroma.localhost")
+      user = insert(:user)
+
+      response =
+        build_conn()
+        |> put_req_header("accept", "application/jrd+json")
+        |> get("/.well-known/webfinger?resource=acct:#{user.nickname}@pleroma.localhost")
+        |> json_response(200)
+
+      assert response["subject"] == "acct:#{user.nickname}@pleroma.localhost"
+      assert response["aliases"] == [user.ap_id]
+
+      assert response["links"] == [
+               %{
+                 "href" => user.ap_id,
+                 "rel" => "http://webfinger.net/rel/profile-page",
+                 "type" => "text/html"
+               },
+               %{"href" => user.ap_id, "rel" => "self", "type" => "application/activity+json"},
+               %{
+                 "href" => user.ap_id,
+                 "rel" => "self",
+                 "type" =>
+                   "application/ld+json; profile=\"https://www.w3.org/ns/activitystreams\""
+               },
+               %{
+                 "rel" => "http://ostatus.org/schema/1.0/subscribe",
+                 "template" => "http://pleroma.localhost/ostatus_subscribe?acct={uri}"
+               }
+             ]
+    end
+
+    test "it returns 404 when user isn't found (JSON)" do
+      result =
+        build_conn()
+        |> put_req_header("accept", "application/jrd+json")
+        |> get("/.well-known/webfinger?resource=acct:jimm@localhost")
+        |> json_response(404)
+
+      assert result == "Couldn't find user"
+    end
   end
 
-  test "it returns 404 when user isn't found (JSON)" do
-    result =
-      build_conn()
-      |> put_req_header("accept", "application/jrd+json")
-      |> get("/.well-known/webfinger?resource=acct:jimm@localhost")
-      |> json_response(404)
+  describe "webfinger XML" do
+    test "for subdomain" do
+      Pleroma.Config.put([Pleroma.Web.Endpoint, :web_endpoint], "http://pleroma.localhost")
+      user = insert(:user)
 
-    assert result == "Couldn't find user"
-  end
+      response =
+        build_conn()
+        |> put_req_header("accept", "application/xrd+xml")
+        |> get("/.well-known/webfinger?resource=acct:#{user.nickname}@pleroma.localhost")
+        |> response(200)
+        |> parse()
 
-  test "Webfinger XML" do
-    user = insert(:user)
+      assert xpath(response, ~x"//Subject/text()"s) == "acct:#{user.nickname}@pleroma.localhost"
+    end
 
-    response =
-      build_conn()
-      |> put_req_header("accept", "application/xrd+xml")
-      |> get("/.well-known/webfinger?resource=acct:#{user.nickname}@localhost")
+    test "for main domain" do
+      user = insert(:user)
 
-    assert response(response, 200)
-  end
+      response =
+        build_conn()
+        |> put_req_header("accept", "application/xrd+xml")
+        |> get("/.well-known/webfinger?resource=acct:#{user.nickname}@localhost")
+        |> response(200)
+        |> parse()
 
-  test "it returns 404 when user isn't found (XML)" do
-    result =
-      build_conn()
-      |> put_req_header("accept", "application/xrd+xml")
-      |> get("/.well-known/webfinger?resource=acct:jimm@localhost")
-      |> response(404)
+      assert xpath(response, ~x"//Subject/text()"s) == "acct:#{user.nickname}@localhost"
+    end
 
-    assert result == "Couldn't find user"
+    test "it returns 404 when user isn't found (XML)" do
+      result =
+        build_conn()
+        |> put_req_header("accept", "application/xrd+xml")
+        |> get("/.well-known/webfinger?resource=acct:jimm@localhost")
+        |> response(404)
+
+      assert result == "Couldn't find user"
+    end
   end
 
   test "Sends a 404 when invalid format" do
