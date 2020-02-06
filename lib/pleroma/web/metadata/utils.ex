@@ -41,13 +41,13 @@ defmodule Pleroma.Web.Metadata.Utils do
     MediaProxy.url(url)
   end
 
-  def user_name_string(user) do
-    "#{user.name} " <>
-      if user.local do
-        "(@#{user.nickname}@#{Pleroma.Web.Endpoint.host()})"
-      else
-        "(@#{user.nickname})"
-      end
+  @spec user_name_string(Pleroma.User.t()) :: String.t()
+  def user_name_string(%{name: name, nickname: nickname, local: true}) do
+    "#{name} (@#{nickname}@#{Pleroma.Web.web_host()})"
+  end
+
+  def user_name_string(%{name: name, nickname: nickname}) do
+    "#{name} (@#{nickname})"
   end
 
   @spec fetch_media_type(list(String.t()), String.t()) :: String.t() | nil

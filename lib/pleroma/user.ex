@@ -780,7 +780,7 @@ defmodule Pleroma.User do
 
   def get_by_nickname(nickname) do
     Repo.get_by(User, nickname: nickname) ||
-      if Regex.match?(~r(@#{Pleroma.Web.Endpoint.host()})i, nickname) do
+      if Regex.match?(~r(@#{Web.base_host()})i, nickname) do
         Repo.get_by(User, nickname: local_nickname(nickname))
       end
   end

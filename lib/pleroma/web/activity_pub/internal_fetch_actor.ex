@@ -13,8 +13,11 @@ defmodule Pleroma.Web.ActivityPub.InternalFetchActor do
     get_actor()
   end
 
+  @spec get_actor() :: User.t()
   def get_actor do
-    "#{Pleroma.Web.Endpoint.url()}/internal/fetch"
-    |> User.get_or_create_service_actor_by_ap_id("internal.fetch")
+    User.get_or_create_service_actor_by_ap_id(
+      Pleroma.Web.base_url(%{path: "/internal/fetch"}),
+      "internal.fetch"
+    )
   end
 end

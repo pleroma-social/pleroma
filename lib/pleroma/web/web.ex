@@ -107,6 +107,15 @@ defmodule Pleroma.Web do
 
   def base_url, do: Endpoint.url()
 
+  def base_url(map) do
+    Endpoint.url()
+    |> URI.parse()
+    |> Map.merge(map)
+    |> URI.to_string()
+  end
+
+  def base_host, do: Endpoint.host()
+
   def web_url(map \\ %{}) do
     Pleroma.Web.web_endpoint()
     |> URI.parse()

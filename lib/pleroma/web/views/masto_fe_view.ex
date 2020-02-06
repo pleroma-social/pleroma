@@ -47,7 +47,7 @@ defmodule Pleroma.Web.MastoFEView do
         streaming_api_base_url: Pleroma.Web.Endpoint.websocket_url(),
         access_token: token,
         locale: "en",
-        domain: Pleroma.Web.Endpoint.host(),
+        domain: Pleroma.Web.base_host(),
         admin: "1",
         me: "#{user.id}",
         unfollow_modal: false,

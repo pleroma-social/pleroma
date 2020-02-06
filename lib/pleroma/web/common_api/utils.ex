@@ -16,9 +16,9 @@ defmodule Pleroma.Web.CommonAPI.Utils do
   alias Pleroma.Plugs.AuthenticationPlug
   alias Pleroma.Repo
   alias Pleroma.User
+  alias Pleroma.Web
   alias Pleroma.Web.ActivityPub.Utils
   alias Pleroma.Web.ActivityPub.Visibility
-  alias Pleroma.Web.Endpoint
   alias Pleroma.Web.MediaProxy
 
   require Logger
@@ -438,7 +438,7 @@ defmodule Pleroma.Web.CommonAPI.Utils do
     |> Enum.map(fn {shortcode, %Emoji{file: path}} ->
       %{
         "type" => "Emoji",
-        "icon" => %{"type" => "Image", "url" => "#{Endpoint.url()}#{path}"},
+        "icon" => %{"type" => "Image", "url" => Web.base_url(%{path: path})},
         "name" => ":#{shortcode}:"
       }
     end)

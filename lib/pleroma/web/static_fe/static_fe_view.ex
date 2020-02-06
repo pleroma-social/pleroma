@@ -8,7 +8,6 @@ defmodule Pleroma.Web.StaticFE.StaticFEView do
   alias Calendar.Strftime
   alias Pleroma.Emoji.Formatter
   alias Pleroma.User
-  alias Pleroma.Web.Endpoint
   alias Pleroma.Web.Gettext
   alias Pleroma.Web.MediaProxy
   alias Pleroma.Web.Metadata.Utils

@@ -11,16 +11,16 @@ defmodule Pleroma.Web.ActivityPub.Relay do
 
   @relay_nickname "relay"
 
+  @spec get_actor() :: User.t()
   def get_actor do
-    actor =
-      relay_ap_id()
-      |> User.get_or_create_service_actor_by_ap_id(@relay_nickname)
-
-    actor
+    User.get_or_create_service_actor_by_ap_id(
+      relay_ap_id(),
+      @relay_nickname
+    )
   end
 
   def relay_ap_id do
-    "#{Pleroma.Web.Endpoint.url()}/relay"
+    Pleroma.Web.base_url(%{path: "/relay"})
   end
 
   @spec follow(String.t()) :: {:ok, Activity.t()} | {:error, any()}

@@ -12,6 +12,7 @@ defmodule Pleroma.Web.ActivityPub.Transmogrifier do
   alias Pleroma.Object.Containment
   alias Pleroma.Repo
   alias Pleroma.User
+  alias Pleroma.Web
   alias Pleroma.Web.ActivityPub.ActivityPub
   alias Pleroma.Web.ActivityPub.Utils
   alias Pleroma.Web.ActivityPub.Visibility
@@ -1035,7 +1036,7 @@ defmodule Pleroma.Web.ActivityPub.Transmogrifier do
         # Expand internal representation tags into AS2 tags.
         tag when is_binary(tag) ->
           %{
-            "href" => Pleroma.Web.Endpoint.url() <> "/tags/#{tag}",
+            "href" => Web.base_url(%{path: "/tags/#{tag}"}),
             "name" => "##{tag}",
             "type" => "Hashtag"
           }
