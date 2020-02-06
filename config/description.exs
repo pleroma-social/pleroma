@@ -765,6 +765,15 @@ config :pleroma, :config_description, [
             " This will break federation with older software for theses nicknames."
       },
       %{
+        key: :cleanup_attachments,
+        type: :boolean,
+        description: """
+        "Set to `true` to remove associated attachments when status is removed.
+        This will not affect duplicates and attachments without status.
+        Enabling this will increase load to database when deleting statuses on larger instances.
+        """
+      },
+      %{
         key: :max_pinned_statuses,
         type: :integer,
         description: "The maximum number of pinned statuses. 0 will disable the feature.",
@@ -2170,11 +2179,6 @@ config :pleroma, :config_description, [
         key: :new_window,
         type: :boolean,
         description: "Set to `false` to remove target='_blank' attribute"
-      },
-      %{
-        key: :scheme,
-        type: :boolean,
-        description: "Set to `true` to link urls with schema http://google.com"
       },
       %{
         key: :truncate,
