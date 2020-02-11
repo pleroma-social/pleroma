@@ -15,4 +15,4 @@ mix pleroma.frontend download [<options>]
 ```
 
 ### Options
-- `--reference <reference>` - Specify the reference that willl be downloaded. Defaults to `master`.
+- `--reference <reference>` - Specify the reference that will be downloaded. Defaults to `master`.
