@@ -581,7 +581,7 @@ defmodule Pleroma.Web.ActivityPub.Transmogrifier do
     "star" => "⭐"
   }
 
-  @doc "Rewrite misskey likes into EmojiReactions"
+  @doc "Rewrite misskey likes into EmojiReacts"
   def handle_incoming(
         %{
           "type" => "Like",
@@ -590,7 +590,7 @@ defmodule Pleroma.Web.ActivityPub.Transmogrifier do
         options
       ) do
     data
-    |> Map.put("type", "EmojiReaction")
+    |> Map.put("type", "EmojiReact")
     |> Map.put("content", @misskey_reactions[reaction] || reaction)
     |> handle_incoming(options)
   end
@@ -611,7 +611,7 @@ defmodule Pleroma.Web.ActivityPub.Transmogrifier do
 
   def handle_incoming(
         %{
-          "type" => "EmojiReaction",
+          "type" => "EmojiReact",
           "object" => object_id,
           "actor" => _actor,
           "id" => id,
@@ -752,7 +752,7 @@ defmodule Pleroma.Web.ActivityPub.Transmogrifier do
   def handle_incoming(
         %{
           "type" => "Undo",
-          "object" => %{"type" => "EmojiReaction", "id" => reaction_activity_id},
+          "object" => %{"type" => "EmojiReact", "id" => reaction_activity_id},
           "actor" => _actor,
           "id" => id
         } = data,
