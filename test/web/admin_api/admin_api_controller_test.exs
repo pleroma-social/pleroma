@@ -1640,6 +1640,95 @@ defmodule Pleroma.Web.AdminAPI.AdminAPIControllerTest do
       }
     end
 
+    test "returns reports grouped by status new", %{
+      conn: conn,
+      first_status: first_status,
+      second_status: second_status,
+      third_status: third_status,
+      first_status_reports: first_status_reports,
+      second_status_reports: second_status_reports,
+      third_status_reports: third_status_reports,
+      target_user: target_user,
+      reporter: reporter
+    } do
+      response =
+        conn
+        |> get("/api/pleroma/admin/grouped_reports_new")
+        |> json_response(:ok)
+
+      assert length(response["reports"]) == 3
+
+      first_group = Enum.find(response["reports"], &(&1["status"]["id"] == first_status.id))
+
+      second_group = Enum.find(response["reports"], &(&1["status"]["id"] == second_status.id))
+
+      third_group = Enum.find(response["reports"], &(&1["status"]["id"] == third_status.id))
+
+      assert length(first_group["reports"]) == 3
+      assert length(second_group["reports"]) == 2
+      assert length(third_group["reports"]) == 1
+
+      assert first_group["date"] ==
+               Enum.max_by(first_status_reports, fn act ->
+                 NaiveDateTime.from_iso8601!(act.data["published"])
+               end).data["published"]
+
+      assert first_group["status"] ==
+               Map.put(
+                 stringify_keys(StatusView.render("show.json", %{activity: first_status})),
+                 "deleted",
+                 false
+               )
+
+      assert(first_group["account"]["id"] == target_user.id)
+
+      assert length(first_group["actors"]) == 1
+      assert hd(first_group["actors"])["id"] == reporter.id
+
+      assert Enum.map(first_group["reports"], & &1["id"]) --
+               Enum.map(first_status_reports, & &1.id) == []
+
+      assert second_group["date"] ==
+               Enum.max_by(second_status_reports, fn act ->
+                 NaiveDateTime.from_iso8601!(act.data["published"])
+               end).data["published"]
+
+      assert second_group["status"] ==
+               Map.put(
+                 stringify_keys(StatusView.render("show.json", %{activity: second_status})),
+                 "deleted",
+                 false
+               )
+
+      assert second_group["account"]["id"] == target_user.id
+
+      assert length(second_group["actors"]) == 1
+      assert hd(second_group["actors"])["id"] == reporter.id
+
+      assert Enum.map(second_group["reports"], & &1["id"]) --
+               Enum.map(second_status_reports, & &1.id) == []
+
+      assert third_group["date"] ==
+               Enum.max_by(third_status_reports, fn act ->
+                 NaiveDateTime.from_iso8601!(act.data["published"])
+               end).data["published"]
+
+      assert third_group["status"] ==
+               Map.put(
+                 stringify_keys(StatusView.render("show.json", %{activity: third_status})),
+                 "deleted",
+                 false
+               )
+
+      assert third_group["account"]["id"] == target_user.id
+
+      assert length(third_group["actors"]) == 1
+      assert hd(third_group["actors"])["id"] == reporter.id
+
+      assert Enum.map(third_group["reports"], & &1["id"]) --
+               Enum.map(third_status_reports, & &1.id) == []
+    end
+
     test "returns reports grouped by status", %{
       conn: conn,
       first_status: first_status,

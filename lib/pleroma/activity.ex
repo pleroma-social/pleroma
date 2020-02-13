@@ -190,9 +190,33 @@ defmodule Pleroma.Activity do
     |> Repo.one()
   end
 
+  def all_by_ids(ids) do
+    ids
+    |> all_by_ids_query()
+    |> Repo.all()
+  end
+
+  def all_by_ids_query(query \\ Activity, ids) do
+    from(a in query, where: a.id in ^ids)
+  end
+
   def all_by_ids_with_object(ids) do
-    Activity
-    |> where([a], a.id in ^ids)
+    ids
+    |> all_by_ids_query()
+    |> with_preloaded_object()
+    |> Repo.all()
+  end
+
+  def all_by_ap_ids_query(query \\ Activity, ap_ids) do
+    from(
+      a in query,
+      where: fragment("(?)->>'id' = ANY(?)", a.data, ^ap_ids)
+    )
+  end
+
+  def all_by_ap_ids_with_object(ap_ids) do
+    ap_ids
+    |> all_by_ap_ids_query()
     |> with_preloaded_object()
     |> Repo.all()
   end
@@ -330,4 +354,6 @@ defmodule Pleroma.Activity do
       _ -> nil
     end
   end
+
+  def flags_activities_query(query \\ Activity), do: Queries.by_type(query, "Flag")
 end

@@ -184,7 +184,8 @@ defmodule Pleroma.Web.Router do
     patch("/users/resend_confirmation_email", AdminAPIController, :resend_confirmation_email)
 
     get("/reports", AdminAPIController, :list_reports)
-    get("/grouped_reports", AdminAPIController, :list_grouped_reports)
+    get("/grouped_reports", AdminAPIController, :list_grouped_reports_new)
+    get("/grouped_reports_new", AdminAPIController, :list_grouped_reports_new)
     get("/reports/:id", AdminAPIController, :report_show)
     patch("/reports", AdminAPIController, :reports_update)
     post("/reports/:id/notes", AdminAPIController, :report_notes_create)

@@ -1,5 +1,8 @@
 defmodule Pleroma.LoadTesting.Generator do
   use Pleroma.LoadTesting.Helper
+
+  import Ecto.Query
+
   alias Pleroma.Web.CommonAPI
 
   def generate_like_activities(user, posts) do
@@ -405,5 +408,50 @@ defmodule Pleroma.LoadTesting.Generator do
 
       CommonAPI.post(user, post)
     end)
+  end
+
+  def generate_flags(remote_users, users) do
+    IO.puts("Starting generating 100 flag activities...")
+
+    {time, _} =
+      :timer.tc(fn ->
+        do_generate_flags(remote_users, users)
+      end)
+
+    IO.puts("Inserting flag activities take #{to_sec(time)} sec.\n")
+  end
+
+  defp do_generate_flags(remote_users, users) do
+    Task.async_stream(
+      1..100,
+      fn _ ->
+        do_generate_flag(Enum.random(remote_users), Enum.random(users))
+      end,
+      max_concurrency: 30,
+      timeout: 30_000
+    )
+    |> Stream.run()
+  end
+
+  defp do_generate_flag(actor, user) do
+    limit = Enum.random(1..3)
+
+    activities =
+      from(a in Pleroma.Activity,
+        where: a.local == true,
+        where: a.actor == ^user.ap_id,
+        order_by: fragment("RANDOM()"),
+        limit: ^limit
+      )
+      |> Repo.all()
+
+    Pleroma.Web.ActivityPub.ActivityPub.flag(%{
+      context: Pleroma.Web.ActivityPub.Utils.generate_context_id(),
+      actor: actor,
+      account: user,
+      statuses: activities,
+      content: "Some content",
+      forward: false
+    })
   end
 end

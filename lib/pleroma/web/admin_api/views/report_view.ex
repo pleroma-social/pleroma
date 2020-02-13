@@ -44,6 +44,42 @@ defmodule Pleroma.Web.AdminAPI.ReportView do
     }
   end
 
+  def render("index_grouped_new.json", %{groups: groups}) do
+    updated =
+      Enum.map(groups, fn report ->
+        status =
+          case report.status do
+            %Activity{} = activity -> StatusView.render("show.json", %{activity: activity})
+            _ -> report.status
+          end
+          |> Map.put_new("deleted", false)
+
+        report
+        |> Map.replace!(
+          :actors,
+          Enum.map(report[:actors], &merge_account_views/1)
+        )
+        |> Map.replace!(
+          :account,
+          merge_account_views(report[:account])
+        )
+        |> Map.replace!(
+          :status,
+          status
+        )
+        |> Map.replace!(
+          :reports,
+          report[:reports]
+          |> Enum.map(&Report.extract_report_info(&1))
+          |> Enum.map(&render(__MODULE__, "show.json", &1))
+        )
+      end)
+
+    %{
+      reports: updated
+    }
+  end
+
   def render("index_grouped.json", %{groups: groups}) do
     reports =
       Enum.map(groups, fn group ->

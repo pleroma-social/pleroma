@@ -101,7 +101,8 @@ defmodule Mix.Tasks.Pleroma.LoadTesting do
     generate_remote_activities(user, remote_users)
 
     generate_like_activities(
-      user, Pleroma.Repo.all(Pleroma.Activity.Queries.by_type("Create"))
+      user,
+      Pleroma.Repo.all(Pleroma.Activity.Queries.by_type("Create"))
     )
 
     generate_dms(user, users, opts)
@@ -109,6 +110,8 @@ defmodule Mix.Tasks.Pleroma.LoadTesting do
     {:ok, activity} = generate_long_thread(user, users, opts)
 
     generate_non_visible_message(user, users)
+
+    generate_flags(remote_users, users)
 
     IO.puts("Users in DB: #{Repo.aggregate(from(u in User), :count, :id)}")
 
@@ -127,6 +130,7 @@ defmodule Mix.Tasks.Pleroma.LoadTesting do
     query_long_thread(user, activity)
     Pleroma.Config.put([:instance, :skip_thread_containment], false)
     query_timelines(user)
+    query_flags_group_reports()
   end
 
   defp clean_tables do
@@ -134,5 +138,6 @@ defmodule Mix.Tasks.Pleroma.LoadTesting do
     Ecto.Adapters.SQL.query!(Repo, "TRUNCATE users CASCADE;")
     Ecto.Adapters.SQL.query!(Repo, "TRUNCATE activities CASCADE;")
     Ecto.Adapters.SQL.query!(Repo, "TRUNCATE objects CASCADE;")
+    Ecto.Adapters.SQL.query!(Repo, "TRUNCATE oban_jobs CASCADE;")
   end
 end

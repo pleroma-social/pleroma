@@ -98,33 +98,35 @@ defmodule Pleroma.LoadTesting.Fetcher do
       end,
       "Rendering favorites timeline" => fn ->
         conn = Phoenix.ConnTest.build_conn(:get, "http://localhost:4001/api/v1/favourites", nil)
-        Pleroma.Web.MastodonAPI.StatusController.favourites(
-          %Plug.Conn{conn |
-                     assigns: %{user: user},
-                     query_params:  %{"limit" => "0"},
-                     body_params: %{},
-                     cookies: %{},
-                     params: %{},
-                     path_params: %{},
-                     private: %{
-                       Pleroma.Web.Router => {[], %{}},
-                       phoenix_router: Pleroma.Web.Router,
-                       phoenix_action: :favourites,
-                       phoenix_controller: Pleroma.Web.MastodonAPI.StatusController,
-                       phoenix_endpoint: Pleroma.Web.Endpoint,
-                       phoenix_format: "json",
-                       phoenix_layout: {Pleroma.Web.LayoutView, "app.html"},
-                       phoenix_recycled: true,
 
-                       phoenix_view: Pleroma.Web.MastodonAPI.StatusView,
-                       plug_session: %{"user_id" => user.id},
-                       plug_session_fetch: :done,
-                       plug_session_info: :write,
-                       plug_skip_csrf_protection: true
-                     }
+        Pleroma.Web.MastodonAPI.StatusController.favourites(
+          %Plug.Conn{
+            conn
+            | assigns: %{user: user},
+              query_params: %{"limit" => "0"},
+              body_params: %{},
+              cookies: %{},
+              params: %{},
+              path_params: %{},
+              private: %{
+                Pleroma.Web.Router => {[], %{}},
+                phoenix_router: Pleroma.Web.Router,
+                phoenix_action: :favourites,
+                phoenix_controller: Pleroma.Web.MastodonAPI.StatusController,
+                phoenix_endpoint: Pleroma.Web.Endpoint,
+                phoenix_format: "json",
+                phoenix_layout: {Pleroma.Web.LayoutView, "app.html"},
+                phoenix_recycled: true,
+                phoenix_view: Pleroma.Web.MastodonAPI.StatusView,
+                plug_session: %{"user_id" => user.id},
+                plug_session_fetch: :done,
+                plug_session_info: :write,
+                plug_skip_csrf_protection: true
+              }
           },
-          %{})
-      end,
+          %{}
+        )
+      end
     })
   end
 
@@ -254,6 +256,24 @@ defmodule Pleroma.LoadTesting.Fetcher do
           as: :activity
         )
         |> Enum.reverse()
+      end
+    })
+  end
+
+  def query_flags_group_reports do
+    statuses = Pleroma.Web.ActivityPub.Utils.get_reported_activities()
+
+    Benchee.run(%{
+      "Old method" => fn ->
+        Pleroma.Web.AdminAPI.ReportView.render(
+          "index_grouped.json",
+          Pleroma.Web.ActivityPub.Utils.get_reports_grouped_by_status(statuses)
+        )
+      end,
+      "New method" => fn ->
+        Pleroma.Web.AdminAPI.ReportView.render("index_grouped_new.json", %{
+          groups: Pleroma.Web.ActivityPub.Utils.get_grouped_reports()
+        })
       end
     })
   end

@@ -236,7 +236,7 @@ defmodule Pleroma.Web.ActivityPub.ActivityPub do
     # only accept false as false value
     local = !(params[:local] == false)
     published = params[:published]
-    quick_insert? = Pleroma.Config.get([:env]) == :benchmark
+    quick_insert? = Config.get([:env]) == :benchmark
 
     with create_data <-
            make_create_data(
@@ -525,6 +525,8 @@ defmodule Pleroma.Web.ActivityPub.ActivityPub do
 
     additional = params[:additional] || %{}
 
+    quick_insert? = Config.get(:env) == :benchmark
+
     additional =
       if forward do
         Map.merge(additional, %{"to" => [], "cc" => [account.ap_id]})
@@ -534,6 +536,7 @@ defmodule Pleroma.Web.ActivityPub.ActivityPub do
 
     with flag_data <- make_flag_data(params, additional),
          {:ok, activity} <- insert(flag_data, local),
+         {:quick_insert, false, activity} <- {:quick_insert, quick_insert?, activity},
          {:ok, stripped_activity} <- strip_report_status_data(activity),
          :ok <- maybe_federate(stripped_activity) do
       Enum.each(User.all_superusers(), fn superuser ->
@@ -543,6 +546,9 @@ defmodule Pleroma.Web.ActivityPub.ActivityPub do
       end)
 
       {:ok, activity}
+    else
+      {:quick_insert, true, activity} -> {:ok, activity}
+      e -> e
     end
   end
 
@@ -1321,7 +1327,7 @@ defmodule Pleroma.Web.ActivityPub.ActivityPub do
 
   defp maybe_update_follow_information(data) do
     with {:enabled, true} <-
-           {:enabled, Pleroma.Config.get([:instance, :external_user_synchronization])},
+           {:enabled, Config.get([:instance, :external_user_synchronization])},
          {:ok, info} <- fetch_follow_information_for_user(data) do
       info = Map.merge(data[:info] || %{}, info)
       Map.put(data, :info, info)

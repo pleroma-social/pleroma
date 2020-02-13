@@ -61,6 +61,10 @@ defmodule Pleroma.Web.ActivityPub.UserView do
     |> Map.merge(Utils.make_json_ld_header())
   end
 
+  def render("users.json", %{users: users}) do
+    render_many(users, Pleroma.Web.ActivityPub.UserView, "user.json")
+  end
+
   # the instance itself is not a Person, but instead an Application
   def render("user.json", %{user: %User{nickname: nil} = user}),
     do: render("service.json", %{user: user})

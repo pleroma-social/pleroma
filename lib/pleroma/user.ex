@@ -713,6 +713,11 @@ defmodule Pleroma.User do
     |> Repo.all()
   end
 
+  def get_all_by_ap_ids(ap_ids) do
+    from(u in __MODULE__, where: u.ap_id in ^ap_ids)
+    |> Repo.all()
+  end
+
   # This is mostly an SPC migration fix. This guesses the user nickname by taking the last part
   # of the ap_id and the domain and tries to get that user
   def get_by_guessed_nickname(ap_id) do

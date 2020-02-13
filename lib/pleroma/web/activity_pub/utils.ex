@@ -907,12 +907,124 @@ defmodule Pleroma.Web.ActivityPub.Utils do
     }
   end
 
-  @spec get_reported_activities() :: [
+  @spec get_grouped_reports() :: [
           %{
-            required(:activity) => String.t(),
-            required(:date) => String.t()
+            status: Activity.t(),
+            account: User.t(),
+            actors: [User.t()],
+            reports: [Activity.t()]
           }
         ]
+  def get_grouped_reports do
+    reports = Activity.flags_activities_query() |> Repo.all()
+
+    flags =
+      Enum.map(reports, fn %{
+                             id: id,
+                             actor: actor,
+                             data: %{"object" => [account | statuses], "published" => date}
+                           } ->
+        flag = %{
+          report_id: id,
+          actor: actor,
+          account: account,
+          date: date
+        }
+
+        Enum.map(statuses, fn
+          status when is_map(status) ->
+            Map.put(flag, :id, status["id"])
+
+          activity_id when is_binary(activity_id) ->
+            Map.put(flag, :id, activity_id)
+        end)
+      end)
+
+    ids = %{accounts: [], actors: [], reports: []}
+
+    {ids, groups} =
+      flags
+      |> List.flatten()
+      |> Enum.reduce({ids, %{}}, fn status, {ids, acc} ->
+        acc =
+          Map.update(
+            acc,
+            status.id,
+            %{
+              account: status.account,
+              actors: [status.actor],
+              reports: [status.report_id],
+              date: status.date
+            },
+            &update_reported_group(&1, status)
+          )
+
+        ids =
+          ids
+          |> Map.put(:accounts, [status.account | ids.accounts])
+          |> Map.put(:actors, [status.actor | ids.actors])
+          |> Map.put(:reports, [status.report_id | ids.reports])
+
+        {ids, acc}
+      end)
+
+    loaded_activities =
+      groups
+      |> Map.keys()
+      |> Activity.all_by_ap_ids_with_object()
+      |> Enum.reduce(%{}, fn activity, acc ->
+        Map.put(acc, activity.data["id"], activity)
+      end)
+
+    loaded_users =
+      (ids.accounts ++ ids.actors)
+      |> Enum.uniq()
+      |> User.get_all_by_ap_ids()
+      |> Enum.reduce(%{}, fn user, acc -> Map.put(acc, user.ap_id, user) end)
+
+    loaded_reports =
+      reports
+      |> Enum.reduce(%{}, fn report, acc -> Map.put(acc, report.id, report) end)
+
+    Enum.map(groups, fn {activity_id, group} ->
+      updated_actors =
+        group.actors
+        |> Enum.uniq()
+        |> Enum.map(&Map.get(loaded_users, &1))
+
+      updated_reports =
+        group.reports
+        |> Enum.uniq()
+        |> Enum.map(&Map.get(loaded_reports, &1))
+
+      group
+      |> Map.put(
+        :status,
+        Map.get(loaded_activities, activity_id, %{"id" => activity_id, "deleted" => true})
+      )
+      |> Map.put(
+        :account,
+        Map.get(loaded_users, group.account, %{"id" => group.account, "deleted" => true})
+      )
+      |> Map.put(:actors, updated_actors)
+      |> Map.put(:reports, updated_reports)
+    end)
+  end
+
+  defp update_reported_group(group, status) do
+    if NaiveDateTime.compare(
+         NaiveDateTime.from_iso8601!(status.date),
+         NaiveDateTime.from_iso8601!(group.date)
+       ) == :gt do
+      Map.put(group, :date, status.date)
+    else
+      group
+    end
+    |> Map.put(:actors, [status.actor | group.actors])
+    |> Map.put(:reports, [status.report_id | group.reports])
+  end
+
+  @spec get_reported_activities() :: [String.t()]
   def get_reported_activities do
     reported_activities_query =
       from(a in Activity,
