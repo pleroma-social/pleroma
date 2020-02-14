@@ -49,8 +49,17 @@ defmodule Pleroma.Web.RichMedia.Helpers do
     |> hd
   end
 
+  # Comparison with true/false done to handle :local_only
+  defp can_fetch?(%Activity{local: true}) do
+    Config.get([:rich_media, :enabled]) != false
+  end
+
+  defp can_fetch?(_activity) do
+    Config.get([:rich_media, :enabled]) == true
+  end
+
   def fetch_data_for_activity(%Activity{data: %{"type" => "Create"}} = activity) do
-    with true <- Config.get([:rich_media, :enabled]),
+    with true <- can_fetch?(activity),
          %Object{} = object <- Object.normalize(activity),
          false <- object.data["sensitive"] || false,
          {:ok, page_url} <- HTML.extract_first_external_url(object, object.data["content"]),

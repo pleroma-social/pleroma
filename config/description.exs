@@ -2105,8 +2105,9 @@ config :pleroma, :config_description, [
     children: [
       %{
         key: :enabled,
-        type: :boolean,
-        description: "Enables RichMedia parsing of URLs."
+        type: [:boolean, :atom],
+        description: "Enables/disables RichMedia or allows it only on local activities",
+        suggestions: [true, false, :local_only]
       },
       %{
         key: :ignore_hosts,

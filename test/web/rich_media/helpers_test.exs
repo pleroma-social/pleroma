@@ -118,4 +118,24 @@ defmodule Pleroma.Web.RichMedia.HelpersTest do
     assert %{} = Helpers.fetch_data_for_activity(activity4)
     assert %{} = Helpers.fetch_data_for_activity(activity5)
   end
+
+  test "only crawls from local posts when [:rich_media, :enabled] is set to :local_only" do
+    content = ~s[<a href="https://example.com/ogp">https://example.com/ogp</a>]
+    remote_user = insert(:user, local: false)
+    local_user = insert(:user, local: true)
+    remote_note = insert(:note, %{user: remote_user, data: %{"content" => content}})
+    local_note = insert(:note, %{user: local_user, data: %{"content" => content}})
+
+    remote_activity =
+      insert(:note_activity, %{user: remote_user, note: remote_note, local: false})
+
+    local_activity = insert(:note_activity, %{user: local_user, note: local_note, local: true})
+
+    Config.put([:rich_media, :enabled], :local_only)
+
+    assert %{} == Helpers.fetch_data_for_activity(remote_activity)
+
+    assert %{page_url: "https://example.com/ogp", rich_media: _} =
+             Pleroma.Web.RichMedia.Helpers.fetch_data_for_activity(local_activity)
+  end
 end

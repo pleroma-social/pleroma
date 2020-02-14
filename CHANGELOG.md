@@ -75,6 +75,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - A new users admin digest email
 - OAuth: admin scopes support (relevant setting: `[:auth, :enforce_oauth_admin_scope_usage]`).
 - Add an option `authorized_fetch_mode` to require HTTP signatures for AP fetches.
+- Rich Media: Add `local_only` to `[:rich_media, :enabled]`, which forbids getting link previews for remote activities
 <details>
   <summary>API Changes</summary>
 
