@@ -43,6 +43,7 @@ defmodule Pleroma.Activity do
     field(:local, :boolean, default: true)
     field(:actor, :string)
     field(:recipients, {:array, :string}, default: [])
+    field(:block_cache, {:array, :string}, default: [], read_after_writes: true)
     field(:thread_muted?, :boolean, virtual: true)
 
     # This is a fake relation,

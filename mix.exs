@@ -76,6 +76,7 @@ defmodule Pleroma.Mixfile do
   defp warnings_as_errors(:prod), do: false
   # Uncomment this if you need testing configurable_from_database logic
   # defp warnings_as_errors(:dev), do: false
+  defp warnings_as_errors(:benchmark), do: false
   defp warnings_as_errors(_), do: true
 
   # Specifies OAuth dependencies.

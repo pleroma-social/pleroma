@@ -800,50 +800,35 @@ defmodule Pleroma.Web.ActivityPub.ActivityPub do
 
   defp restrict_since(query, _), do: query
 
-  defp restrict_tag_reject(_query, %{"tag_reject" => _tag_reject, "skip_preload" => true}) do
-    raise "Can't use the child object without preloading!"
-  end
-
   defp restrict_tag_reject(query, %{"tag_reject" => tag_reject})
        when is_list(tag_reject) and tag_reject != [] do
     from(
-      [_activity, object] in query,
-      where: fragment("not (?)->'tag' \\?| (?)", object.data, ^tag_reject)
+      activity in query,
+      where: fragment("not ? && ?", activity.tags, ^tag_reject)
     )
   end
 
   defp restrict_tag_reject(query, _), do: query
 
-  defp restrict_tag_all(_query, %{"tag_all" => _tag_all, "skip_preload" => true}) do
-    raise "Can't use the child object without preloading!"
-  end
-
   defp restrict_tag_all(query, %{"tag_all" => tag_all})
        when is_list(tag_all) and tag_all != [] do
     from(
-      [_activity, object] in query,
-      where: fragment("(?)->'tag' \\?& (?)", object.data, ^tag_all)
+      activity in query,
+      where: fragment("? @> ?", activity.tags, ^tag_all)
     )
   end
 
   defp restrict_tag_all(query, _), do: query
 
-  defp restrict_tag(_query, %{"tag" => _tag, "skip_preload" => true}) do
-    raise "Can't use the child object without preloading!"
-  end
-
   defp restrict_tag(query, %{"tag" => tag}) when is_list(tag) do
     from(
-      [_activity, object] in query,
-      where: fragment("(?)->'tag' \\?| (?)", object.data, ^tag)
+      activity in query,
+      where: fragment("? && ?", activity.tags, ^tag)
     )
   end
 
   defp restrict_tag(query, %{"tag" => tag}) when is_binary(tag) do
-    from(
-      [_activity, object] in query,
-      where: fragment("(?)->'tag' \\? (?)", object.data, ^tag)
-    )
+    restrict_tag(query, %{"tag" => [tag]})
   end
 
   defp restrict_tag(query, _), do: query
@@ -934,8 +919,7 @@ defmodule Pleroma.Web.ActivityPub.ActivityPub do
 
     query =
       from([activity] in query,
-        where: fragment("not (? = ANY(?))", activity.actor, ^mutes),
-        where: fragment("not (?->'to' \\?| ?)", activity.data, ^mutes)
+        where: fragment("not (? && ?)", activity.block_cache, ^mutes)
       )
 
     unless opts["skip_preload"] do
@@ -953,34 +937,22 @@ defmodule Pleroma.Web.ActivityPub.ActivityPub do
 
     following_ap_ids = User.get_friends_ap_ids(user)
 
-    query =
-      if has_named_binding?(query, :object), do: query, else: Activity.with_joined_object(query)
-
     from(
-      [activity, object: o] in query,
-      where: fragment("not (? = ANY(?))", activity.actor, ^blocked_ap_ids),
-      where: fragment("not (? && ?)", activity.recipients, ^blocked_ap_ids),
+      [activity] in query,
       where:
         fragment(
-          "not (?->>'type' = 'Announce' and ?->'to' \\?| ?)",
-          activity.data,
-          activity.data,
-          ^blocked_ap_ids
-        ),
-      where:
-        fragment(
-          "(not (split_part(?, '/', 3) = ANY(?))) or ? = ANY(?)",
-          activity.actor,
-          ^domain_blocks,
+          "((not (? && ?)) or (? = ANY(?)))",
+          activity.block_cache,
+          ^(blocked_ap_ids ++ domain_blocks),
           activity.actor,
           ^following_ap_ids
         ),
       where:
         fragment(
           "(not (split_part(?->>'actor', '/', 3) = ANY(?))) or (?->>'actor') = ANY(?)",
-          o.data,
+          activity.data,
           ^domain_blocks,
-          o.data,
+          activity.data,
           ^following_ap_ids
         )
     )

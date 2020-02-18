@@ -105,6 +105,7 @@ defmodule Pleroma.Web.MastodonAPI.TimelineController do
       |> Map.put("tag", tags)
       |> Map.put("tag_all", tag_all)
       |> Map.put("tag_reject", tag_reject)
+      |> Map.put("skip_preload", true)
       |> ActivityPub.fetch_public_activities()
   end
 
