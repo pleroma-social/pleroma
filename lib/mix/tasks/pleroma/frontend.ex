@@ -39,7 +39,7 @@ defmodule Mix.Tasks.Pleroma.Frontend do
         File.write!(path, contents)
       end)
 
-      IO.puts("Succesfully downloaded and unpacked the frontend")
+      IO.puts("Successfully downloaded and unpacked the frontend")
     else
       {error, _} -> IO.puts("Step failed: #{error}")
     end
