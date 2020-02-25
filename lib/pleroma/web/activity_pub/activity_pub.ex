@@ -949,10 +949,10 @@ defmodule Pleroma.Web.ActivityPub.ActivityPub do
         ),
       where:
         fragment(
-          "(not (split_part(?->>'actor', '/', 3) = ANY(?))) or (?->>'actor') = ANY(?)",
+          "(not (split_part(?->>'actor', '/', 3) = ANY(?))) or (? = ANY(?))",
           activity.data,
           ^domain_blocks,
-          activity.data,
+          activity.actor,
           ^following_ap_ids
         )
     )
