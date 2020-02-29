@@ -74,14 +74,25 @@ defmodule Pleroma.Plugs.RateLimiter do
 
   @doc false
   def init(plug_opts) do
-    plug_opts
+    with limiter_name when is_atom(limiter_name) <- plug_opts[:name] do
+      bucket_name_root = Keyword.get(plug_opts, :bucket_name, limiter_name)
+
+      %{
+        name: bucket_name_root,
+        opts: plug_opts
+      }
+    else
+      _ -> nil
+    end
   end
 
-  def call(conn, plug_opts) do
+  def call(conn, nil), do: conn
+
+  def call(conn, action_static_settings) do
     if disabled?() do
       handle_disabled(conn)
     else
-      action_settings = action_settings(plug_opts)
+      action_settings = action_settings(action_static_settings)
       handle(conn, action_settings)
     end
   end
@@ -123,38 +134,38 @@ defmodule Pleroma.Plugs.RateLimiter do
 
   @inspect_bucket_not_found {:error, :not_found}
 
-  def inspect_bucket(conn, bucket_name_root, plug_opts) do
-    with %{name: _} = action_settings <- action_settings(plug_opts) do
-      action_settings = incorporate_conn_info(action_settings, conn)
-      bucket_name = make_bucket_name(%{action_settings | name: bucket_name_root})
-      key_name = make_key_name(action_settings)
-      limit = get_limits(action_settings)
+  def inspect_bucket(conn, bucket_name_root, %{name: _} = action_static_settings) do
+    action_settings =
+      action_static_settings
+      |> action_settings()
+      |> incorporate_conn_info(conn)
 
-      case Cachex.get(bucket_name, key_name) do
-        {:error, :no_cache} ->
-          @inspect_bucket_not_found
+    bucket_name = make_bucket_name(%{action_settings | name: bucket_name_root})
+    key_name = make_key_name(action_settings)
+    limit = get_limits(action_settings)
 
-        {:ok, nil} ->
-          {0, limit}
+    case Cachex.get(bucket_name, key_name) do
+      {:error, :no_cache} ->
+        @inspect_bucket_not_found
 
-        {:ok, value} ->
-          {value, limit - value}
-      end
-    else
-      _ -> @inspect_bucket_not_found
+      {:ok, nil} ->
+        {0, limit}
+
+      {:ok, value} ->
+        {value, limit - value}
     end
   end
 
-  def action_settings(plug_opts) do
-    with limiter_name when is_atom(limiter_name) <- plug_opts[:name],
-         limits when not is_nil(limits) <- Config.get([:rate_limit, limiter_name]) do
-      bucket_name_root = Keyword.get(plug_opts, :bucket_name, limiter_name)
+  def inspect_bucket(_conn, _bucket_name_root, _action_static_settings),
+    do: @inspect_bucket_not_found
 
-      %{
-        name: bucket_name_root,
-        limits: limits,
-        opts: plug_opts
-      }
+  def action_settings(nil), do: nil
+
+  def action_settings(%{opts: opts} = action_static_settings) do
+    with limits when not is_nil(limits) <- Config.get([:rate_limit, opts[:name]]) do
+      Map.put(action_static_settings, :limits, limits)
+    else
+      _ -> nil
     end
   end
 
@@ -237,9 +248,9 @@ defmodule Pleroma.Plugs.RateLimiter do
   defp make_bucket_name(%{mode: :anon, name: bucket_name_root}),
     do: anon_bucket_name(bucket_name_root)
 
-  defp attach_selected_params(input, %{conn_params: conn_params, opts: plug_opts}) do
+  defp attach_selected_params(input, %{conn_params: conn_params, opts: action_static_settings}) do
     params_string =
-      plug_opts
+      action_static_settings
       |> Keyword.get(:params, [])
       |> Enum.sort()
       |> Enum.map(&Map.get(conn_params, &1, ""))
