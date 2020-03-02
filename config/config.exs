@@ -51,20 +51,6 @@ config :pleroma, Pleroma.Repo,
   telemetry_event: [Pleroma.Repo.Instrumenter],
   migration_lock: nil
 
-scheduled_jobs =
-  with digest_config <- Application.get_env(:pleroma, :email_notifications)[:digest],
-       true <- digest_config[:active] do
-    [{digest_config[:schedule], {Pleroma.Daemons.DigestEmailDaemon, :perform, []}}]
-  else
-    _ -> []
-  end
-
-config :pleroma, Pleroma.Scheduler,
-  global: true,
-  overlap: true,
-  timezone: :utc,
-  jobs: scheduled_jobs
-
 config :pleroma, Pleroma.Captcha,
   enabled: true,
   seconds_valid: 300,
@@ -233,6 +219,8 @@ config :pleroma, :instance,
     max_expiration: 365 * 24 * 60 * 60
   },
   registrations_open: true,
+  invites_enabled: false,
+  account_activation_required: false,
   federating: true,
   federation_incoming_replies_max_depth: 100,
   federation_reachability_timeout_days: 7,
@@ -255,7 +243,7 @@ config :pleroma, :instance,
   mrf_transparency_exclusions: [],
   autofollowed_nicknames: [],
   max_pinned_statuses: 1,
-  no_attachment_links: true,
+  attachment_links: false,
   welcome_user_nickname: nil,
   welcome_message: nil,
   max_report_comment_size: 1000,
@@ -271,7 +259,8 @@ config :pleroma, :instance,
   account_field_name_length: 512,
   account_field_value_length: 2048,
   external_user_synchronization: true,
-  extended_nickname_format: true
+  extended_nickname_format: true,
+  cleanup_attachments: false
 
 config :pleroma, :feed,
   post_title: %{
@@ -339,7 +328,9 @@ config :pleroma, :activitypub,
   unfollow_blocked: true,
   outgoing_blocks: true,
   follow_handshake_timeout: 500,
-  sign_object_fetches: true
+  note_replies_output_limit: 5,
+  sign_object_fetches: true,
+  authorized_fetch_mode: false
 
 config :pleroma, :streamer,
   workers: 3,
@@ -410,6 +401,8 @@ config :pleroma, :chat, enabled: true
 config :phoenix, :format_encoders, json: Jason
 
 config :phoenix, :json_library, Jason
+
+config :phoenix, :filter_parameters, ["password", "confirm"]
 
 config :pleroma, :gopher,
   enabled: false,
@@ -493,7 +486,16 @@ config :pleroma, Oban,
     transmogrifier: 20,
     scheduled_activities: 10,
     background: 5,
-    attachments_cleanup: 5
+    remote_fetcher: 2,
+    attachments_cleanup: 5,
+    new_users_digest: 1
+  ],
+  crontab: [
+    {"0 0 * * *", Pleroma.Workers.Cron.ClearOauthTokenWorker},
+    {"0 * * * *", Pleroma.Workers.Cron.StatsWorker},
+    {"* * * * *", Pleroma.Workers.Cron.PurgeExpiredActivitiesWorker},
+    {"0 0 * * 0", Pleroma.Workers.Cron.DigestEmailsWorker},
+    {"0 0 * * *", Pleroma.Workers.Cron.NewUsersDigestWorker}
   ]
 
 config :pleroma, :workers,
@@ -508,7 +510,6 @@ config :pleroma, :fetch_initial_posts,
 
 config :auto_linker,
   opts: [
-    scheme: true,
     extra: true,
     # TODO: Set to :no_scheme when it works properly
     validate_tld: true,
@@ -568,6 +569,8 @@ config :pleroma, Pleroma.Emails.UserEmail,
     text_muted_color: "#b9b9ba"
   }
 
+config :pleroma, Pleroma.Emails.NewUsersDigestEmail, enabled: false
+
 config :prometheus, Pleroma.Web.Endpoint.MetricsExporter, path: "/api/pleroma/app_metrics"
 
 config :pleroma, Pleroma.ScheduledActivity,
@@ -578,7 +581,6 @@ config :pleroma, Pleroma.ScheduledActivity,
 config :pleroma, :email_notifications,
   digest: %{
     active: false,
-    schedule: "0 0 * * 0",
     interval: 7,
     inactivity_threshold: 7
   }
@@ -586,8 +588,7 @@ config :pleroma, :email_notifications,
 config :pleroma, :oauth2,
   token_expires_in: 600,
   issue_new_refresh_token: true,
-  clean_expired_tokens: false,
-  clean_expired_tokens_interval: 86_400_000
+  clean_expired_tokens: false
 
 config :pleroma, :database, rum_enabled: false
 
@@ -596,11 +597,22 @@ config :pleroma, :env, Mix.env()
 config :http_signatures,
   adapter: Pleroma.Signature
 
-config :pleroma, :rate_limit, authentication: {60_000, 15}
+config :pleroma, :rate_limit,
+  authentication: {60_000, 15},
+  timeline: {500, 3},
+  search: [{1000, 10}, {1000, 30}],
+  app_account_creation: {1_800_000, 25},
+  relations_actions: {10_000, 10},
+  relation_id_action: {60_000, 2},
+  statuses_actions: {10_000, 15},
+  status_id_action: {60_000, 3},
+  password_reset: {1_800_000, 5},
+  account_confirmation_resend: {8_640_000, 5},
+  ap_routes: {60_000, 15}
 
 config :pleroma, Pleroma.ActivityExpiration, enabled: true
 
-config :pleroma, Pleroma.Plugs.RemoteIp, enabled: false
+config :pleroma, Pleroma.Plugs.RemoteIp, enabled: true
 
 config :pleroma, :static_fe, enabled: false
 
@@ -612,7 +624,8 @@ config :pleroma, :modules, runtime_dir: "instance/modules"
 
 config :pleroma, configurable_from_database: false
 
-config :swarm, node_blacklist: [~r/myhtml_.*$/]
+config :pleroma, Pleroma.Repo, parameters: [gin_fuzzy_search_limit: "500"]
+
 # Import environment specific config. This must remain at the bottom
 # of this file so it overrides the configuration defined above.
 import_config "#{Mix.env()}.exs"

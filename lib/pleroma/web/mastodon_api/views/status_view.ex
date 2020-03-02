@@ -1,5 +1,5 @@
 # Pleroma: A lightweight social networking server
-# Copyright © 2017-2019 Pleroma Authors <https://pleroma.social/>
+# Copyright © 2017-2020 Pleroma Authors <https://pleroma.social/>
 # SPDX-License-Identifier: AGPL-3.0-only
 
 defmodule Pleroma.Web.MastodonAPI.StatusView do
@@ -175,9 +175,11 @@ defmodule Pleroma.Web.MastodonAPI.StatusView do
 
     expires_at =
       with true <- client_posted_this_activity,
-           expiration when not is_nil(expiration) <-
+           %ActivityExpiration{scheduled_at: scheduled_at} <-
              ActivityExpiration.get_by_activity_id(activity.id) do
-        expiration.scheduled_at
+        scheduled_at
+      else
+        _ -> nil
       end
 
     thread_muted? =
@@ -216,21 +218,6 @@ defmodule Pleroma.Web.MastodonAPI.StatusView do
 
     summary = object.data["summary"] || ""
 
-    summary_html =
-      summary
-      |> HTML.get_cached_scrubbed_html_for_activity(
-        User.html_filter_policy(opts[:for]),
-        activity,
-        "mastoapi:summary"
-      )
-
-    summary_plaintext =
-      summary
-      |> HTML.get_cached_stripped_html_for_activity(
-        activity,
-        "mastoapi:summary"
-      )
-
     card = render("card.json", Pleroma.Web.RichMedia.Helpers.fetch_data_for_activity(activity))
 
     url =
@@ -256,7 +243,11 @@ defmodule Pleroma.Web.MastodonAPI.StatusView do
     emoji_reactions =
       with %{data: %{"reactions" => emoji_reactions}} <- object do
         Enum.map(emoji_reactions, fn [emoji, users] ->
-          %{emoji: emoji, count: length(users)}
+          %{
+            name: emoji,
+            count: length(users),
+            me: !!(opts[:for] && opts[:for].ap_id in users)
+          }
         end)
       else
         _ -> []
@@ -282,7 +273,7 @@ defmodule Pleroma.Web.MastodonAPI.StatusView do
       muted: thread_muted? || User.mutes?(opts[:for], user),
       pinned: pinned?(activity, user),
       sensitive: sensitive,
-      spoiler_text: summary_html,
+      spoiler_text: summary,
       visibility: get_visibility(object),
       media_attachments: attachments,
       poll: render(PollView, "show.json", object: object, for: opts[:for]),
@@ -299,7 +290,7 @@ defmodule Pleroma.Web.MastodonAPI.StatusView do
         conversation_id: get_context_id(activity),
         in_reply_to_account_acct: reply_to_user && reply_to_user.nickname,
         content: %{"text/plain" => content_plaintext},
-        spoiler_text: %{"text/plain" => summary_plaintext},
+        spoiler_text: %{"text/plain" => summary},
         expires_at: expires_at,
         direct_conversation_id: direct_conversation_id,
         thread_muted: thread_muted?,
@@ -332,11 +323,9 @@ defmodule Pleroma.Web.MastodonAPI.StatusView do
         nil
       end
 
-    site_name = rich_media[:site_name] || page_url_data.host
-
     %{
       type: "link",
-      provider_name: site_name,
+      provider_name: page_url_data.host,
       provider_url: page_url_data.scheme <> "://" <> page_url_data.host,
       url: page_url,
       image: image_url |> MediaProxy.url(),

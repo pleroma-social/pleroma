@@ -1,14 +1,20 @@
 # Pleroma: A lightweight social networking server
-# Copyright © 2017-2019 Pleroma Authors <https://pleroma.social/>
+# Copyright © 2017-2020 Pleroma Authors <https://pleroma.social/>
 # SPDX-License-Identifier: AGPL-3.0-only
 
 defmodule Pleroma.Web.AdminAPI.ConfigView do
   use Pleroma.Web, :view
 
-  def render("index.json", %{configs: configs}) do
-    %{
+  def render("index.json", %{configs: configs} = params) do
+    map = %{
       configs: render_many(configs, __MODULE__, "show.json", as: :config)
     }
+
+    if params[:need_reboot] do
+      Map.put(map, :need_reboot, true)
+    else
+      map
+    end
   end
 
   def render("show.json", %{config: config}) do

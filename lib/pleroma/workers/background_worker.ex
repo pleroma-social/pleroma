@@ -1,12 +1,11 @@
 # Pleroma: A lightweight social networking server
-# Copyright © 2017-2019 Pleroma Authors <https://pleroma.social/>
+# Copyright © 2017-2020 Pleroma Authors <https://pleroma.social/>
 # SPDX-License-Identifier: AGPL-3.0-only
 
 defmodule Pleroma.Workers.BackgroundWorker do
   alias Pleroma.Activity
   alias Pleroma.User
   alias Pleroma.Web.ActivityPub.MRF.MediaProxyWarmingPolicy
-  alias Pleroma.Web.OAuth.Token.CleanWorker
 
   use Pleroma.Workers.WorkerHelper, queue: "background"
 
@@ -53,10 +52,6 @@ defmodule Pleroma.Workers.BackgroundWorker do
       ) do
     follower = User.get_cached_by_id(follower_id)
     User.perform(:follow_import, follower, followed_identifiers)
-  end
-
-  def perform(%{"op" => "clean_expired_tokens"}, _job) do
-    CleanWorker.perform(:clean)
   end
 
   def perform(%{"op" => "media_proxy_preload", "message" => message}, _job) do

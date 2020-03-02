@@ -2,9 +2,11 @@
 
 This is a cheat sheet for Pleroma configuration file, any setting possible to configure should be listed here.
 
-Pleroma configuration works by first importing the base config (`config/config.exs` on source installs, compiled-in on OTP releases), then overriding it by the environment config (`config/$MIX_ENV.exs` on source installs, N/A to OTP releases) and then overriding it by user config (`config/$MIX_ENV.secret.exs` on source installs, typically `/etc/pleroma/config.exs` on OTP releases).
+For OTP installations the configuration is typically stored in `/etc/pleroma/config.exs`.
 
-You shouldn't edit the base config directly to avoid breakages and merge conflicts, but it can be used as a reference if you don't understand how an option is supposed to be formatted, the latest version of it can be viewed [here](https://git.pleroma.social/pleroma/pleroma/blob/develop/config/config.exs).
+For from source installations Pleroma configuration works by first importing the base config `config/config.exs`, then overriding it by the environment config `config/$MIX_ENV.exs` and then overriding it by user config `config/$MIX_ENV.secret.exs`. In from source installations you should always make the changes to the user config and NEVER to the base config to avoid breakages and merge conflicts. So for production you change/add configuration to `config/prod.secret.exs`.
+
+To add configuration to your config file, you can copy it from the base config. The latest version of it can be viewed [here](https://git.pleroma.social/pleroma/pleroma/blob/develop/config/config.exs). You can also use this file if you don't know how an option is supposed to be formatted.
 
 ## :instance
 * `name`: The instance’s name.
@@ -69,6 +71,7 @@ You shouldn't edit the base config directly to avoid breakages and merge conflic
 * `account_field_name_length`: An account field name maximum length (default: `512`).
 * `account_field_value_length`: An account field value maximum length (default: `2048`).
 * `external_user_synchronization`: Enabling following/followers counters synchronization for external users.
+* `cleanup_attachments`: Remove attachments along with statuses. Does not affect duplicate files and attachments without status. Enabling this will increase load to database when deleting statuses on larger instances.
 
 ## Federation
 ### MRF policies
@@ -142,14 +145,17 @@ config :pleroma, :mrf_user_allowlist,
   * `:reject` rejects the message entirely
 
 ### :activitypub
-* ``unfollow_blocked``: Whether blocks result in people getting unfollowed
-* ``outgoing_blocks``: Whether to federate blocks to other instances
-* ``deny_follow_blocked``: Whether to disallow following an account that has blocked the user in question
-* ``sign_object_fetches``: Sign object fetches with HTTP signatures
+* `unfollow_blocked`: Whether blocks result in people getting unfollowed
+* `outgoing_blocks`: Whether to federate blocks to other instances
+* `deny_follow_blocked`: Whether to disallow following an account that has blocked the user in question
+* `sign_object_fetches`: Sign object fetches with HTTP signatures
+* `authorized_fetch_mode`: Require HTTP signatures for AP fetches
 
 ### :fetch_initial_posts
-* `enabled`: if enabled, when a new user is federated with, fetch some of their latest posts
-* `pages`: the amount of pages to fetch
+!!! warning
+   Be careful with this setting, fetching posts may lead to new users being discovered whose posts will then also be fetched. This can lead to serious load on your instance and database.
+* `enabled`: If enabled, when a new user is discovered by your instance, fetch some of their latest posts.
+* `pages`: The amount of pages to fetch
 
 ## Pleroma.ScheduledActivity
 
@@ -308,16 +314,15 @@ This will make Pleroma listen on `127.0.0.1` port `8080` and generate urls start
 Available options:
 
 * `enabled` - Enable/disable the plug. Defaults to `false`.
-* `headers` - A list of strings naming the `req_headers` to use when deriving the `remote_ip`. Order does not matter. Defaults to `~w[forwarded x-forwarded-for x-client-ip x-real-ip]`.
+* `headers` - A list of strings naming the `req_headers` to use when deriving the `remote_ip`. Order does not matter. Defaults to `["x-forwarded-for"]`.
 * `proxies` - A list of strings in [CIDR](https://en.wikipedia.org/wiki/CIDR) notation specifying the IPs of known proxies. Defaults to `[]`.
 * `reserved` - Defaults to [localhost](https://en.wikipedia.org/wiki/Localhost) and [private network](https://en.wikipedia.org/wiki/Private_network).
 
 
 ### :rate_limit
 
-This is an advanced feature and disabled by default.
-
-If your instance is behind a reverse proxy you must enable and configure [`Pleroma.Plugs.RemoteIp`](#pleroma-plugs-remoteip).
+!!! note
+   If your instance is behind a reverse proxy ensure [`Pleroma.Plugs.RemoteIp`](#pleroma-plugs-remoteip) is enabled (it is enabled by default).
 
 A keyword list of rate limiters where a key is a limiter name and value is the limiter configuration. The basic configuration is a tuple where:
 
@@ -326,14 +331,32 @@ A keyword list of rate limiters where a key is a limiter name and value is the l
 
 It is also possible to have different limits for unauthenticated and authenticated users: the keyword value must be a list of two tuples where the first one is a config for unauthenticated users and the second one is for authenticated.
 
+For example:
+
+```elixir
+config :pleroma, :rate_limit,
+  authentication: {60_000, 15},
+  search: [{1000, 10}, {1000, 30}]
+```
+
+Means that:
+
+1. In 60 seconds, 15 authentication attempts can be performed from the same IP address.
+2. In 1 second, 10 search requests can be performed from the same IP adress by unauthenticated users, while authenticated users can perform 30 search requests per second.
+
 Supported rate limiters:
 
-* `:search` for the search requests (account & status search etc.)
-* `:app_account_creation` for registering user accounts from the same IP address
-* `:relations_actions` for actions on relations with all users (follow, unfollow)
-* `:relation_id_action` for actions on relation with a specific user (follow, unfollow)
-* `:statuses_actions` for create / delete / fav / unfav / reblog / unreblog actions on any statuses
-* `:status_id_action` for fav / unfav or reblog / unreblog actions on the same status by the same user
+* `:search` - Account/Status search.
+* `:timeline` - Timeline requests (each timeline has it's own limiter).
+* `:app_account_creation` - Account registration from the API.
+* `:relations_actions` - Following/Unfollowing in general.
+* `:relation_id_action` - Following/Unfollowing for a specific user.
+* `:statuses_actions` - Status actions such as: (un)repeating, (un)favouriting, creating, deleting.
+* `:status_id_action` - (un)Repeating/(un)Favouriting a particular status.
+* `:authentication` - Authentication actions, i.e getting an OAuth token.
+* `:password_reset` - Requesting password reset emails.
+* `:account_confirmation_resend` - Requesting resending account confirmation emails.
+* `:ap_routes` - Requesting statuses via ActivityPub.
 
 ### :web_cache_ttl
 
@@ -484,6 +507,10 @@ Email notifications settings.
 - `:logo` - a path to a custom logo. Set it to `nil` to use the default Pleroma logo.
 - `:styling` - a map with color settings for email templates.
 
+### Pleroma.Emails.NewUsersDigestEmail
+
+- `:enabled` - a boolean, enables new users admin digest email when `true`. Defaults to `false`.
+
 ## Background jobs
 
 ### Oban
@@ -496,6 +523,7 @@ Configuration options described in [Oban readme](https://github.com/sorentwo/oba
 * `verbose` - logs verbosity
 * `prune` - non-retryable jobs [pruning settings](https://github.com/sorentwo/oban#pruning) (`:disabled` / `{:maxlen, value}` / `{:maxage, value}`)
 * `queues` - job queues (see below)
+* `crontab` - periodic jobs, see [`Oban.Cron`](#obancron)
 
 Pleroma has the following queues:
 
@@ -507,6 +535,12 @@ Pleroma has the following queues:
 * `web_push` - Web push notifications
 * `scheduled_activities` - Scheduled activities, see [`Pleroma.ScheduledActivity`](#pleromascheduledactivity)
 
+#### Oban.Cron
+
+Pleroma has these periodic job workers:
+
+`Pleroma.Workers.Cron.ClearOauthTokenWorker` - a job worker to cleanup expired oauth tokens.
+
 Example:
 
 ```elixir
@@ -517,6 +551,9 @@ config :pleroma, Oban,
   queues: [
     federator_incoming: 50,
     federator_outgoing: 50
+  ],
+  crontab: [
+    {"0 0 * * *", Pleroma.Workers.Cron.ClearOauthTokenWorker}
   ]
 ```
 
@@ -799,8 +836,7 @@ Configure OAuth 2 provider capabilities:
 
 * `token_expires_in` - The lifetime in seconds of the access token.
 * `issue_new_refresh_token` - Keeps old refresh token or generate new refresh token when to obtain an access token.
-* `clean_expired_tokens` - Enable a background job to clean expired oauth tokens. Defaults to `false`.
-* `clean_expired_tokens_interval` - Interval to run the job to clean expired tokens. Defaults to `86_400_000` (24 hours).
+* `clean_expired_tokens` - Enable a background job to clean expired oauth tokens. Defaults to `false`. Interval settings sets in configuration periodic jobs [`Oban.Cron`](#obancron)
 
 ## Link parsing
 
@@ -839,4 +875,5 @@ config :auto_linker,
 
 
 ## :configurable_from_database
-Enable/disable configuration from database.
+
+Boolean, enables/disables in-database configuration. Read [Transfering the config to/from the database](../administration/CLI_tasks/config.md) for more information.

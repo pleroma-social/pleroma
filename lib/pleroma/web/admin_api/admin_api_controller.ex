@@ -1,5 +1,5 @@
 # Pleroma: A lightweight social networking server
-# Copyright © 2017-2019 Pleroma Authors <https://pleroma.social/>
+# Copyright © 2017-2020 Pleroma Authors <https://pleroma.social/>
 # SPDX-License-Identifier: AGPL-3.0-only
 
 defmodule Pleroma.Web.AdminAPI.AdminAPIController do
@@ -8,10 +8,12 @@ defmodule Pleroma.Web.AdminAPI.AdminAPIController do
   import Pleroma.Web.ControllerHelper, only: [json_response: 3]
 
   alias Pleroma.Activity
+  alias Pleroma.Config
   alias Pleroma.ConfigDB
   alias Pleroma.ModerationLog
   alias Pleroma.Plugs.OAuthScopesPlug
   alias Pleroma.ReportNote
+  alias Pleroma.Stats
   alias Pleroma.User
   alias Pleroma.UserInviteToken
   alias Pleroma.Web.ActivityPub.ActivityPub
@@ -97,7 +99,7 @@ defmodule Pleroma.Web.AdminAPI.AdminAPIController do
   plug(
     OAuthScopesPlug,
     %{scopes: ["read"], admin: true}
-    when action in [:config_show, :migrate_from_db, :list_log]
+    when action in [:config_show, :list_log, :stats]
   )
 
   plug(
@@ -242,13 +244,15 @@ defmodule Pleroma.Web.AdminAPI.AdminAPIController do
   end
 
   def list_instance_statuses(conn, %{"instance" => instance} = params) do
+    with_reblogs = params["with_reblogs"] == "true" || params["with_reblogs"] == true
     {page, page_size} = page_params(params)
 
     activities =
-      ActivityPub.fetch_instance_activities(%{
+      ActivityPub.fetch_statuses(nil, %{
         "instance" => instance,
         "limit" => page_size,
-        "offset" => (page - 1) * page_size
+        "offset" => (page - 1) * page_size,
+        "exclude_reblogs" => !with_reblogs && "true"
       })
 
     conn
@@ -257,6 +261,7 @@ defmodule Pleroma.Web.AdminAPI.AdminAPIController do
   end
 
   def list_user_statuses(conn, %{"nickname" => nickname} = params) do
+    with_reblogs = params["with_reblogs"] == "true" || params["with_reblogs"] == true
     godmode = params["godmode"] == "true" || params["godmode"] == true
 
     with %User{} = user <- User.get_cached_by_nickname_or_id(nickname) do
@@ -265,7 +270,8 @@ defmodule Pleroma.Web.AdminAPI.AdminAPIController do
       activities =
         ActivityPub.fetch_user_activities(user, nil, %{
           "limit" => page_size,
-          "godmode" => godmode
+          "godmode" => godmode,
+          "exclude_reblogs" => !with_reblogs && "true"
         })
 
       conn
@@ -570,8 +576,8 @@ defmodule Pleroma.Web.AdminAPI.AdminAPIController do
   @doc "Sends registration invite via email"
   def email_invite(%{assigns: %{user: user}} = conn, %{"email" => email} = params) do
     with true <-
-           Pleroma.Config.get([:instance, :invites_enabled]) &&
-             !Pleroma.Config.get([:instance, :registrations_open]),
+           Config.get([:instance, :invites_enabled]) &&
+             !Config.get([:instance, :registrations_open]),
          {:ok, invite_token} <- UserInviteToken.create_invite(),
          email <-
            Pleroma.Emails.UserEmail.user_invitation_email(
@@ -739,6 +745,24 @@ defmodule Pleroma.Web.AdminAPI.AdminAPIController do
     end
   end
 
+  def list_statuses(%{assigns: %{user: admin}} = conn, params) do
+    godmode = params["godmode"] == "true" || params["godmode"] == true
+    local_only = params["local_only"] == "true" || params["local_only"] == true
+    {page, page_size} = page_params(params)
+
+    activities =
+      ActivityPub.fetch_statuses(admin, %{
+        "godmode" => godmode,
+        "local_only" => local_only,
+        "limit" => page_size,
+        "offset" => (page - 1) * page_size
+      })
+
+    conn
+    |> put_view(Pleroma.Web.AdminAPI.StatusView)
+    |> render("index.json", %{activities: activities, as: :activity})
+  end
+
   def status_update(%{assigns: %{user: admin}} = conn, %{"id" => id} = params) do
     with {:ok, activity} <- CommonAPI.update_activity_scope(id, params) do
       {:ok, sensitive} = Ecto.Type.cast(:boolean, params["sensitive"])
@@ -793,33 +817,13 @@ defmodule Pleroma.Web.AdminAPI.AdminAPIController do
     |> Plug.Conn.send_resp(200, @descriptions_json)
   end
 
-  def migrate_from_db(conn, _params) do
-    with :ok <- configurable_from_database(conn) do
-      Mix.Tasks.Pleroma.Config.run([
-        "migrate_from_db",
-        "--env",
-        to_string(Pleroma.Config.get(:env)),
-        "-d"
-      ])
-
-      json(conn, %{})
-    end
-  end
-
   def config_show(conn, %{"only_db" => true}) do
     with :ok <- configurable_from_database(conn) do
       configs = Pleroma.Repo.all(ConfigDB)
 
-      if configs == [] do
-        errors(
-          conn,
-          {:error, "To use configuration from database migrate your settings to database."}
-        )
-      else
-        conn
-        |> put_view(ConfigView)
-        |> render("index.json", %{configs: configs})
-      end
+      conn
+      |> put_view(ConfigView)
+      |> render("index.json", %{configs: configs})
     end
   end
 
@@ -827,45 +831,47 @@ defmodule Pleroma.Web.AdminAPI.AdminAPIController do
     with :ok <- configurable_from_database(conn) do
       configs = ConfigDB.get_all_as_keyword()
 
-      if configs == [] do
-        errors(
-          conn,
-          {:error, "To use configuration from database migrate your settings to database."}
-        )
-      else
-        merged =
-          Pleroma.Config.Holder.config()
-          |> ConfigDB.merge(configs)
-          |> Enum.map(fn {group, values} ->
-            Enum.map(values, fn {key, value} ->
-              db =
-                if configs[group][key] do
-                  ConfigDB.get_db_keys(configs[group][key], key)
-                end
+      merged =
+        Config.Holder.config()
+        |> ConfigDB.merge(configs)
+        |> Enum.map(fn {group, values} ->
+          Enum.map(values, fn {key, value} ->
+            db =
+              if configs[group][key] do
+                ConfigDB.get_db_keys(configs[group][key], key)
+              end
 
-              db_value = configs[group][key]
+            db_value = configs[group][key]
 
-              merged_value =
-                if !is_nil(db_value) and Keyword.keyword?(db_value) and
-                     ConfigDB.sub_key_full_update?(group, key, Keyword.keys(db_value)) do
-                  ConfigDB.merge_group(group, key, value, db_value)
-                else
-                  value
-                end
+            merged_value =
+              if !is_nil(db_value) and Keyword.keyword?(db_value) and
+                   ConfigDB.sub_key_full_update?(group, key, Keyword.keys(db_value)) do
+                ConfigDB.merge_group(group, key, value, db_value)
+              else
+                value
+              end
 
-              setting = %{
-                group: ConfigDB.convert(group),
-                key: ConfigDB.convert(key),
-                value: ConfigDB.convert(merged_value)
-              }
+            setting = %{
+              group: ConfigDB.convert(group),
+              key: ConfigDB.convert(key),
+              value: ConfigDB.convert(merged_value)
+            }
 
-              if db, do: Map.put(setting, :db, db), else: setting
-            end)
+            if db, do: Map.put(setting, :db, db), else: setting
           end)
-          |> List.flatten()
+        end)
+        |> List.flatten()
 
-        json(conn, %{configs: merged})
-      end
+      response = %{configs: merged}
+
+      response =
+        if Restarter.Pleroma.need_reboot?() do
+          Map.put(response, :need_reboot, true)
+        else
+          response
+        end
+
+      json(conn, response)
     end
   end
 
@@ -890,22 +896,43 @@ defmodule Pleroma.Web.AdminAPI.AdminAPIController do
           Ecto.get_meta(config, :state) == :deleted
         end)
 
-      Pleroma.Config.TransferTask.load_and_update_env(deleted)
+      Config.TransferTask.load_and_update_env(deleted, false)
 
-      Mix.Tasks.Pleroma.Config.run([
-        "migrate_from_db",
-        "--env",
-        to_string(Pleroma.Config.get(:env))
-      ])
+      need_reboot? =
+        Restarter.Pleroma.need_reboot?() ||
+          Enum.any?(updated, fn config ->
+            group = ConfigDB.from_string(config.group)
+            key = ConfigDB.from_string(config.key)
+            value = ConfigDB.from_binary(config.value)
+            Config.TransferTask.pleroma_need_restart?(group, key, value)
+          end)
+
+      response = %{configs: updated}
+
+      response =
+        if need_reboot? do
+          Restarter.Pleroma.need_reboot()
+          Map.put(response, :need_reboot, need_reboot?)
+        else
+          response
+        end
 
       conn
       |> put_view(ConfigView)
-      |> render("index.json", %{configs: updated})
+      |> render("index.json", response)
+    end
+  end
+
+  def restart(conn, _params) do
+    with :ok <- configurable_from_database(conn) do
+      Restarter.Pleroma.restart(Config.get(:env), 50)
+
+      json(conn, %{})
     end
   end
 
   defp configurable_from_database(conn) do
-    if Pleroma.Config.get(:configurable_from_database) do
+    if Config.get(:configurable_from_database) do
       :ok
     else
       errors(
@@ -947,6 +974,13 @@ defmodule Pleroma.Web.AdminAPI.AdminAPIController do
     })
 
     conn |> json("")
+  end
+
+  def stats(conn, _) do
+    count = Stats.get_status_visibility_count()
+
+    conn
+    |> json(%{"status_visibility" => count})
   end
 
   def errors(conn, {:error, :not_found}) do

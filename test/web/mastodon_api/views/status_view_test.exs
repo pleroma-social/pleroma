@@ -1,5 +1,5 @@
 # Pleroma: A lightweight social networking server
-# Copyright © 2017-2019 Pleroma Authors <https://pleroma.social/>
+# Copyright © 2017-2020 Pleroma Authors <https://pleroma.social/>
 # SPDX-License-Identifier: AGPL-3.0-only
 
 defmodule Pleroma.Web.MastodonAPI.StatusViewTest do
@@ -37,8 +37,15 @@ defmodule Pleroma.Web.MastodonAPI.StatusViewTest do
     status = StatusView.render("show.json", activity: activity)
 
     assert status[:pleroma][:emoji_reactions] == [
-             %{emoji: "☕", count: 2},
-             %{emoji: "🍵", count: 1}
+             %{name: "☕", count: 2, me: false},
+             %{name: "🍵", count: 1, me: false}
+           ]
+
+    status = StatusView.render("show.json", activity: activity, for: user)
+
+    assert status[:pleroma][:emoji_reactions] == [
+             %{name: "☕", count: 2, me: true},
+             %{name: "🍵", count: 1, me: false}
            ]
   end
 
@@ -484,7 +491,7 @@ defmodule Pleroma.Web.MastodonAPI.StatusViewTest do
         title: "Example website"
       }
 
-      %{provider_name: "Example site name"} =
+      %{provider_name: "example.com"} =
         StatusView.render("card.json", %{page_url: page_url, rich_media: card})
     end
 
@@ -499,7 +506,7 @@ defmodule Pleroma.Web.MastodonAPI.StatusViewTest do
         description: "Example description"
       }
 
-      %{provider_name: "Example site name"} =
+      %{provider_name: "example.com"} =
         StatusView.render("card.json", %{page_url: page_url, rich_media: card})
     end
   end

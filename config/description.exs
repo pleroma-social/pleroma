@@ -101,7 +101,7 @@ config :pleroma, :config_description, [
                       %{
                         key: :versions,
                         type: {:list, :atom},
-                        description: "List of TLS version to use",
+                        description: "List of TLS versions to use",
                         suggestions: [:tlsv1, ":tlsv1.1", ":tlsv1.2"]
                       }
                     ]
@@ -534,7 +534,8 @@ config :pleroma, :config_description, [
       %{
         key: :description,
         type: :string,
-        description: "The instance's description, can be seen in nodeinfo and /api/v1/instance",
+        description:
+          "The instance's description. It can be seen in nodeinfo and `/api/v1/instance`",
         suggestions: [
           "Very cool instance"
         ]
@@ -637,29 +638,31 @@ config :pleroma, :config_description, [
       %{
         key: :registrations_open,
         type: :boolean,
-        description: "Enable registrations for anyone, invitations can be enabled when `false`"
+        description:
+          "Enable registrations for anyone. Invitations require this setting to be disabled."
       },
       %{
         key: :invites_enabled,
         type: :boolean,
-        description: "Enable user invitations for admins (depends on `registrations_open: false`)"
+        description:
+          "Enable user invitations for admins (depends on `registrations_open` being disabled)."
       },
       %{
         key: :account_activation_required,
         type: :boolean,
-        description: "Require users to confirm their emails before signing in"
+        description: "Require users to confirm their emails before signing in."
       },
       %{
         key: :federating,
         type: :boolean,
-        description: "Enable federation with other instances"
+        description: "Enable federation with other instances."
       },
       %{
         key: :federation_incoming_replies_max_depth,
         label: "Fed. incoming replies max depth",
         type: :integer,
         description:
-          "Max. depth of reply-to activities fetching on incoming federation, to prevent out-of-memory situations while" <>
+          "Max. depth of reply-to and reply activities fetching on incoming federation, to prevent out-of-memory situations while" <>
             " fetching very long threads. If set to `nil`, threads of any depth will be fetched. Lower this value if you experience out-of-memory crashes.",
         suggestions: [
           100
@@ -761,8 +764,17 @@ config :pleroma, :config_description, [
         key: :extended_nickname_format,
         type: :boolean,
         description:
-          "Set to `true` to use extended local nicknames format (allows underscores/dashes)." <>
+          "Enable to use extended local nicknames format (allows underscores/dashes)." <>
             " This will break federation with older software for theses nicknames."
+      },
+      %{
+        key: :cleanup_attachments,
+        type: :boolean,
+        description: """
+        Enable to remove associated attachments when status is removed.
+        This will not affect duplicates and attachments without status.
+        Enabling this will increase load to database when deleting statuses on larger instances.
+        """
       },
       %{
         key: :max_pinned_statuses,
@@ -787,10 +799,9 @@ config :pleroma, :config_description, [
         ]
       },
       %{
-        key: :no_attachment_links,
+        key: :attachment_links,
         type: :boolean,
-        description:
-          "Set to `true` to disable automatically adding attachment link text to statuses"
+        description: "Enable to automatically add attachment link text to statuses"
       },
       %{
         key: :welcome_message,
@@ -821,14 +832,14 @@ config :pleroma, :config_description, [
         key: :safe_dm_mentions,
         type: :boolean,
         description:
-          "If set to `true`, only mentions at the beginning of a post will be used to address people in direct messages." <>
+          "If enabled, only mentions at the beginning of a post will be used to address people in direct messages." <>
             " This is to prevent accidental mentioning of people when talking about them (e.g. \"@admin please keep an eye on @bad_actor\")." <>
-            " Default: `false`"
+            " Default: disabled"
       },
       %{
         key: :healthcheck,
         type: :boolean,
-        description: "If set to `true`, system data will be shown on /api/pleroma/healthcheck"
+        description: "If enabled, system data will be shown on `/api/pleroma/healthcheck`"
       },
       %{
         key: :remote_post_retention_days,
@@ -858,11 +869,11 @@ config :pleroma, :config_description, [
       %{
         key: :skip_thread_containment,
         type: :boolean,
-        description: "Skip filter out broken threads. Default: `true`"
+        description: "Skip filtering out broken threads. Default: enabled"
       },
       %{
         key: :limit_to_local_content,
-        type: [:atom, false],
+        type: {:dropdown, :atom},
         description:
           "Limit unauthenticated users to search for local statutes and users only. Default: `:unauthenticated`.",
         suggestions: [
@@ -933,7 +944,7 @@ config :pleroma, :config_description, [
     children: [
       %{
         key: :level,
-        type: :atom,
+        type: {:dropdown, :atom},
         description: "Log level",
         suggestions: [:debug, :info, :warn, :error]
       },
@@ -965,7 +976,7 @@ config :pleroma, :config_description, [
     children: [
       %{
         key: :level,
-        type: :atom,
+        type: {:dropdown, :atom},
         description: "Log level",
         suggestions: [:debug, :info, :warn, :error]
       },
@@ -989,7 +1000,7 @@ config :pleroma, :config_description, [
     children: [
       %{
         key: :level,
-        type: :atom,
+        type: {:dropdown, :atom},
         description: "Log level",
         suggestions: [:debug, :info, :warn, :error]
       },
@@ -1150,17 +1161,15 @@ config :pleroma, :config_description, [
             key: :alwaysShowSubjectInput,
             label: "Always show subject input",
             type: :boolean,
-            description: "When set to `false`, auto-hide the subject field when it's empty"
+            description: "When disabled, auto-hide the subject field if it's empty"
           },
           %{
             key: :logoMask,
             label: "Logo mask",
             type: :boolean,
             description:
-              "By default it assumes logo used will be monochrome-with-alpha one, this is done to be compatible with both light and dark themes, " <>
-                "so that white logo designed with dark theme in mind won't be invisible over light theme, this is done via CSS3 Masking. " <>
-                "Basically - it will take alpha channel of the image and fill non-transparent areas of it with solid color. " <>
-                "If you really want colorful logo - it can be done by setting logoMask to false."
+              "By default it assumes logo used will be monochrome with alpha channel to be compatible with both light and dark themes. " <>
+                "If you want a colorful logo you must disable logoMask."
           },
           %{
             key: :logoMargin,
@@ -1174,13 +1183,13 @@ config :pleroma, :config_description, [
           %{
             key: :stickers,
             type: :boolean,
-            description: "Enables/disables stickers."
+            description: "Enables stickers."
           },
           %{
             key: :enableEmojiPicker,
             label: "Emoji picker",
             type: :boolean,
-            description: "Enables/disables emoji picker."
+            description: "Enables emoji picker."
           }
         ]
       },
@@ -1288,14 +1297,14 @@ config :pleroma, :config_description, [
       %{
         key: :media_removal,
         type: {:list, :string},
-        description: "List of instances to remove medias from",
+        description: "List of instances to strip media attachments from",
         suggestions: ["example.com", "*.example.com"]
       },
       %{
         key: :media_nsfw,
         label: "Media NSFW",
         type: {:list, :string},
-        description: "List of instances to put medias as NSFW (sensitive) from",
+        description: "List of instances to tag all media as NSFW (sensitive) from",
         suggestions: ["example.com", "*.example.com"]
       },
       %{
@@ -1414,21 +1423,21 @@ config :pleroma, :config_description, [
         key: :reject,
         type: [:string, :regex],
         description:
-          "A list of patterns which result in message being rejected, each pattern can be a string or a regular expression.",
+          "A list of patterns which result in message being rejected. Each pattern can be a string or a regular expression.",
         suggestions: ["foo", ~r/foo/iu]
       },
       %{
         key: :federated_timeline_removal,
         type: [:string, :regex],
         description:
-          "A list of patterns which result in message being removed from federated timelines (a.k.a unlisted), each pattern can be a string or a regular expression.",
+          "A list of patterns which result in message being removed from federated timelines (a.k.a unlisted). Each pattern can be a string or a regular expression.",
         suggestions: ["foo", ~r/foo/iu]
       },
       %{
         key: :replace,
         type: [{:tuple, :string, :string}, {:tuple, :regex, :string}],
         description:
-          "A list of tuples containing {pattern, replacement}, pattern can be a string or a regular expression.",
+          "A list of tuples containing {pattern, replacement}. Each pattern can be a string or a regular expression.",
         suggestions: [{"foo", "bar"}, {~r/foo/iu, "bar"}]
       }
     ]
@@ -1443,7 +1452,7 @@ config :pleroma, :config_description, [
       %{
         key: :actors,
         type: {:list, :string},
-        description: "A list of actors, for which to drop any posts mentioning",
+        description: "A list of actors for which any post mentioning them will be dropped.",
         suggestions: ["actor1", "actor2"]
       }
     ]
@@ -1608,160 +1617,6 @@ config :pleroma, :config_description, [
   },
   %{
     group: :pleroma,
-    key: Pleroma.Web.Endpoint,
-    type: :group,
-    description: "Phoenix endpoint configuration",
-    children: [
-      %{
-        key: :http,
-        label: "HTTP",
-        type: {:keyword, :integer, :tuple},
-        description: "http protocol configuration",
-        suggestions: [
-          port: 8080,
-          ip: {127, 0, 0, 1}
-        ],
-        children: [
-          %{
-            key: :dispatch,
-            type: {:list, :tuple},
-            description: "dispatch settings",
-            suggestions: [
-              {:_,
-               [
-                 {"/api/v1/streaming", Pleroma.Web.MastodonAPI.WebsocketHandler, []},
-                 {"/websocket", Phoenix.Endpoint.CowboyWebSocket,
-                  {Phoenix.Transports.WebSocket,
-                   {Pleroma.Web.Endpoint, Pleroma.Web.UserSocket, websocket_config}}},
-                 {:_, Phoenix.Endpoint.Cowboy2Handler, {Pleroma.Web.Endpoint, []}}
-               ]}
-              # end copied from config.exs
-            ]
-          },
-          %{
-            key: :ip,
-            label: "IP",
-            type: :tuple,
-            description: "ip",
-            suggestions: [
-              {0, 0, 0, 0}
-            ]
-          },
-          %{
-            key: :port,
-            type: :integer,
-            description: "port",
-            suggestions: [
-              2020
-            ]
-          }
-        ]
-      },
-      %{
-        key: :url,
-        label: "URL",
-        type: {:keyword, :string, :integer},
-        description: "configuration for generating urls",
-        suggestions: [
-          host: "example.com",
-          port: 2020,
-          scheme: "https"
-        ],
-        children: [
-          %{
-            key: :host,
-            type: :string,
-            description: "Host",
-            suggestions: [
-              "example.com"
-            ]
-          },
-          %{
-            key: :port,
-            type: :integer,
-            description: "port",
-            suggestions: [
-              2020
-            ]
-          },
-          %{
-            key: :scheme,
-            type: :string,
-            description: "Scheme",
-            suggestions: [
-              "https",
-              "https"
-            ]
-          }
-        ]
-      },
-      %{
-        key: :instrumenters,
-        type: {:list, :module},
-        suggestions: [Pleroma.Web.Endpoint.Instrumenter]
-      },
-      %{
-        key: :protocol,
-        type: :string,
-        suggestions: ["https"]
-      },
-      %{
-        key: :secret_key_base,
-        type: :string,
-        suggestions: ["aK4Abxf29xU9TTDKre9coZPUgevcVCFQJe/5xP/7Lt4BEif6idBIbjupVbOrbKxl"]
-      },
-      %{
-        key: :signing_salt,
-        type: :string,
-        suggestions: ["CqaoopA2"]
-      },
-      %{
-        key: :render_errors,
-        type: :keyword,
-        suggestions: [view: Pleroma.Web.ErrorView, accepts: ~w(json)],
-        children: [
-          %{
-            key: :view,
-            type: :module,
-            suggestions: [Pleroma.Web.ErrorView]
-          },
-          %{
-            key: :accepts,
-            type: {:list, :string},
-            suggestions: ["json"]
-          }
-        ]
-      },
-      %{
-        key: :pubsub,
-        type: :keyword,
-        suggestions: [name: Pleroma.PubSub, adapter: Phoenix.PubSub.PG2],
-        children: [
-          %{
-            key: :name,
-            type: :module,
-            suggestions: [Pleroma.PubSub]
-          },
-          %{
-            key: :adapter,
-            type: :module,
-            suggestions: [Phoenix.PubSub.PG2]
-          }
-        ]
-      },
-      %{
-        key: :secure_cookie_flag,
-        type: :boolean
-      },
-      %{
-        key: :extra_cookie_attrs,
-        type: {:list, :string},
-        suggestions: ["SameSite=Lax"]
-      }
-    ]
-  },
-  %{
-    group: :pleroma,
     key: :activitypub,
     type: :group,
     description: "ActivityPub-related settings",
@@ -1780,6 +1635,12 @@ config :pleroma, :config_description, [
         key: :sign_object_fetches,
         type: :boolean,
         description: "Sign object fetches with HTTP signatures"
+      },
+      %{
+        key: :note_replies_output_limit,
+        type: :integer,
+        description:
+          "The number of Note replies' URIs to be included with outgoing federation (`5` to match Mastodon hardcoded value, `0` to disable the output)."
       },
       %{
         key: :follow_handshake_timeout,
@@ -1847,9 +1708,8 @@ config :pleroma, :config_description, [
         type: :string,
         description:
           "A mailto link for the administrative contact." <>
-            " It's best if this email is not a personal email address, but rather a group email so that if a person leaves an organization," <>
-            " is unavailable for an extended period, or otherwise can't respond, someone else on the list can.",
-        suggestions: ["Subject"]
+            " It's best if this email is not a personal email address, but rather a group email to the instance moderation team.",
+        suggestions: ["mailto:moderators@pleroma.com"]
       },
       %{
         key: :public_key,
@@ -1916,7 +1776,7 @@ config :pleroma, :config_description, [
         key: :admin_token,
         type: :string,
         description: "Token",
-        suggestions: ["some_random_token"]
+        suggestions: ["We recommend a secure random string or UUID"]
       }
     ]
   },
@@ -1960,7 +1820,7 @@ config :pleroma, :config_description, [
       },
       %{
         key: :verbose,
-        type: [:atom, false],
+        type: {:dropdown, :atom},
         description: "Logs verbose mode",
         suggestions: [false, :error, :warn, :info, :debug]
       },
@@ -1978,6 +1838,7 @@ config :pleroma, :config_description, [
           "Background jobs queues (keys: queues, values: max numbers of concurrent jobs)",
         suggestions: [
           activity_expiration: 10,
+          attachments_cleanup: 5,
           background: 5,
           federator_incoming: 50,
           federator_outgoing: 50,
@@ -1992,6 +1853,12 @@ config :pleroma, :config_description, [
             type: :integer,
             description: "Activity expiration queue",
             suggestions: [10]
+          },
+          %{
+            key: :attachments_cleanup,
+            type: :integer,
+            description: "Attachment deletion queue",
+            suggestions: [5]
           },
           %{
             key: :background,
@@ -2036,6 +1903,18 @@ config :pleroma, :config_description, [
             suggestions: [50]
           }
         ]
+      },
+      %{
+        key: :crontab,
+        type: {:list, :tuple},
+        description: "Settings for cron background jobs",
+        suggestions: [
+          {"0 0 * * *", Pleroma.Workers.Cron.ClearOauthTokenWorker},
+          {"0 * * * *", Pleroma.Workers.Cron.StatsWorker},
+          {"* * * * *", Pleroma.Workers.Cron.PurgeExpiredActivitiesWorker},
+          {"0 0 * * 0", Pleroma.Workers.Cron.DigestEmailsWorker},
+          {"0 0 * * *", Pleroma.Workers.Cron.NewUsersDigestWorker}
+        ]
       }
     ]
   },
@@ -2077,7 +1956,7 @@ config :pleroma, :config_description, [
         key: :unfurl_nsfw,
         label: "Unfurl NSFW",
         type: :boolean,
-        description: "If set to `true` NSFW attachments will be shown in previews"
+        description: "When enabled NSFW attachments will be shown in previews"
       }
     ]
   },
@@ -2091,7 +1970,7 @@ config :pleroma, :config_description, [
       %{
         key: :enabled,
         type: :boolean,
-        description: "Enables/disables RichMedia."
+        description: "Enables RichMedia parsing of URLs."
       },
       %{
         key: :ignore_hosts,
@@ -2137,8 +2016,7 @@ config :pleroma, :config_description, [
       %{
         key: :enabled,
         type: :boolean,
-        description:
-          "If enabled, when a new user is federated with, fetch some of their latest posts"
+        description: "Fetch posts when a new user is federated with"
       },
       %{
         key: :pages,
@@ -2157,24 +2035,19 @@ config :pleroma, :config_description, [
       %{
         key: :class,
         type: [:string, false],
-        description: "Specify the class to be added to the generated link. `False` to clear",
+        description: "Specify the class to be added to the generated link. Disable to clear",
         suggestions: ["auto-linker", false]
       },
       %{
         key: :rel,
         type: [:string, false],
-        description: "Override the rel attribute. `False` to clear",
+        description: "Override the rel attribute. Disable to clear",
         suggestions: ["ugc", "noopener noreferrer", false]
       },
       %{
         key: :new_window,
         type: :boolean,
-        description: "Set to `false` to remove target='_blank' attribute"
-      },
-      %{
-        key: :scheme,
-        type: :boolean,
-        description: "Set to `true` to link urls with schema http://google.com"
+        description: "Link urls will open in new window/tab"
       },
       %{
         key: :truncate,
@@ -2278,7 +2151,7 @@ config :pleroma, :config_description, [
         key: :ssl,
         label: "SSL",
         type: :boolean,
-        description: "`True` to use SSL, usually implies the port 636"
+        description: "Enable to use SSL, usually implies the port 636"
       },
       %{
         key: :sslopts,
@@ -2305,7 +2178,7 @@ config :pleroma, :config_description, [
         key: :tls,
         label: "TLS",
         type: :boolean,
-        description: "`True` to start TLS, usually implies the port 389"
+        description: "Enable to use STARTTLS, usually implies the port 389"
       },
       %{
         key: :tlsopts,
@@ -2354,8 +2227,8 @@ config :pleroma, :config_description, [
         type: :boolean,
         description:
           "OAuth admin scope requirement toggle. " <>
-            "If `true`, admin actions explicitly demand admin OAuth scope(s) presence in OAuth token " <>
-            "(client app must support admin scopes). If `false` and token doesn't have admin scope(s)," <>
+            "If enabled, admin actions explicitly demand admin OAuth scope(s) presence in OAuth token " <>
+            "(client app must support admin scopes). If disabled and token doesn't have admin scope(s)," <>
             "`is_admin` user flag grants access to admin-specific actions."
       },
       %{
@@ -2377,7 +2250,7 @@ config :pleroma, :config_description, [
         key: :oauth_consumer_strategies,
         type: {:list, :string},
         description:
-          "The list of enabled OAuth consumer strategies; by default it's set by OAUTH_CONSUMER_STRATEGIES environment variable." <>
+          "The list of enabled OAuth consumer strategies. By default it's set by OAUTH_CONSUMER_STRATEGIES environment variable." <>
             " Each entry in this space-delimited string should be of format \"strategy\" or \"strategy:dependency\"" <>
             " (e.g. twitter or keycloak:ueberauth_keycloak_strategy in case dependency is named differently than ueberauth_<strategy>).",
         suggestions: ["twitter", "keycloak:ueberauth_keycloak_strategy"]
@@ -2495,6 +2368,20 @@ config :pleroma, :config_description, [
   },
   %{
     group: :pleroma,
+    key: Pleroma.Emails.NewUsersDigestEmail,
+    type: :group,
+    description: "New users admin email digest",
+    children: [
+      %{
+        key: :enabled,
+        type: :boolean,
+        description: "enables new users admin digest email when `true`",
+        suggestions: [false]
+      }
+    ]
+  },
+  %{
+    group: :pleroma,
     key: :oauth2,
     type: :group,
     description: "Configure OAuth 2 provider capabilities",
@@ -2514,14 +2401,7 @@ config :pleroma, :config_description, [
       %{
         key: :clean_expired_tokens,
         type: :boolean,
-        description: "Enable a background job to clean expired oauth tokens. Default: `false`."
-      },
-      %{
-        key: :clean_expired_tokens_interval,
-        type: :integer,
-        description:
-          "Interval to run the job to clean expired tokens. Default: 86_400_000 (24 hours).",
-        suggestions: [86_400_000]
+        description: "Enable a background job to clean expired oauth tokens. Default: disabled."
       }
     ]
   },
@@ -2574,19 +2454,6 @@ config :pleroma, :config_description, [
   },
   %{
     group: :pleroma,
-    key: :database,
-    type: :group,
-    description: "Database related settings",
-    children: [
-      %{
-        key: :rum_enabled,
-        type: :boolean,
-        description: "If RUM indexes should be used. Default: `false`"
-      }
-    ]
-  },
-  %{
-    group: :pleroma,
     key: :rate_limit,
     type: :group,
     description:
@@ -2596,6 +2463,12 @@ config :pleroma, :config_description, [
         key: :search,
         type: [:tuple, {:list, :tuple}],
         description: "For the search requests (account & status search etc.)",
+        suggestions: [{1000, 10}, [{10_000, 10}, {10_000, 50}]]
+      },
+      %{
+        key: :timeline,
+        type: [:tuple, {:list, :tuple}],
+        description: "For requests to timelines (each timeline has it's own limiter)",
         suggestions: [{1000, 10}, [{10_000, 10}, {10_000, 50}]]
       },
       %{
@@ -2745,20 +2618,6 @@ config :pleroma, :config_description, [
       %{
         key: :enabled,
         type: :boolean
-      }
-    ]
-  },
-  %{
-    group: :prometheus,
-    key: Pleroma.Web.Endpoint.MetricsExporter,
-    type: :group,
-    description: "Prometheus settings",
-    children: [
-      %{
-        key: :path,
-        type: :string,
-        description: "API endpoint with metrics",
-        suggestions: ["/api/pleroma/app_metrics"]
       }
     ]
   },
@@ -2967,7 +2826,7 @@ config :pleroma, :config_description, [
       %{
         key: :enabled,
         type: :boolean,
-        description: "Enable/disable the plug. Default: `false`."
+        description: "Enable/disable the plug. Default: disabled."
       },
       %{
         key: :headers,
@@ -3021,7 +2880,7 @@ config :pleroma, :config_description, [
       %{
         key: :enabled,
         type: :boolean,
-        description: "Enables the rendering of static HTML. Defaults to `false`."
+        description: "Enables the rendering of static HTML. Default: disabled."
       }
     ]
   },
@@ -3029,7 +2888,7 @@ config :pleroma, :config_description, [
     group: :pleroma,
     key: :feed,
     type: :group,
-    description: "Configure feed rendering.",
+    description: "Configure feed rendering",
     children: [
       %{
         key: :post_title,
@@ -3079,7 +2938,7 @@ config :pleroma, :config_description, [
     group: :pleroma,
     key: :modules,
     type: :group,
-    description: "Custom Runtime Modules.",
+    description: "Custom Runtime Modules",
     children: [
       %{
         key: :runtime_dir,
@@ -3090,14 +2949,21 @@ config :pleroma, :config_description, [
   },
   %{
     group: :pleroma,
+    key: :streamer,
     type: :group,
-    description: "Allow instance configuration from database.",
+    description: "Settings for notifications streamer",
     children: [
       %{
-        key: :configurable_from_database,
-        type: :boolean,
-        description:
-          "Allow transferring configuration to DB with the subsequent customization from Admin api. Defaults to `false`"
+        key: :workers,
+        type: :integer,
+        description: "Number of workers to send notifications.",
+        suggestions: [3]
+      },
+      %{
+        key: :overflow_workers,
+        type: :integer,
+        description: "Maximum number of workers created if pool is empty.",
+        suggestions: [2]
       }
     ]
   }
