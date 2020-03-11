@@ -24,6 +24,7 @@ rc_check() {
 }
 
 rc_start() {
+	export ERL_EPMD_ADDRESS=127.0.0.1,::1
 	${rcexec} "cd pleroma; ${daemon} ${daemon_flags}"
 }
 

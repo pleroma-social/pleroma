@@ -14,7 +14,7 @@ start_precmd="ulimit -n unlimited"
 pidfile="/dev/null"
 
 pleroma_chdir="${pleroma_home}/pleroma"
-pleroma_env="HOME=${pleroma_home} MIX_ENV=prod"
+pleroma_env="HOME=${pleroma_home} MIX_ENV=prod ERL_EPMD_ADDRESS=127.0.0.1,::1"
 
 check_pidfile()
 {

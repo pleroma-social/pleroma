@@ -11,6 +11,7 @@ Restart=on-failure
 User=pleroma
 ; Declares that Pleroma runs in production mode.
 Environment="MIX_ENV=prod"
+Environment="ERL_EPMD_ADDRESS=127.0.0.1,::1"
 
 ; Make sure that all paths fit your installation.
 ; Path to the home directory of the user running the Pleroma service.
