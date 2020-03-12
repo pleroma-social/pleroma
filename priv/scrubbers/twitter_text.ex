@@ -26,7 +26,9 @@ defmodule Pleroma.HTML.Scrubber.TwitterText do
     "tag",
     "nofollow",
     "noopener",
-    "noreferrer"
+    "noreferrer",
+    "ugc",
+    "ugc canonical"
   ])
 
   Meta.allow_tag_with_these_attributes(:a, ["name", "title"])

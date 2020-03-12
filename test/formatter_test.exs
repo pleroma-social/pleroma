@@ -173,7 +173,7 @@ defmodule Pleroma.FormatterTest do
       expected_text =
         ~s(<span class="h-card"><a data-user="#{mike.id}" class="u-url mention" href="#{
           mike.ap_id
-        }" rel="ugc">@<span>mike</span></a></span> test)
+        }" rel="ugc canonical">@<span>mike</span></a></span> test)
 
       assert expected_text == text
     end

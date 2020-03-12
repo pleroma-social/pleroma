@@ -19,7 +19,8 @@ defmodule Pleroma.HTML.Scrubber.LinksOnly do
     "noopener",
     "noreferrer",
     "me",
-    "ugc"
+    "ugc",
+    "ugc canonical"
   ])
 
   Meta.allow_tag_with_these_attributes(:a, ["name", "title"])

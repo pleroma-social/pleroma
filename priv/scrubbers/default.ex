@@ -26,7 +26,8 @@ defmodule Pleroma.HTML.Scrubber.Default do
     "nofollow",
     "noopener",
     "noreferrer",
-    "ugc"
+    "ugc",
+    "ugc canonical"
   ])
 
   Meta.allow_tag_with_these_attributes(:a, ["name", "title"])

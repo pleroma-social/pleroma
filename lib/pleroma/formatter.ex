@@ -34,10 +34,12 @@ defmodule Pleroma.Formatter do
         ap_id = get_ap_id(user)
         nickname_text = get_nickname_text(nickname, opts)
 
+        rel = if user.local, do: "ugc", else: "ugc canonical"
+
         link =
-          ~s(<span class="h-card"><a data-user="#{id}" class="u-url mention" href="#{ap_id}" rel="ugc">@<span>#{
-            nickname_text
-          }</span></a></span>)
+          ~s(<span class="h-card"><a data-user="#{id}" class="u-url mention" href="#{ap_id}" rel="#{
+            rel
+          }">@<span>#{nickname_text}</span></a></span>)
 
         {link, %{acc | mentions: MapSet.put(acc.mentions, {"@" <> nickname, user})}}
 
