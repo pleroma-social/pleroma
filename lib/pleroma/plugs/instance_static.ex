@@ -10,19 +10,25 @@ defmodule Pleroma.Plugs.InstanceStatic do
   """
   @behaviour Plug
 
-  def file_path(path) do
-    instance_path =
-      Path.join(Pleroma.Config.get([:instance, :static_dir], "instance/static/"), path)
+  alias Pleroma.Config
 
-    if File.exists?(instance_path) do
-      instance_path
-    else
-      Path.join(Application.app_dir(:pleroma, "priv/static/"), path)
+  def file_path(path) do
+    instance_path = Path.join(Config.get([:instance, :static_dir], "instance/static/"), path)
+
+    frontends_path =
+      Config.get([:instance, :frontends_dir], "instance/frontends/")
+      |> Path.join("pleroma-fe")
+      |> Path.join(path)
+
+    cond do
+      File.exists?(instance_path) -> instance_path
+      File.exists?(frontends_path) -> frontends_path
+      true -> Path.join(Application.app_dir(:pleroma, "priv/static/"), path)
     end
   end
 
   @only ~w(index.html robots.txt static emoji packs sounds images instance favicon.png sw.js
-  sw-pleroma.js)
+  sw-pleroma.js fontello)
 
   def init(opts) do
     opts
@@ -38,8 +44,7 @@ defmodule Pleroma.Plugs.InstanceStatic do
       call_static(
         conn,
         opts,
-        unquote(at),
-        Pleroma.Config.get([:instance, :static_dir], "instance/static")
+        unquote(at)
       )
     end
   end
@@ -48,7 +53,20 @@ defmodule Pleroma.Plugs.InstanceStatic do
     conn
   end
 
-  defp call_static(conn, opts, at, from) do
+  defp call_static(conn, opts, at) do
+    static_dir = Config.get([:instance, :static_dir], "instance/static/")
+
+    frontend_dir =
+      Config.get([:instance, :frontends_dir], "instance/frontends/")
+      |> Path.join("pleroma-fe")
+
+    from =
+      if File.exists?(Path.join(static_dir, conn.request_path)) do
+        static_dir
+      else
+        frontend_dir
+      end
+
     opts =
       opts
       |> Map.put(:from, from)

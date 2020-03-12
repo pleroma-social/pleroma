@@ -233,6 +233,7 @@ config :pleroma, :instance,
   quarantined_instances: [],
   managed_config: true,
   static_dir: "instance/static/",
+  frontends_dir: "instance/frontends/",
   allowed_post_formats: [
     "text/plain",
     "text/html",

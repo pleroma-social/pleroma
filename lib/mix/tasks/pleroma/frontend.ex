@@ -4,7 +4,7 @@
 
 defmodule Mix.Tasks.Pleroma.Frontend do
   use Mix.Task
-  alias __MODULE__.Fetcher
+  import Mix.Pleroma
 
   @shortdoc "Manages the Pleroma frontends"
   @moduledoc File.read!("docs/administration/CLI_tasks/frontend.md")
@@ -15,21 +15,36 @@ defmodule Mix.Tasks.Pleroma.Frontend do
         rest,
         strict: [
           reference: :string
-        ]
+        ],
+        aliases: [r: :reference]
       )
 
     reference = options[:reference] || "master"
 
-    IO.puts("Downloading reference #{reference}")
+    shell_info("Downloading reference #{reference}")
 
     url =
       "https://git.pleroma.social/pleroma/pleroma-fe/-/jobs/artifacts/#{reference}/download?job=build"
 
-    sd = Pleroma.Config.get([:instance, :static_dir]) |> Path.expand()
+    sd =
+      Pleroma.Config.get([:instance, :frontends_dir], "instance/frontends")
+      |> Path.join("pleroma-fe")
+      |> Path.expand()
 
-    with {_, {:ok, %{status: 200, body: body}}} <- {:fetch, Fetcher.get(url)},
-         {_, {:ok, results}} <- {:unzip, :zip.unzip(body, [:memory])} do
-      IO.puts("Writing to #{sd}")
+    adapter =
+      if Pleroma.Config.get(:env) == :test do
+        Tesla.Mock
+      else
+        Tesla.Adapter.Httpc
+      end
+
+    client = Tesla.client([Tesla.Middleware.FollowRedirects], adapter)
+
+    with {_, {:ok, %{status: 200, body: body}}} <- {:fetch, Tesla.get(client, url)},
+         {_, {:ok, results}} <- {:unzip, :zip.unzip(body, [:memory])},
+         shell_info("Cleaning #{sd}"),
+         {_, {:ok, _}} <- {:clean_up, File.rm_rf(sd)} do
+      shell_info("Writing to #{sd}")
 
       results
       |> Enum.each(fn {path, contents} ->
@@ -39,16 +54,9 @@ defmodule Mix.Tasks.Pleroma.Frontend do
         File.write!(path, contents)
       end)
 
-      IO.puts("Successfully downloaded and unpacked the frontend")
+      shell_info("Successfully downloaded and unpacked the frontend")
     else
-      {error, _} -> IO.puts("Step failed: #{error}")
+      {error, _} -> shell_error("Step failed: #{error}")
     end
   end
-end
-
-defmodule Mix.Tasks.Pleroma.Frontend.Fetcher do
-  use Tesla
-  plug(Tesla.Middleware.FollowRedirects)
-
-  adapter(Tesla.Adapter.Httpc)
 end

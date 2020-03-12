@@ -33,7 +33,8 @@ config :pleroma, :instance,
   skip_thread_containment: false,
   federating: false,
   external_user_synchronization: false,
-  static_dir: "test/instance_static/"
+  static_dir: "test/instance_static/",
+  frontends_dir: "test/instance_static/frontends"
 
 config :pleroma, :activitypub, sign_object_fetches: false
 

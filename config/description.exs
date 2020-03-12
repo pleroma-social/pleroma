@@ -733,6 +733,14 @@ config :pleroma, :config_description, [
         ]
       },
       %{
+        key: :frontends_dir,
+        type: :string,
+        description: "Instance frontends directory",
+        suggestions: [
+          "instance/frontends/"
+        ]
+      },
+      %{
         key: :allowed_post_formats,
         type: {:list, :string},
         description: "MIME-type list of formats allowed to be posted (transformed into HTML)",
