@@ -615,7 +615,7 @@ keeping it in cache for #{div(cache_ms, 1000)}s")
   defp files_for_pack(emoji_txt_path, dir_path) do
     if File.exists?(emoji_txt_path) do
       # There's an emoji.txt file, it's likely from a pack installed by the pack manager.
-      # Make a pack.json file from the contents of that emoji.txt fileh
+      # Make a pack.json file from the contents of that emoji.txt file
 
       # FIXME: Copy-pasted from Pleroma.Emoji/load_from_file_stream/2
 
@@ -627,11 +627,23 @@ keeping it in cache for #{div(cache_ms, 1000)}s")
         case String.split(line, ~r/,\s*/) do
           # This matches both strings with and without tags
           # and we don't care about tags here
-          [name, file | _] -> {name, file}
-          _ -> nil
+          [name, file | _] ->
+            file_dir_name = Path.dirname(file)
+
+            file =
+              if String.ends_with?(dir_path, file_dir_name) do
+                Path.basename(file)
+              else
+                file
+              end
+
+            {name, file}
+
+          _ ->
+            nil
         end
       end)
-      |> Enum.filter(fn x -> not is_nil(x) end)
+      |> Enum.filter(& &1)
       |> Enum.into(%{})
     else
       # If there's no emoji.txt, assume all files
