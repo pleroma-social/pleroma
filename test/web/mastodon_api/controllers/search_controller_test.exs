@@ -37,6 +37,28 @@ defmodule Pleroma.Web.MastodonAPI.SearchControllerTest do
       end
     end
 
+    test "activity search", %{conn: conn} do
+      user = insert(:user)
+
+      {:ok, activity} = CommonAPI.post(user, %{"status" => "Query in the body 2hu"})
+
+      {:ok, activity_two} =
+        CommonAPI.post(user, %{"spoiler_text" => "2hu", "status" => "Query in the subject"})
+
+      {:ok, _activity} = CommonAPI.post(user, %{"status" => "No query"})
+
+      statuses =
+        conn
+        |> get("/api/v2/search", %{"q" => "2hu"})
+        |> json_response(200)
+        |> Map.get("statuses")
+        |> Enum.map(& &1["id"])
+
+      assert length(statuses) == 2
+      assert activity.id in statuses
+      assert activity_two.id in statuses
+    end
+
     test "search", %{conn: conn} do
       user = insert(:user)
       user_two = insert(:user, %{nickname: "shp@shitposter.club"})
