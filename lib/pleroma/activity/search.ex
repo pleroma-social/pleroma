@@ -75,6 +75,12 @@ defmodule Pleroma.Activity.Search do
           o.fts_content,
           ^search_query
         ),
+      or_where:
+        fragment(
+          "? @@ plainto_tsquery('english', ?)",
+          o.fts_summary,
+          ^search_query
+        ),
       order_by: [fragment("? <=> now()::date", o.inserted_at)]
     )
   end
