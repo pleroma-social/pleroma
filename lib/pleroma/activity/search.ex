@@ -54,16 +54,15 @@ defmodule Pleroma.Activity.Search do
     from([a, o] in q,
       where:
         fragment(
-          "(to_tsvector('english', ?->>'summary') @@ plainto_tsquery('english', ?))",
+          "to_tsvector('english', ?->>'summary') @@ plainto_tsquery('english', ?)",
           o.data,
           ^search_query
-        ),
-      or_where:
-        fragment(
-          "(to_tsvector('english', ?->>'content') @@ plainto_tsquery('english', ?))",
-          o.data,
-          ^search_query
-        )
+        ) or
+          fragment(
+            "to_tsvector('english', ?->>'content') @@ plainto_tsquery('english', ?)",
+            o.data,
+            ^search_query
+          )
     )
   end
 
@@ -72,15 +71,14 @@ defmodule Pleroma.Activity.Search do
       where:
         fragment(
           "? @@ plainto_tsquery('english', ?)",
-          o.fts_content,
-          ^search_query
-        ),
-      or_where:
-        fragment(
-          "? @@ plainto_tsquery('english', ?)",
           o.fts_summary,
           ^search_query
-        ),
+        ) or
+          fragment(
+            "? @@ plainto_tsquery('english', ?)",
+            o.fts_content,
+            ^search_query
+          ),
       order_by: [fragment("? <=> now()::date", o.inserted_at)]
     )
   end
