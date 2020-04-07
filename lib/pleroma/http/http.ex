@@ -55,6 +55,11 @@ defmodule Pleroma.HTTP do
   @spec request(atom(), Request.url(), String.t(), Request.headers(), keyword()) ::
           {:ok, Env.t()} | {:error, any()}
   def request(method, url, body, headers, options) when is_binary(url) do
+    if String.starts_with?(url, Pleroma.Web.base_url()) do
+      Logger.warn("Request is called with local URL -> #{url}")
+      Logger.warn("Backtrace: #{inspect(Process.info(:erlang.self(), :current_stacktrace))}")
+    end
+
     uri = URI.parse(url)
     adapter_opts = Connection.options(uri, options[:adapter] || [])
     options = put_in(options[:adapter], adapter_opts)
