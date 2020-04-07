@@ -31,11 +31,15 @@ defmodule Pleroma.Plugs.RemoteIp do
   def call(%{remote_ip: original_remote_ip} = conn, _) do
     config = Pleroma.Config.get(__MODULE__, [])
 
-    IO.inspect(original_remote_ip, label: "original remote ip")
-
     if Keyword.get(config, :enabled, false) do
       %{remote_ip: new_remote_ip} = conn = RemoteIp.call(conn, remote_ip_opts(config))
-      IO.inspect(new_remote_ip, label: "new remote ip")
+
+      if original_remote_ip == new_remote_ip do
+        IO.inspect(conn.request_path, label: "path")
+        IO.inspect(conn.query_string, label: "query string")
+        IO.inspect(conn.req_headers, label: "headers")
+      end
+
       assign(conn, :remote_ip_found, original_remote_ip != new_remote_ip)
     else
       conn

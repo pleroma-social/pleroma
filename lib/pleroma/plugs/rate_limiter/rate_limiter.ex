@@ -123,9 +123,6 @@ defmodule Pleroma.Plugs.RateLimiter do
         do: !conn.assigns.remote_ip_found,
         else: false
 
-    IO.inspect(localhost_or_socket, label: "localhost_or_socket")
-    IO.inspect(remote_ip_not_found, label: "remote_ip_not_found")
-    IO.inspect(Map.get(conn.assigns, :remote_ip_found), label: "remote_ip_found")
     localhost_or_socket and remote_ip_not_found
   end
 
