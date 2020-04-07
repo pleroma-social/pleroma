@@ -8,7 +8,6 @@ defmodule Pleroma.Web.Federator do
   alias Pleroma.User
   alias Pleroma.Web.ActivityPub.ActivityPub
   alias Pleroma.Web.ActivityPub.Transmogrifier
-  alias Pleroma.Web.ActivityPub.Utils
   alias Pleroma.Web.Federator.Publisher
   alias Pleroma.Workers.PublisherWorker
   alias Pleroma.Workers.ReceiverWorker
@@ -66,11 +65,11 @@ defmodule Pleroma.Web.Federator do
   def perform(:incoming_ap_doc, params) do
     Logger.debug("Handling incoming AP activity")
 
-    params = Utils.normalize_params(params)
+    actor = Containment.get_actor(params)
 
     # NOTE: we use the actor ID to do the containment, this is fine because an
     # actor shouldn't be acting on objects outside their own AP server.
-    with {:ok, _user} <- ap_enabled_actor(params["actor"]),
+    with {_, {:ok, _user}} <- {:get_user, User.get_or_fetch_by_ap_id(actor)},
          nil <- Activity.normalize(params["id"]),
          {_, :ok} <-
            {:correct_origin?, Containment.contain_origin_from_id(params["actor"], params)},
@@ -90,16 +89,6 @@ defmodule Pleroma.Web.Federator do
         Logger.debug("Unhandled activity, #{inspect(e)}")
         Logger.debug(Jason.encode!(params, pretty: true))
         {:error, e}
-    end
-  end
-
-  def ap_enabled_actor(id) do
-    user = User.get_cached_by_ap_id(id)
-
-    if User.ap_enabled?(user) do
-      {:ok, user}
-    else
-      ActivityPub.make_user_from_ap_id(id)
     end
   end
 end

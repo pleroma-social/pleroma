@@ -42,10 +42,6 @@ defmodule Pleroma.Web.ActivityPub.Utils do
   def get_ap_id(%{"id" => id} = _), do: id
   def get_ap_id(id), do: id
 
-  def normalize_params(params) do
-    Map.put(params, "actor", get_ap_id(params["actor"]))
-  end
-
   @spec determine_explicit_mentions(map()) :: [any]
   def determine_explicit_mentions(%{"tag" => tag}) when is_list(tag) do
     Enum.flat_map(tag, fn

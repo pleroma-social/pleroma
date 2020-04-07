@@ -8,7 +8,6 @@ defmodule Pleroma.Web.ActivityPub.Transmogrifier.FollowHandlingTest do
   alias Pleroma.Repo
   alias Pleroma.User
   alias Pleroma.Web.ActivityPub.Transmogrifier
-  alias Pleroma.Web.ActivityPub.Utils
 
   import Pleroma.Factory
   import Ecto.Query
@@ -151,7 +150,6 @@ defmodule Pleroma.Web.ActivityPub.Transmogrifier.FollowHandlingTest do
         File.read!("test/fixtures/hubzilla-follow-activity.json")
         |> Poison.decode!()
         |> Map.put("object", user.ap_id)
-        |> Utils.normalize_params()
 
       {:ok, %Activity{data: data, local: false}} = Transmogrifier.handle_incoming(data)
 

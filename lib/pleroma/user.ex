@@ -704,12 +704,8 @@ defmodule Pleroma.User do
     follow(follower, followed)
   end
 
-  def maybe_direct_follow(%User{} = follower, %User{} = followed) do
-    if not ap_enabled?(followed) do
-      follow(follower, followed)
-    else
-      {:ok, follower}
-    end
+  def maybe_direct_follow(%User{} = follower, _followed) do
+    {:ok, follower}
   end
 
   @doc "A mass follow for local users. Respects blocks in both directions but does not create activities."
