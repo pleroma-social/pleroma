@@ -394,14 +394,19 @@ For each pool, the options are:
 
 Advanced settings for connections pool. Pool with opened connections. These connections can be reused in worker pools.
 
-For big instances it's recommended to increase `config :pleroma, :connections_pool, max_connections: 500` up to 500-1000.
-It will increase memory usage, but federation would work faster.
+For big instances it's recommended to increase `max_connections` up to 500-1000. It will increase memory usage, but federation would work faster.
 
 * `:checkin_timeout` - timeout to checkin connection from pool. Default: 250ms.
 * `:max_connections` - maximum number of connections in the pool. Default: 250 connections.
+* `:max_idle_time` - maximum of time, while connection can be idle. Default: 10 minutes.
+* `:closing_idle_conns_interval` - interval between cleaning pool from idle connections. Default: 10 minutes.
 * `:retry` - number of retries, while `gun` will try to reconnect if connection goes down. Default: 1.
 * `:retry_timeout` - time between retries when `gun` will try to reconnect in milliseconds. Default: 1000ms.
 * `:await_up_timeout` - timeout while `gun` will wait until connection is up. Default: 5000ms.
+
+*If you are increasing `max_connections` setting, dont't forget to increase limit for file descriptors:*
+* `installation/pleroma.service` - `LimitNOFILE`
+* `installation/pleroma.supervisord` - `minfds`
 
 ### :pools
 

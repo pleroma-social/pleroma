@@ -608,6 +608,8 @@ config :pleroma, Pleroma.Repo,
 config :pleroma, :connections_pool,
   checkin_timeout: 250,
   max_connections: 250,
+  max_idle_time: 10,
+  closing_idle_conns_interval: 10,
   retry: 1,
   retry_timeout: 1000,
   await_up_timeout: 5_000

@@ -757,4 +757,38 @@ defmodule Pleroma.Pool.ConnectionsTest do
     Connections.remove_conn(name, "1")
     assert Connections.count(name) == 0
   end
+
+  test "close_idle_conns/2", %{name: name} do
+    GunMock
+    |> expect(:close, fn _ -> :ok end)
+    |> allow(self(), name)
+
+    Connections.add_conn(name, "1", %Conn{
+      conn_state: :idle,
+      last_reference: now() - 30,
+      conn: self()
+    })
+
+    Connections.add_conn(name, "2", %Conn{
+      conn_state: :idle,
+      last_reference: now() - 10,
+      conn: self()
+    })
+
+    Connections.add_conn(name, "3", %Conn{
+      conn_state: :active,
+      conn: self()
+    })
+
+    name
+    |> Process.whereis()
+    |> send({:close_idle_conns, 15})
+
+    assert %Connections{
+             conns: %{
+               "3" => %Conn{},
+               "2" => %Conn{}
+             }
+           } = Connections.get_state(name)
+  end
 end

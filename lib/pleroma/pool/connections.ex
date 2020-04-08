@@ -12,6 +12,7 @@ defmodule Pleroma.Pool.Connections do
 
   @type domain :: String.t()
   @type conn :: Pleroma.Gun.Conn.t()
+  @type seconds :: pos_integer()
 
   @type t :: %__MODULE__{
           conns: %{domain() => conn()},
@@ -26,7 +27,10 @@ defmodule Pleroma.Pool.Connections do
   end
 
   @impl true
-  def init(opts), do: {:ok, %__MODULE__{conns: %{}, opts: opts}}
+  def init(opts) do
+    schedule_close_idle_conns()
+    {:ok, %__MODULE__{conns: %{}, opts: opts}}
+  end
 
   @spec checkin(String.t() | URI.t(), atom()) :: pid() | nil
   def checkin(url, name)
@@ -154,16 +158,16 @@ defmodule Pleroma.Pool.Connections do
   def handle_call(:unused_conns, _from, state) do
     unused_conns =
       state.conns
-      |> Enum.filter(&filter_conns/1)
-      |> Enum.sort(&sort_conns/2)
+      |> Enum.filter(&idle_conn?/1)
+      |> Enum.sort(&least_used/2)
 
     {:reply, unused_conns, state}
   end
 
-  defp filter_conns({_, %{conn_state: :idle, used_by: []}}), do: true
-  defp filter_conns(_), do: false
+  defp idle_conn?({_, %{conn_state: :idle}}), do: true
+  defp idle_conn?(_), do: false
 
-  defp sort_conns({_, c1}, {_, c2}) do
+  defp least_used({_, c1}, {_, c2}) do
     c1.crf <= c2.crf and c1.last_reference <= c2.last_reference
   end
 
@@ -264,6 +268,38 @@ defmodule Pleroma.Pool.Connections do
 
     {:noreply, state}
   end
+
+  @impl true
+  def handle_info({:close_idle_conns, max_idle_time}, state) do
+    closing_time = :os.system_time(:second) - max_idle_time
+
+    idle_conns_keys =
+      state.conns
+      |> Enum.filter(&idle_more_than?(&1, closing_time))
+      |> Enum.map(fn {key, %{conn: conn}} ->
+        Gun.close(conn)
+        key
+      end)
+
+    schedule_close_idle_conns()
+    {:noreply, put_in(state.conns, Map.drop(state.conns, idle_conns_keys))}
+  end
+
+  defp schedule_close_idle_conns do
+    max_idle_time = Config.get([:connections_pool, :max_idle_time], 10) * 60
+    interval = Config.get([:connections_pool, :closing_idle_conns_interval], 10) * 60 * 1000
+    Process.send_after(self(), {:close_idle_conns, max_idle_time}, interval)
+  end
+
+  defp idle_more_than?(
+         {_, %{conn_state: :idle, last_reference: idle_since}},
+         closing_time
+       )
+       when closing_time >= idle_since do
+    true
+  end
+
+  defp idle_more_than?(_, _), do: false
 
   defp find_conn(conns, conn_pid) do
     Enum.find(conns, fn {_key, conn} ->
