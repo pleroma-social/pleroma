@@ -71,3 +71,9 @@ config :pleroma, Pleroma.Uploaders.Local, uploads: "<%= uploads_dir %>"
 config :joken, default_signer: "<%= jwt_secret %>"
 
 config :pleroma, configurable_from_database: <%= db_configurable? %>
+
+config :pleroma, :frontends,
+  primary: <%= inspect(fe_primary) %>,
+  mastodon: <%= inspect(fe_mastodon) %>,
+  admin: <%= inspect(fe_admin) %>,
+  static: <%= enable_static_fe? %>

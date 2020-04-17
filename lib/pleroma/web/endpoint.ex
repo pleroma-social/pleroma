@@ -11,6 +11,7 @@ defmodule Pleroma.Web.Endpoint do
   plug(CORSPlug)
   plug(Pleroma.Plugs.HTTPSecurityPlug)
   plug(Pleroma.Plugs.UploadedMedia)
+  plug(Pleroma.Plugs.FrontendPlug)
 
   @static_cache_control "public, no-cache"
 
@@ -35,20 +36,13 @@ defmodule Pleroma.Web.Endpoint do
     at: "/",
     from: :pleroma,
     only:
-      ~w(index.html robots.txt static finmoji emoji packs sounds images instance sw.js sw-pleroma.js favicon.png schemas doc),
+      ~w(robots.txt static-fe.css finmoji emoji sounds images instance favicon.png schemas doc),
     # credo:disable-for-previous-line Credo.Check.Readability.MaxLineLength
     gzip: true,
     cache_control_for_etags: @static_cache_control,
     headers: %{
       "cache-control" => @static_cache_control
     }
-  )
-
-  plug(Plug.Static.IndexHtml, at: "/pleroma/admin/")
-
-  plug(Plug.Static,
-    at: "/pleroma/admin/",
-    from: {:pleroma, "priv/static/adminfe/"}
   )
 
   # Code reloading can be explicitly enabled under the

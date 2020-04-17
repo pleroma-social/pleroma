@@ -5,6 +5,7 @@ defmodule Pleroma.Mixfile do
     [
       app: :pleroma,
       version: version("2.0.50"),
+      stable?: stable?(),
       elixir: "~> 1.8",
       elixirc_paths: elixirc_paths(Mix.env()),
       compilers: [:phoenix, :gettext] ++ Mix.compilers(),
@@ -178,7 +179,6 @@ defmodule Pleroma.Mixfile do
       {:benchee, "~> 1.0"},
       {:esshd, "~> 0.1.0", runtime: Application.get_env(:esshd, :enabled, false)},
       {:ex_const, "~> 0.2"},
-      {:plug_static_index_html, "~> 1.0.0"},
       {:excoveralls, "~> 0.12.1", only: :test},
       {:flake_id, "~> 0.1.0"},
       {:remote_ip,
@@ -294,5 +294,9 @@ defmodule Pleroma.Mixfile do
     [version, pre_release, build_metadata]
     |> Enum.filter(fn string -> string && string != "" end)
     |> Enum.join()
+  end
+
+  defp stable? do
+    match?({"tags/" <> _tag, 0}, System.cmd("git", ["describe", "--all"]))
   end
 end

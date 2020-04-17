@@ -2,7 +2,7 @@
 # Copyright © 2017-2020 Pleroma Authors <https://pleroma.social/>
 # SPDX-License-Identifier: AGPL-3.0-only
 
-defmodule Pleroma.InstanceTest do
+defmodule Mix.Tasks.Pleroma.InstanceTest do
   use ExUnit.Case
 
   setup do
@@ -63,7 +63,21 @@ defmodule Pleroma.InstanceTest do
         "--uploads-dir",
         "test/uploads",
         "--static-dir",
-        "instance/static/"
+        "instance/static/",
+        "--fe-primary",
+        "pleroma",
+        "--fe-primary-ref",
+        "develop",
+        "--fe-mastodon",
+        "y",
+        "--fe-mastodon-ref",
+        "develop",
+        "--fe-admin",
+        "y",
+        "--fe-admin-ref",
+        "develop",
+        "--fe-static",
+        "y"
       ])
     end
 
@@ -82,6 +96,10 @@ defmodule Pleroma.InstanceTest do
     assert generated_config =~ "password: \"dbpass\""
     assert generated_config =~ "configurable_from_database: true"
     assert generated_config =~ "http: [ip: {127, 0, 0, 1}, port: 4000]"
+    assert generated_config =~ ~s(primary: %{"name" => "pleroma", "ref" => "develop"})
+    assert generated_config =~ ~s(mastodon: %{"name" => "mastodon", "ref" => "develop"})
+    assert generated_config =~ ~s(admin: %{"name" => "admin", "ref" => "develop"})
+    assert generated_config =~ "static: true"
     assert File.read!(tmp_path() <> "setup.psql") == generated_setup_psql()
   end
 

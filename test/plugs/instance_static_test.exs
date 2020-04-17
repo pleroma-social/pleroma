@@ -6,38 +6,64 @@ defmodule Pleroma.Web.RuntimeStaticPlugTest do
   use Pleroma.Web.ConnCase
 
   @dir "test/tmp/instance_static"
+  @primary_fe %{"name" => "pleroma", "ref" => "1.2.3"}
+  @fe_dir Path.join([@dir, "frontends", @primary_fe["name"], @primary_fe["ref"]])
 
   setup do
-    File.mkdir_p!(@dir)
+    [@dir, "frontends", @primary_fe["name"], @primary_fe["ref"], "static"]
+    |> Path.join()
+    |> File.mkdir_p()
+
+    [@dir, "static"]
+    |> Path.join()
+    |> File.mkdir!()
+
     on_exit(fn -> File.rm_rf(@dir) end)
+    clear_config([:instance, :static_dir], @dir)
+    clear_config([:frontends, :primary], @primary_fe)
   end
 
-  setup do: clear_config([:instance, :static_dir], @dir)
+  test "frontend files override files in priv" do
+    content = "body{ color: red; }"
 
-  test "overrides index" do
-    bundled_index = get(build_conn(), "/")
-    assert html_response(bundled_index, 200) == File.read!("priv/static/index.html")
+    conn = get(build_conn(), "/static-fe.css")
+    refute response(conn, 200) == content
 
-    File.write!(@dir <> "/index.html", "hello world")
+    [@fe_dir, "static-fe.css"]
+    |> Path.join()
+    |> File.write!(content)
 
-    index = get(build_conn(), "/")
-    assert html_response(index, 200) == "hello world"
+    conn = get(build_conn(), "/static-fe.css")
+    assert response(conn, 200) == content
   end
 
-  test "overrides any file in static/static" do
-    bundled_index = get(build_conn(), "/static/terms-of-service.html")
+  test "files in instance/static overrides priv/static" do
+    content = "no room for Bender"
 
-    assert html_response(bundled_index, 200) ==
-             File.read!("priv/static/static/terms-of-service.html")
+    conn = get(build_conn(), "/robots.txt")
+    refute text_response(conn, 200) == content
 
-    File.mkdir!(@dir <> "/static")
-    File.write!(@dir <> "/static/terms-of-service.html", "plz be kind")
+    [@dir, "robots.txt"]
+    |> Path.join()
+    |> File.write!(content)
 
-    index = get(build_conn(), "/static/terms-of-service.html")
-    assert html_response(index, 200) == "plz be kind"
+    conn = get(build_conn(), "/robots.txt")
+    assert text_response(conn, 200) == content
+  end
 
-    File.write!(@dir <> "/static/kaniini.html", "<h1>rabbit hugs as a service</h1>")
-    index = get(build_conn(), "/static/kaniini.html")
-    assert html_response(index, 200) == "<h1>rabbit hugs as a service</h1>"
+  test "files in instance/static overrides frontend files" do
+    [@fe_dir, "static", "helo.html"]
+    |> Path.join()
+    |> File.write!("cofe")
+
+    conn = get(build_conn(), "/static/helo.html")
+    assert html_response(conn, 200) == "cofe"
+
+    [@dir, "static", "helo.html"]
+    |> Path.join()
+    |> File.write!("moto")
+
+    conn = get(build_conn(), "/static/helo.html")
+    assert html_response(conn, 200) == "moto"
   end
 end

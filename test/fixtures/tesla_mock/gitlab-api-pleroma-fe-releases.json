@@ -1,0 +1,188 @@
+[
+  {
+    "name": "0.9.999",
+    "tag_name": "0.9.999",
+    "description": "Changes:\r\n- Fix . activating when typing a message\r\n- Fix gaps when scrolling down on a timeline after showing new\r\n- Added floating action button for posting status on mobile\r\n- Changed user-settings icon to a pencil",
+    "description_html": "\u003cp data-sourcepos=\"1:1-1:8\" dir=\"auto\"\u003eChanges:\u003c/p\u003e\u0026#x000A;\u003cul data-sourcepos=\"2:1-5:40\" dir=\"auto\"\u003e\u0026#x000A;\u003cli data-sourcepos=\"2:1-2:40\"\u003eFix . activating when typing a message\u003c/li\u003e\u0026#x000A;\u003cli data-sourcepos=\"3:1-3:62\"\u003eFix gaps when scrolling down on a timeline after showing new\u003c/li\u003e\u0026#x000A;\u003cli data-sourcepos=\"4:1-4:59\"\u003eAdded floating action button for posting status on mobile\u003c/li\u003e\u0026#x000A;\u003cli data-sourcepos=\"5:1-5:40\"\u003eChanged user-settings icon to a pencil\u003c/li\u003e\u0026#x000A;\u003c/ul\u003e",
+    "created_at": "2019-03-11T18:57:05.583Z",
+    "released_at": "2019-03-11T18:57:05.583Z",
+    "author": {
+      "id": 4,
+      "name": "Shpuld Shpludson",
+      "username": "shpuld",
+      "state": "active",
+      "avatar_url": "https://git.pleroma.social/uploads/-/system/user/avatar/4/avatar.png",
+      "web_url": "https://git.pleroma.social/shpuld"
+    },
+    "commit": {
+      "id": "7c26435e66fd7e142ea4b88fbe51eede32eeb5ce",
+      "short_id": "7c26435e",
+      "created_at": "2019-03-11T18:53:34.000+00:00",
+      "parent_ids": [
+        "7e9c8c3d219aa3b787c5606efbb54a73c1738b07",
+        "f397537642a6b8a4079d8d45d835ddd50f2d2b4a"
+      ],
+      "title": "Merge branch 'develop' into 'master'",
+      "message": "Merge branch 'develop' into 'master'\n\nUpdate master with bugfixes (and other changes)\n\nSee merge request pleroma/pleroma-fe!673",
+      "author_name": "Shpuld Shpludson",
+      "author_email": "shp@cock.li",
+      "authored_date": "2019-03-11T18:53:34.000+00:00",
+      "committer_name": "Shpuld Shpludson",
+      "committer_email": "shp@cock.li",
+      "committed_date": "2019-03-11T18:53:34.000+00:00",
+      "web_url": "https://git.pleroma.social/pleroma/pleroma-fe/-/commit/7c26435e66fd7e142ea4b88fbe51eede32eeb5ce"
+    },
+    "upcoming_release": false,
+    "commit_path": "/pleroma/pleroma-fe/-/commit/7c26435e66fd7e142ea4b88fbe51eede32eeb5ce",
+    "tag_path": "/pleroma/pleroma-fe/-/tags/0.9.999",
+    "assets": {
+      "count": 4,
+      "sources": [
+        {
+          "format": "zip",
+          "url": "https://git.pleroma.social/pleroma/pleroma-fe/-/archive/0.9.999/pleroma-fe-0.9.999.zip"
+        },
+        {
+          "format": "tar.gz",
+          "url": "https://git.pleroma.social/pleroma/pleroma-fe/-/archive/0.9.999/pleroma-fe-0.9.999.tar.gz"
+        },
+        {
+          "format": "tar.bz2",
+          "url": "https://git.pleroma.social/pleroma/pleroma-fe/-/archive/0.9.999/pleroma-fe-0.9.999.tar.bz2"
+        },
+        {
+          "format": "tar",
+          "url": "https://git.pleroma.social/pleroma/pleroma-fe/-/archive/0.9.999/pleroma-fe-0.9.999.tar"
+        }
+      ],
+      "links": []
+    },
+    "_links": {
+      "self": "https://git.pleroma.social/pleroma/pleroma-fe/-/releases/0.9.999"
+    }
+  },
+  {
+    "name": "0.9.99",
+    "tag_name": "0.9.99",
+    "description": "Notable changes since the previous stable release:\r\n- Added a cropper when setting avatar\r\n- Show number of follow requests for locked accounts\r\n- Added blocks management in user settings\r\n- Added a hotkey for showing new posts, it's . and not currently configurable\r\n- Added error handling for missing profiles\r\n- Added OAuth token management in the user settings\r\n- Space out status component and make the layout jump around less\r\n- Added navigation for going between pics in a post in the media modal, use the on screen buttons or left/right arrow key\r\n- Make maximum amount of thumbnails shown configurable in settings\r\n- Update translations: Portuguese, Esperanto, Occitan, Czech\r\n- Lots of minor fixes and improvements, thanks to all contributors!",
+    "description_html": "\u003cp data-sourcepos=\"1:1-1:50\" dir=\"auto\"\u003eNotable changes since the previous stable release:\u003c/p\u003e\u0026#x000A;\u003cul data-sourcepos=\"2:1-12:67\" dir=\"auto\"\u003e\u0026#x000A;\u003cli data-sourcepos=\"2:1-2:37\"\u003eAdded a cropper when setting avatar\u003c/li\u003e\u0026#x000A;\u003cli data-sourcepos=\"3:1-3:52\"\u003eShow number of follow requests for locked accounts\u003c/li\u003e\u0026#x000A;\u003cli data-sourcepos=\"4:1-4:42\"\u003eAdded blocks management in user settings\u003c/li\u003e\u0026#x000A;\u003cli data-sourcepos=\"5:1-5:77\"\u003eAdded a hotkey for showing new posts, it's . and not currently configurable\u003c/li\u003e\u0026#x000A;\u003cli data-sourcepos=\"6:1-6:43\"\u003eAdded error handling for missing profiles\u003c/li\u003e\u0026#x000A;\u003cli data-sourcepos=\"7:1-7:51\"\u003eAdded OAuth token management in the user settings\u003c/li\u003e\u0026#x000A;\u003cli data-sourcepos=\"8:1-8:65\"\u003eSpace out status component and make the layout jump around less\u003c/li\u003e\u0026#x000A;\u003cli data-sourcepos=\"9:1-9:121\"\u003eAdded navigation for going between pics in a post in the media modal, use the on screen buttons or left/right arrow key\u003c/li\u003e\u0026#x000A;\u003cli data-sourcepos=\"10:1-10:66\"\u003eMake maximum amount of thumbnails shown configurable in settings\u003c/li\u003e\u0026#x000A;\u003cli data-sourcepos=\"11:1-11:60\"\u003eUpdate translations: Portuguese, Esperanto, Occitan, Czech\u003c/li\u003e\u0026#x000A;\u003cli data-sourcepos=\"12:1-12:67\"\u003eLots of minor fixes and improvements, thanks to all contributors!\u003c/li\u003e\u0026#x000A;\u003c/ul\u003e",
+    "created_at": "2019-03-07T15:55:05.139Z",
+    "released_at": "2019-03-07T15:55:05.139Z",
+    "author": {
+      "id": 4,
+      "name": "Shpuld Shpludson",
+      "username": "shpuld",
+      "state": "active",
+      "avatar_url": "https://git.pleroma.social/uploads/-/system/user/avatar/4/avatar.png",
+      "web_url": "https://git.pleroma.social/shpuld"
+    },
+    "commit": {
+      "id": "7e9c8c3d219aa3b787c5606efbb54a73c1738b07",
+      "short_id": "7e9c8c3d",
+      "created_at": "2019-03-07T15:11:11.000+00:00",
+      "parent_ids": [
+        "4800169f36e0a71c322b9707a797c3b1ad48bf58",
+        "c44f0a9bde08c50598207494b121ae4bdf1f0fb1"
+      ],
+      "title": "Merge branch 'develop' into 'master'",
+      "message": "Merge branch 'develop' into 'master'\n\nUpdate master\n\nSee merge request pleroma/pleroma-fe!646",
+      "author_name": "Shpuld Shpludson",
+      "author_email": "shp@cock.li",
+      "authored_date": "2019-03-07T15:11:11.000+00:00",
+      "committer_name": "Shpuld Shpludson",
+      "committer_email": "shp@cock.li",
+      "committed_date": "2019-03-07T15:11:11.000+00:00",
+      "web_url": "https://git.pleroma.social/pleroma/pleroma-fe/-/commit/7e9c8c3d219aa3b787c5606efbb54a73c1738b07"
+    },
+    "upcoming_release": false,
+    "commit_path": "/pleroma/pleroma-fe/-/commit/7e9c8c3d219aa3b787c5606efbb54a73c1738b07",
+    "tag_path": "/pleroma/pleroma-fe/-/tags/0.9.99",
+    "assets": {
+      "count": 4,
+      "sources": [
+        {
+          "format": "zip",
+          "url": "https://git.pleroma.social/pleroma/pleroma-fe/-/archive/0.9.99/pleroma-fe-0.9.99.zip"
+        },
+        {
+          "format": "tar.gz",
+          "url": "https://git.pleroma.social/pleroma/pleroma-fe/-/archive/0.9.99/pleroma-fe-0.9.99.tar.gz"
+        },
+        {
+          "format": "tar.bz2",
+          "url": "https://git.pleroma.social/pleroma/pleroma-fe/-/archive/0.9.99/pleroma-fe-0.9.99.tar.bz2"
+        },
+        {
+          "format": "tar",
+          "url": "https://git.pleroma.social/pleroma/pleroma-fe/-/archive/0.9.99/pleroma-fe-0.9.99.tar"
+        }
+      ],
+      "links": []
+    },
+    "_links": {
+      "self": "https://git.pleroma.social/pleroma/pleroma-fe/-/releases/0.9.99"
+    }
+  },
+  {
+    "name": "0.9.9",
+    "tag_name": "0.9.9",
+    "description": "The version bundled with 0.9.9 of BE. First \"stable\" release.\r\n\r\nNot exactly same as content-type fix was cherry picked in after release.",
+    "description_html": "\u003cp data-sourcepos=\"1:1-1:61\" dir=\"auto\"\u003eThe version bundled with 0.9.9 of BE. First \"stable\" release.\u003c/p\u003e\u0026#x000A;\u003cp data-sourcepos=\"3:1-3:72\" dir=\"auto\"\u003eNot exactly same as content-type fix was cherry picked in after release.\u003c/p\u003e",
+    "created_at": "2019-03-07T15:04:53.563Z",
+    "released_at": "2019-03-07T15:04:53.563Z",
+    "author": {
+      "id": 4,
+      "name": "Shpuld Shpludson",
+      "username": "shpuld",
+      "state": "active",
+      "avatar_url": "https://git.pleroma.social/uploads/-/system/user/avatar/4/avatar.png",
+      "web_url": "https://git.pleroma.social/shpuld"
+    },
+    "commit": {
+      "id": "4800169f36e0a71c322b9707a797c3b1ad48bf58",
+      "short_id": "4800169f",
+      "created_at": "2019-02-22T16:34:29.000+00:00",
+      "parent_ids": [
+        "533597fe259344c763ea06f8be71f34491c4d4e9",
+        "2d453e635572dd640d4f5e1ecd7837b5874bd250"
+      ],
+      "title": "Merge branch 'cherry-pick-254b0afa' into 'master'",
+      "message": "Merge branch 'cherry-pick-254b0afa' into 'master'\n\nMerge default content-type fix into master\n\nSee merge request pleroma/pleroma-fe!609",
+      "author_name": "Shpuld Shpludson",
+      "author_email": "shp@cock.li",
+      "authored_date": "2019-02-22T16:34:29.000+00:00",
+      "committer_name": "Shpuld Shpludson",
+      "committer_email": "shp@cock.li",
+      "committed_date": "2019-02-22T16:34:29.000+00:00",
+      "web_url": "https://git.pleroma.social/pleroma/pleroma-fe/-/commit/4800169f36e0a71c322b9707a797c3b1ad48bf58"
+    },
+    "upcoming_release": false,
+    "commit_path": "/pleroma/pleroma-fe/-/commit/4800169f36e0a71c322b9707a797c3b1ad48bf58",
+    "tag_path": "/pleroma/pleroma-fe/-/tags/0.9.9",
+    "assets": {
+      "count": 4,
+      "sources": [
+        {
+          "format": "zip",
+          "url": "https://git.pleroma.social/pleroma/pleroma-fe/-/archive/0.9.9/pleroma-fe-0.9.9.zip"
+        },
+        {
+          "format": "tar.gz",
+          "url": "https://git.pleroma.social/pleroma/pleroma-fe/-/archive/0.9.9/pleroma-fe-0.9.9.tar.gz"
+        },
+        {
+          "format": "tar.bz2",
+          "url": "https://git.pleroma.social/pleroma/pleroma-fe/-/archive/0.9.9/pleroma-fe-0.9.9.tar.bz2"
+        },
+        {
+          "format": "tar",
+          "url": "https://git.pleroma.social/pleroma/pleroma-fe/-/archive/0.9.9/pleroma-fe-0.9.9.tar"
+        }
+      ],
+      "links": []
+    },
+    "_links": {
+      "self": "https://git.pleroma.social/pleroma/pleroma-fe/-/releases/0.9.9"
+    }
+  }
+]

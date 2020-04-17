@@ -1,0 +1,33 @@
+# Pleroma: A lightweight social networking server
+# Copyright © 2017-2020 Pleroma Authors <https://pleroma.social/>
+# SPDX-License-Identifier: AGPL-3.0-only
+
+defmodule Pleroma.Web.Frontend.StaticView do
+  use Pleroma.Web, :view
+
+  alias Calendar.Strftime
+  alias Pleroma.User
+  alias Pleroma.Web.Metadata.Utils
+
+  use Phoenix.HTML
+
+  @media_types ["image", "audio", "video"]
+
+  def fetch_media_type(%{"mediaType" => mediaType}) do
+    Utils.fetch_media_type(@media_types, mediaType)
+  end
+
+  def format_date(date) do
+    {:ok, date, _} = DateTime.from_iso8601(date)
+    Strftime.strftime!(date, "%Y/%m/%d %l:%M:%S %p UTC")
+  end
+
+  def instance_name, do: Pleroma.Config.get([:instance, :name], "Pleroma")
+
+  def open_content? do
+    Pleroma.Config.get(
+      [:frontend_configurations, :collapse_message_with_subjects],
+      true
+    )
+  end
+end

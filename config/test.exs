@@ -96,6 +96,12 @@ config :pleroma, Pleroma.Emails.NewUsersDigestEmail, enabled: true
 
 config :pleroma, Pleroma.Plugs.RemoteIp, enabled: false
 
+config :pleroma, :frontends,
+  primary: %{"name" => "pleroma", "ref" => "develop"},
+  mastodon: %{"name" => "mastodon", "ref" => "develop"},
+  admin: %{"name" => "admin", "ref" => "develop"},
+  static: false
+
 if File.exists?("./config/test.secret.exs") do
   import_config "test.secret.exs"
 else

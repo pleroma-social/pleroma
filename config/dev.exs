@@ -52,6 +52,16 @@ config :pleroma, Pleroma.Repo,
   hostname: "localhost",
   pool_size: 10
 
+config :pleroma, :frontends,
+  primary: %{"name" => "pleroma", "ref" => "develop"},
+  mastodon: %{"name" => "mastodon", "ref" => "develop"},
+  admin: %{"name" => "admin", "ref" => "develop"},
+  static: true
+
+config :pleroma, Pleroma.Captcha, enabled: false
+
+config :logger, :console, level: :warn
+
 if File.exists?("./config/dev.secret.exs") do
   import_config "dev.secret.exs"
 else

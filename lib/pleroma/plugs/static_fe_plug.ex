@@ -4,21 +4,23 @@
 
 defmodule Pleroma.Plugs.StaticFEPlug do
   import Plug.Conn
-  alias Pleroma.Web.StaticFE.StaticFEController
 
   def init(options), do: options
 
-  def call(conn, _) do
-    if enabled?() and accepts_html?(conn) do
+  def call(%{private: %{frontend: %{static: true}}} = conn, _) do
+    action = Phoenix.Controller.action_name(conn)
+
+    if accepts_html?(conn) and
+         function_exported?(Pleroma.Web.Frontend.StaticController, action, 2) do
       conn
-      |> StaticFEController.call(:show)
+      |> Pleroma.Web.FrontendController.call(action)
       |> halt()
     else
       conn
     end
   end
 
-  defp enabled?, do: Pleroma.Config.get([:static_fe, :enabled], false)
+  def call(conn, _), do: conn
 
   defp accepts_html?(conn) do
     case get_req_header(conn, "accept") do

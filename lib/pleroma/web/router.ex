@@ -447,7 +447,7 @@ defmodule Pleroma.Web.Router do
   scope "/api/web", Pleroma.Web do
     pipe_through(:authenticated_api)
 
-    put("/settings", MastoFEController, :put_settings)
+    put("/settings", FrontendController, :put_settings, as: :frontend_mastodon)
   end
 
   scope "/api/v1", Pleroma.Web.MastodonAPI do
@@ -535,16 +535,18 @@ defmodule Pleroma.Web.Router do
 
   pipeline :ostatus do
     plug(:accepts, ["html", "xml", "rss", "atom", "activity+json", "json"])
-    plug(Pleroma.Plugs.StaticFEPlug)
   end
+
+  # pipeline :static_fe do
+  #   plug(Pleroma.Plugs.StaticFEPlug)
+  # end
 
   pipeline :oembed do
     plug(:accepts, ["json", "xml"])
   end
 
   scope "/", Pleroma.Web do
-    pipe_through(:ostatus)
-    pipe_through(:http_signature)
+    pipe_through([:http_signature, :ostatus])
 
     get("/objects/:uuid", OStatus.OStatusController, :object)
     get("/activities/:uuid", OStatus.OStatusController, :activity)
@@ -646,7 +648,7 @@ defmodule Pleroma.Web.Router do
   scope "/", Pleroma.Web do
     pipe_through(:api)
 
-    get("/web/manifest.json", MastoFEController, :manifest)
+    get("/web/manifest.json", FrontendController, :manifest, as: :frontend_mastodon)
   end
 
   scope "/", Pleroma.Web do
@@ -657,15 +659,10 @@ defmodule Pleroma.Web.Router do
 
     post("/auth/password", MastodonAPI.AuthController, :password_reset)
 
-    get("/web/*path", MastoFEController, :index)
-  end
-
-  pipeline :remote_media do
+    get("/web/*path", FrontendController, :index, as: :frontend_mastodon)
   end
 
   scope "/proxy/", Pleroma.Web.MediaProxy do
-    pipe_through(:remote_media)
-
     get("/:sig/:url", MediaProxyController, :remote)
     get("/:sig/:url/:filename", MediaProxyController, :remote)
   end
@@ -694,12 +691,16 @@ defmodule Pleroma.Web.Router do
     get("/check_password", MongooseIMController, :check_password)
   end
 
-  scope "/", Fallback do
-    get("/registration/:token", RedirectController, :registration_page)
-    get("/:maybe_nickname_or_id", RedirectController, :redirector_with_meta)
-    get("/api*path", RedirectController, :api_not_implemented)
-    get("/*path", RedirectController, :redirector)
+  scope "/pleroma/admin", Pleroma.Web do
+    get("/*path", FrontendController, :index, as: :frontend_admin)
+  end
 
-    options("/*path", RedirectController, :empty)
+  scope "/", Pleroma.Web do
+    get("/registration/:token", FrontendController, :registration_page)
+    get("/:maybe_nickname_or_id", FrontendController, :index_with_meta)
+    get("/api*path", FrontendController, :api_not_implemented)
+    get("/*path", FrontendController, :index)
+
+    options("/*path", FrontendController, :empty)
   end
 end

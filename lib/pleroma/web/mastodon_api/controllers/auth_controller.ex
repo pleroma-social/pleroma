@@ -51,8 +51,8 @@ defmodule Pleroma.Web.MastodonAPI.AuthController do
   @doc "DELETE /auth/sign_out"
   def logout(conn, _) do
     conn
-    |> clear_session
-    |> redirect(to: "/")
+    |> clear_session()
+    |> redirect(to: frontend_path(conn, :index, []))
   end
 
   @doc "POST /auth/password"
@@ -75,7 +75,7 @@ defmodule Pleroma.Web.MastodonAPI.AuthController do
   defp local_mastodon_root_path(conn) do
     case get_session(conn, :return_to) do
       nil ->
-        masto_fe_path(conn, :index, ["getting-started"])
+        frontend_mastodon_path(conn, :index, ["getting-started"])
 
       return_to ->
         delete_session(conn, :return_to)

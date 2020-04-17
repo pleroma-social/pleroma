@@ -31,7 +31,7 @@ defmodule Pleroma.Emails.UserEmailTest do
     assert email.to == [{"Jonh", "test@test.com"}]
 
     assert email.html_body =~
-             Router.Helpers.redirect_url(Endpoint, :registration_page, token.token)
+             Router.Helpers.frontend_url(Endpoint, :registration_page, token.token)
   end
 
   test "build account confirmation email" do

@@ -13,11 +13,13 @@ defmodule Pleroma.Application do
 
   @name Mix.Project.config()[:name]
   @version Mix.Project.config()[:version]
+  @stable? Mix.Project.config()[:stable?]
   @repository Mix.Project.config()[:source_url]
   @env Mix.env()
 
   def name, do: @name
   def version, do: @version
+  def stable?, do: @stable?
   def named_version, do: @name <> " " <> @version
   def repository, do: @repository
 

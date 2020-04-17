@@ -50,7 +50,7 @@ defmodule Pleroma.Web do
       end
 
       # Here we can apply before-action hooks (e.g. verify whether auth checks were preformed)
-      defp action(conn, params) do
+      def action(conn, params) do
         if Pleroma.Plugs.AuthExpectedPlug.auth_expected?(conn) &&
              not PlugHelper.plug_called_or_skipped?(conn, Pleroma.Plugs.OAuthScopesPlug) do
           conn
@@ -63,6 +63,8 @@ defmodule Pleroma.Web do
           super(conn, params)
         end
       end
+
+      defoverridable(action: 2)
     end
   end
 
@@ -80,6 +82,8 @@ defmodule Pleroma.Web do
       import Pleroma.Web.Router.Helpers
 
       require Logger
+
+      alias Pleroma.Web.Endpoint
 
       @doc "Same as `render/3` but wrapped in a rescue block"
       def safe_render(view, template, assigns \\ %{}) do

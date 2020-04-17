@@ -94,7 +94,7 @@ defmodule Pleroma.Web.OStatus.OStatusControllerTest do
       redirect_url =
         conn
         |> put_req_header("accept", "application/activity+json")
-        |> get("/notice/#{note_activity.id}")
+        |> get(o_status_path(conn, :notice, note_activity.id))
         |> redirected_to()
 
       assert redirect_url == expected_redirect_url

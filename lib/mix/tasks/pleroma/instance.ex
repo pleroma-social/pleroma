@@ -33,7 +33,14 @@ defmodule Mix.Tasks.Pleroma.Instance do
           uploads_dir: :string,
           static_dir: :string,
           listen_ip: :string,
-          listen_port: :string
+          listen_port: :string,
+          fe_primary: :string,
+          fe_primary_ref: :string,
+          fe_mastodon: :string,
+          fe_mastodon_ref: :string,
+          fe_admin: :string,
+          fe_admin_ref: :string,
+          fe_static: :string
         ],
         aliases: [
           o: :output,
@@ -158,6 +165,62 @@ defmodule Mix.Tasks.Pleroma.Instance do
 
       Config.put([:instance, :static_dir], static_dir)
 
+      install_fe =
+        case Mix.env() do
+          :test -> fn _, _ -> :ok end
+          _ -> &Mix.Tasks.Pleroma.Frontend.run(["install", &1, "--ref", &2])
+        end
+
+      fe_primary =
+        get_option(
+          options,
+          :fe_primary,
+          "Choose primary frontend for your instance (available: pleroma/kenoma/none)",
+          "pleroma"
+        )
+
+      fe_primary_ref =
+        get_frontend_ref(fe_primary !== "none", fe_primary, :fe_primary_ref, options)
+
+      install_fe.(fe_primary, fe_primary_ref)
+
+      enable_static_fe? =
+        get_option(
+          options,
+          :fe_static,
+          "Would you like to enable Static frontend (render profiles and posts using server-generated HTML that is viewable without using JavaScript)?",
+          "y"
+        ) === "y"
+
+      install_mastodon_fe? =
+        get_option(
+          options,
+          :fe_mastodon,
+          "Would you like to install Mastodon frontend?",
+          "y"
+        ) === "y"
+
+      fe_mastodon_ref =
+        get_frontend_ref(install_mastodon_fe?, "mastodon", :fe_mastodon_ref, options)
+
+      with true <- install_mastodon_fe? do
+        install_fe.("mastodon", fe_mastodon_ref)
+      end
+
+      install_admin_fe? =
+        get_option(
+          options,
+          :fe_admin,
+          "Would you like to install Admin frontend?",
+          "y"
+        ) === "y"
+
+      fe_admin_ref = get_frontend_ref(install_admin_fe?, "admin", :fe_admin_ref, options)
+
+      with true <- install_admin_fe? do
+        install_fe.("admin", fe_admin_ref)
+      end
+
       secret = :crypto.strong_rand_bytes(64) |> Base.encode64() |> binary_part(0, 64)
       jwt_secret = :crypto.strong_rand_bytes(64) |> Base.encode64() |> binary_part(0, 64)
       signing_salt = :crypto.strong_rand_bytes(8) |> Base.encode64() |> binary_part(0, 8)
@@ -186,7 +249,11 @@ defmodule Mix.Tasks.Pleroma.Instance do
           uploads_dir: uploads_dir,
           rum_enabled: rum_enabled,
           listen_ip: listen_ip,
-          listen_port: listen_port
+          listen_port: listen_port,
+          fe_primary: %{"name" => fe_primary, "ref" => fe_primary_ref},
+          fe_mastodon: %{"name" => "mastodon", "ref" => fe_mastodon_ref},
+          fe_admin: %{"name" => "admin", "ref" => fe_admin_ref},
+          enable_static_fe?: enable_static_fe?
         )
 
       result_psql =
@@ -246,5 +313,26 @@ defmodule Mix.Tasks.Pleroma.Instance do
 
     File.write(robots_txt_path, robots_txt)
     shell_info("Writing #{robots_txt_path}.")
+  end
+
+  defp get_frontend_ref(false, _frontend, _option_key, _options), do: ""
+
+  defp get_frontend_ref(true, frontend, option_key, options) do
+    stable_pleroma? = Pleroma.Application.stable?()
+
+    current_stable_out =
+      case stable_pleroma? do
+        true -> "stable"
+        false -> "develop"
+      end
+
+    get_option(
+      options,
+      option_key,
+      "You are currently running #{current_stable_out} version of Pleroma. What version of #{
+        frontend
+      } you want to install? (\"stable\", \"develop\" or specific ref)",
+      current_stable_out
+    )
   end
 end

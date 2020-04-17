@@ -5,7 +5,6 @@
 defmodule Pleroma.Web.OStatus.OStatusController do
   use Pleroma.Web, :controller
 
-  alias Fallback.RedirectController
   alias Pleroma.Activity
   alias Pleroma.Object
   alias Pleroma.Plugs.RateLimiter
@@ -30,6 +29,8 @@ defmodule Pleroma.Web.OStatus.OStatusController do
     when action in [:object, :activity, :notice]
   )
 
+  plug(Pleroma.Plugs.StaticFEPlug)
+
   action_fallback(:errors)
 
   def object(%{assigns: %{format: format}} = conn, %{"uuid" => _uuid})
@@ -37,14 +38,12 @@ defmodule Pleroma.Web.OStatus.OStatusController do
     ActivityPubController.call(conn, :object)
   end
 
-  def object(%{assigns: %{format: format}} = conn, %{"uuid" => uuid}) do
+  def object(conn, %{"uuid" => uuid}) do
     with id <- o_status_url(conn, :object, uuid),
          {_, %Activity{} = activity} <-
            {:activity, Activity.get_create_by_object_ap_id_with_object(id)},
          {_, true} <- {:public?, Visibility.is_public?(activity)} do
-      case format do
-        _ -> redirect(conn, to: "/notice/#{activity.id}")
-      end
+      redirect(conn, to: o_status_path(conn, :notice, activity.id))
     else
       reason when reason in [{:public?, false}, {:activity, nil}] ->
         {:error, :not_found}
@@ -59,13 +58,11 @@ defmodule Pleroma.Web.OStatus.OStatusController do
     ActivityPubController.call(conn, :activity)
   end
 
-  def activity(%{assigns: %{format: format}} = conn, %{"uuid" => uuid}) do
+  def activity(conn, %{"uuid" => uuid}) do
     with id <- o_status_url(conn, :activity, uuid),
          {_, %Activity{} = activity} <- {:activity, Activity.normalize(id)},
          {_, true} <- {:public?, Visibility.is_public?(activity)} do
-      case format do
-        _ -> redirect(conn, to: "/notice/#{activity.id}")
-      end
+      redirect(conn, to: o_status_path(conn, :notice, activity.id))
     else
       reason when reason in [{:public?, false}, {:activity, nil}] ->
         {:error, :not_found}
@@ -91,24 +88,25 @@ defmodule Pleroma.Web.OStatus.OStatusController do
         activity.data["type"] == "Create" ->
           %Object{} = object = Object.normalize(activity)
 
-          RedirectController.redirector_with_meta(
-            conn,
-            %{
-              activity_id: activity.id,
-              object: object,
-              url: Router.Helpers.o_status_url(Endpoint, :notice, activity.id),
-              user: user
-            }
-          )
+          params = %{
+            activity_id: activity.id,
+            object: object,
+            url: Router.Helpers.o_status_url(Endpoint, :notice, activity.id),
+            user: user
+          }
+
+          conn
+          |> Map.put(:params, params)
+          |> Pleroma.Web.FrontendController.call(:index_with_meta)
 
         true ->
-          RedirectController.redirector(conn, nil)
+          Pleroma.Web.FrontendController.call(conn, :index)
       end
     else
       reason when reason in [{:public?, false}, {:activity, nil}] ->
         conn
         |> put_status(404)
-        |> RedirectController.redirector(nil, 404)
+        |> Pleroma.Web.FrontendController.call(:index)
 
       e ->
         e
@@ -135,7 +133,7 @@ defmodule Pleroma.Web.OStatus.OStatusController do
       _error ->
         conn
         |> put_status(404)
-        |> RedirectController.redirector(nil, 404)
+        |> Pleroma.Web.FrontendController.call(:index)
     end
   end
 
