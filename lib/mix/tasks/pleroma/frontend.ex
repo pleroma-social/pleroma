@@ -34,6 +34,8 @@ defmodule Mix.Tasks.Pleroma.Frontend do
   end
 
   def run(["install", frontend | args]) do
+    log_level = Logger.level()
+    Logger.configure(level: :warn)
     {:ok, _} = Application.ensure_all_started(:pleroma)
 
     {options, [], []} =
@@ -49,7 +51,7 @@ defmodule Mix.Tasks.Pleroma.Frontend do
     %{"name" => bundle_name, "url" => bundle_url} =
       get_bundle_meta(ref, @pleroma_gitlab_host, @projects[frontend])
 
-    shell_info("Installing #{frontend} frontend (version: #{bundle_name}, url: #{bundle_url})")
+    shell_info("Installing frontend #{frontend}, version: #{bundle_name}")
 
     dest = Path.join([Pleroma.Config.get!([:instance, :static_dir]), "frontends", frontend, ref])
 
@@ -60,6 +62,8 @@ defmodule Mix.Tasks.Pleroma.Frontend do
       {:error, error} ->
         shell_error("Error: #{inspect(error)}")
     end
+
+    Logger.configure(level: log_level)
   end
 
   defp post_install_bundle("mastodon", path) do
@@ -80,12 +84,10 @@ defmodule Mix.Tasks.Pleroma.Frontend do
       nil ->
         primary_fe_config = Pleroma.Config.get([:frontends, :primary])
 
-        case primary_fe_config["name"] == frontend do
-          true ->
-            primary_fe_config["ref"]
-
-          false ->
-            nil
+        if primary_fe_config["name"] == frontend do
+          primary_fe_config["ref"]
+        else
+          nil
         end
 
       val ->
@@ -96,9 +98,10 @@ defmodule Mix.Tasks.Pleroma.Frontend do
         stable_pleroma? = Pleroma.Application.stable?()
 
         current_stable_out =
-          case stable_pleroma? do
-            true -> "stable"
-            false -> "develop"
+          if stable_pleroma? do
+            "stable"
+          else
+            "develop"
           end
 
         get_option(
@@ -120,7 +123,7 @@ defmodule Mix.Tasks.Pleroma.Frontend do
         get_option(
           options,
           :ref,
-          "You are currently running #{current_ref} version of \"#{frontend}\" frontend. What version do you want to install? (\"stable\", \"develop\" or specific ref)",
+          "You are currently running \"#{current_ref}\" version of \"#{frontend}\" frontend. What version do you want to install? (\"stable\", \"develop\" or specific ref)",
           current_ref
         )
     end
@@ -129,11 +132,10 @@ defmodule Mix.Tasks.Pleroma.Frontend do
   defp get_bundle_meta("develop", gitlab_base_url, project) do
     url = "#{gitlab_api_url(gitlab_base_url, project)}/repository/branches"
 
-    http_client = http_client()
-    %{status: 200, body: json} = Tesla.get!(http_client, url)
+    %{status: 200, body: json} = Tesla.get!(http_client(), url)
 
     %{"name" => name, "commit" => %{"short_id" => last_commit_ref}} =
-      Enum.find(json, &(&1["default"] == true))
+      Enum.find(json, & &1["default"])
 
     %{
       "name" => name,
@@ -143,11 +145,14 @@ defmodule Mix.Tasks.Pleroma.Frontend do
 
   defp get_bundle_meta("stable", gitlab_base_url, project) do
     url = "#{gitlab_api_url(gitlab_base_url, project)}/releases"
-    http_client = http_client()
-    %{status: 200, body: json} = Tesla.get!(http_client, url)
+    %{status: 200, body: json} = Tesla.get!(http_client(), url)
 
     [%{"commit" => %{"short_id" => commit_id}, "name" => name} | _] =
-      Enum.sort(json, fn r1, r2 -> r1 > r2 end)
+      Enum.sort(json, fn r1, r2 ->
+        {:ok, date1, _offset} = DateTime.from_iso8601(r1["created_at"])
+        {:ok, date2, _offset} = DateTime.from_iso8601(r2["created_at"])
+        DateTime.compare(date1, date2) != :lt
+      end)
 
     %{
       "name" => name,

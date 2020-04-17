@@ -25,12 +25,10 @@ defmodule Mix.Tasks.Pleroma.FrontendTest do
   setup do
     mock_global(fn
       %{method: :get, url: "https://git.pleroma.social/api/v4/projects/" <> rest} ->
-        case String.ends_with?(rest, "repository/branches") do
-          true ->
-            "test/fixtures/tesla_mock/gitlab-api-pleroma-fe-branches.json"
-
-          false ->
-            "test/fixtures/tesla_mock/gitlab-api-pleroma-fe-releases.json"
+        if String.ends_with?(rest, "repository/branches") do
+          "test/fixtures/tesla_mock/gitlab-api-pleroma-fe-branches.json"
+        else
+          "test/fixtures/tesla_mock/gitlab-api-pleroma-fe-releases.json"
         end
         |> Path.absname()
         |> File.read!()

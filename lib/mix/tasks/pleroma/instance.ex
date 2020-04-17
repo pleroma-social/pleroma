@@ -321,9 +321,10 @@ defmodule Mix.Tasks.Pleroma.Instance do
     stable_pleroma? = Pleroma.Application.stable?()
 
     current_stable_out =
-      case stable_pleroma? do
-        true -> "stable"
-        false -> "develop"
+      if stable_pleroma? do
+        "stable"
+      else
+        "develop"
       end
 
     get_option(
