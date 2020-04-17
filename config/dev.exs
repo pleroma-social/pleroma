@@ -58,10 +58,6 @@ config :pleroma, :frontends,
   admin: %{"name" => "admin", "ref" => "develop"},
   static: true
 
-config :pleroma, Pleroma.Captcha, enabled: false
-
-config :logger, :console, level: :warn
-
 if File.exists?("./config/dev.secret.exs") do
   import_config "dev.secret.exs"
 else
