@@ -11,7 +11,7 @@ defmodule Pleroma.Plugs.InstanceStatic do
   @behaviour Plug
 
   # list of paths to be looked up in intance/static
-  @instance_overridable_paths ~w(robots.txt emoji sounds images instance favicon.png packs sw.js static index.html sw-pleroma.js static-fe.css)
+  @instance_overridable_paths ~w(robots.txt emoji sounds images instance favicon.png)
 
   # both pleroma/{STATIC_PATH} and pleroma/admin/{STATIC_PATH} can be requested
   @fe_prefixed_paths ~w(pleroma/admin pleroma)
