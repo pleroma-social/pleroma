@@ -73,7 +73,7 @@ defmodule Mix.Tasks.Pleroma.Frontend do
       :ok
     else
       error ->
-        error
+        {:error, error}
     end
   end
 

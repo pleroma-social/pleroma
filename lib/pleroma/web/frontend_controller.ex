@@ -9,10 +9,7 @@ defmodule Pleroma.Web.FrontendController do
   def action(conn, _opts) do
     # `conn.private[:frontend]` can be unset if the function is called outside
     # of the standard controller pipeline
-    fe_config =
-      with nil <- conn.private[:frontend] do
-        get_primary_fe_opts()
-      end
+    fe_config = conn.private[:frontend] || get_primary_fe_opts()
 
     # can only be true for :primary frontend
     static_enabled? = Map.get(fe_config, :static, false)

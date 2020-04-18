@@ -203,7 +203,7 @@ defmodule Mix.Tasks.Pleroma.Instance do
       fe_mastodon_ref =
         get_frontend_ref(install_mastodon_fe?, "mastodon", :fe_mastodon_ref, options)
 
-      with true <- install_mastodon_fe? do
+      if install_mastodon_fe? do
         install_fe.("mastodon", fe_mastodon_ref)
       end
 
@@ -217,7 +217,7 @@ defmodule Mix.Tasks.Pleroma.Instance do
 
       fe_admin_ref = get_frontend_ref(install_admin_fe?, "admin", :fe_admin_ref, options)
 
-      with true <- install_admin_fe? do
+      if install_admin_fe? do
         install_fe.("admin", fe_admin_ref)
       end
 

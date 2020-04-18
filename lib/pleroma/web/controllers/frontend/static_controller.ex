@@ -129,9 +129,10 @@ defmodule Pleroma.Web.Frontend.StaticController do
     {:ok, user} = User.get_or_fetch(activity.object.data["actor"])
 
     link =
-      case user.local do
-        true -> o_status_url(Pleroma.Web.Endpoint, :notice, activity)
-        _ -> data["url"] || data["external_url"] || data["id"]
+      if user.local do
+        o_status_url(Pleroma.Web.Endpoint, :notice, activity)
+      else
+        data["url"] || data["external_url"] || data["id"]
       end
 
     content =
@@ -139,8 +140,6 @@ defmodule Pleroma.Web.Frontend.StaticController do
         data["content"]
         |> Pleroma.HTML.filter_tags()
         |> Pleroma.Emoji.Formatter.emojify(Map.get(data, "emoji", %{}))
-      else
-        nil
       end
 
     %{

@@ -537,10 +537,6 @@ defmodule Pleroma.Web.Router do
     plug(:accepts, ["html", "xml", "rss", "atom", "activity+json", "json"])
   end
 
-  # pipeline :static_fe do
-  #   plug(Pleroma.Plugs.StaticFEPlug)
-  # end
-
   pipeline :oembed do
     plug(:accepts, ["json", "xml"])
   end
