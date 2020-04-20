@@ -1,0 +1,167 @@
+#!/usr/bin/env perl
+# Pleroma: A lightweight social networking server
+# Copyright © 2017-2020 Pleroma Authors <https://pleroma.social/>
+# SPDX-License-Identifier: AGPL-3.0-only
+
+# Documentation formatted for perldoc(1)
+
+=pod
+
+=encoding utf8
+
+=head1 Munin Pleroma Healthcheck
+
+Munin plugin to monitor a pleroma instance via it's healthcheck endpoint
+
+=head2 Parameters
+
+	config (required)
+
+=head2 Requirements
+
+	LWP::Protocol::https
+	LWP::UserAgent
+	JSON::MaybeXS
+
+=head2 Tested on
+
+	Gentoo Linux
+
+=head2 Usage
+
+=over
+
+=item 1.
+You will need the previously mentionned Perl modules for this to work.
+
+On a gentoo system: C<emerge dev-perl/LWP-Protocol-https dev-perl/libwww-perl dev-perl/JSON-MaybeXS>
+
+=item 2.
+To install this plugin you can simply copy this file into the F<plugins> directory in munin configuration.
+
+This directory is
+typically found at F</etc/munin/plugin-conf.d/> on Linux distros
+and F</usr/local/etc/munin/plugin-conf.d/> on BSDs.
+
+=item 3.
+The default instance URL is http://localhost/ you probably want to change 
+this into the plugin configuration.
+
+The relevant directory to store the config is
+typically found at F</etc/munin/plugin-conf.d/> on Linux distros
+and F</usr/local/etc/munin/plugin-conf.d/> on BSDs.
+
+The entry for the plugin should look like this:
+
+=begin text
+
+	[pleroma_healthcheck]
+	env.instance_url = https://queer.hacktivis.me/
+
+=end text
+
+
+=item 4.
+After a reload/restart of C<munin-node> you should soon see a pleroma category into munin.
+
+=back
+
+=head2 Troubleshooting
+
+To run the plugin manually like C<munin-node> would you can use C<munin-run>, will should give you something like this:
+
+=begin text
+
+% munin-run pleroma_healthcheck config
+graph_title Pleroma Healthcheck / status
+graph_category pleroma
+memory_used.label memory used
+memory_used.min 0
+job_queue_transmogrifier_success.label job queue transmogrifier success%
+job_queue_transmogrifier_success.min 0
+job_queue_transmogrifier_success.max 100
+job_queue_remote_fetcher_success.label job queue remote_fetcher success%
+job_queue_remote_fetcher_success.min 0
+job_queue_remote_fetcher_success.max 100
+job_queue_activity_expiration_success.label job queue activity_expiration success%
+job_queue_activity_expiration_success.min 0
+job_queue_activity_expiration_success.max 100
+job_queue_new_users_digest_success.label job queue new_users_digest success%
+job_queue_new_users_digest_success.min 0
+job_queue_new_users_digest_success.max 100
+job_queue_web_push_success.label job queue web_push success%
+job_queue_web_push_success.min 0
+job_queue_web_push_success.max 100
+job_queue_federator_incoming_success.label job queue federator_incoming success%
+job_queue_federator_incoming_success.min 0
+job_queue_federator_incoming_success.max 100
+job_queue_federator_outgoing_success.label job queue federator_outgoing success%
+job_queue_federator_outgoing_success.min 0
+job_queue_federator_outgoing_success.max 100
+job_queue_background_success.label job queue background success%
+job_queue_background_success.min 0
+job_queue_background_success.max 100
+% munin-run pleroma_healthcheck
+memory_used.value 358.35
+job_queue_transmogrifier_success.value 0
+job_queue_federator_incoming_success.value 92.3304989930633
+job_queue_federator_outgoing_success.value 85.889260269153
+job_queue_new_users_digest_success.value 100
+job_queue_web_push_success.value 100
+job_queue_remote_fetcher_success.value 88.5217391304348
+job_queue_background_success.value 98.8987337231409
+job_queue_activity_expiration_success.value 100
+%
+
+=end text
+
+=cut
+
+use strict;
+use utf8;
+use warnings;
+
+use LWP::Protocol::https;
+use LWP::UserAgent;
+use JSON::MaybeXS;
+
+my $instance_url = exists $ENV{'instance_url'} ? $ENV{'instance_url'} : "http://localhost/";
+my $UA = exists $ENV{'ua'} ? $ENV{'ua'} : 'PleromaHealthchecker <contact+pleroma-healthchecker@hacktivis.me>';
+
+my $ua = LWP::UserAgent->new(timeout => 30);
+$ua->agent($UA);
+
+my $munin_config = defined($ARGV[0]) ? ( $ARGV[0] eq "config" ) : 0;
+
+my $response = $ua->request(HTTP::Request->new('GET',"$instance_url/api/pleroma/healthcheck"));
+
+if ($response->is_success) {
+	my $response_json = decode_json($response->content);
+
+	if ($munin_config) {
+		print "graph_title Pleroma Healthcheck / status\n";
+		print "graph_category pleroma\n";
+		print "memory_used.label memory used\n";
+		print "memory_used.min 0\n";
+	} else {
+		print "memory_used.value ", $response_json->{"memory_used"}, "\n";
+	}
+
+	while(my ($k, $v) = each %{$response_json->{'job_queue_stats'}->{'queues'}}) {
+		if ($munin_config) {
+			print "job_queue_", $k, "_success.label job queue ", $k, " success%\n";
+			print "job_queue_", $k, "_success.min 0\n";
+			print "job_queue_", $k, "_success.max 100\n";
+		} else {
+			print "job_queue_", $k, "_success.value ", ($v->{'success'}/$v->{'processed_jobs'})*100, "\n";
+		}
+
+		#print "job_queue_", $k, "_failed.label job queue ", $k, " failure%\n";
+		#print "job_queue_", $k, "_failed.min 0\n";
+		#print "job_queue_", $k, "_failed.max 100\n";
+		#print "job_queue_", $k, "_failed.value ", ($v->{'failure'}/$v->{'processed_jobs'})*100, "\n";
+	}
+} else {
+	print "Error: ", $response->status_line, "\n";
+	exit 1;
+}
