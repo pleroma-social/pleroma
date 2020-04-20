@@ -159,11 +159,6 @@ if ($response->is_success) {
 				print "job_queue_", $k, "_success.value ", ($v->{'success'}/$v->{'processed_jobs'})*100, "\n";
 			}
 		}
-
-		#print "job_queue_", $k, "_failed.label job queue ", $k, " failure%\n";
-		#print "job_queue_", $k, "_failed.min 0\n";
-		#print "job_queue_", $k, "_failed.max 100\n";
-		#print "job_queue_", $k, "_failed.value ", ($v->{'failure'}/$v->{'processed_jobs'})*100, "\n";
 	}
 } else {
 	print "Error: ", $response->status_line, "\n";
