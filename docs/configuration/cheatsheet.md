@@ -398,8 +398,8 @@ For big instances it's recommended to increase `max_connections` up to 500-1000.
 
 * `:checkin_timeout` - timeout to checkin connection from pool. Default: 250ms.
 * `:max_connections` - maximum number of connections in the pool. Default: 250 connections.
-* `:max_idle_time` - maximum of time, while connection can be idle. Default: 10 minutes.
-* `:closing_idle_conns_interval` - interval between cleaning pool from idle connections. Default: 10 minutes.
+* `:max_idle_time` - maximum of time in minutes, while connection can be idle. Default: 5 minutes.
+* `:closing_idle_conns_interval` - interval between cleaning pool in minutes from idle connections. Default: 5 minutes.
 * `:retry` - number of retries, while `gun` will try to reconnect if connection goes down. Default: 1.
 * `:retry_timeout` - time between retries when `gun` will try to reconnect in milliseconds. Default: 1000ms.
 * `:await_up_timeout` - timeout while `gun` will wait until connection is up. Default: 5000ms.
