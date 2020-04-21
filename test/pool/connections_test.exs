@@ -97,6 +97,16 @@ defmodule Pleroma.Pool.ConnectionsTest do
     refute Connections.checkin(url, name)
     :ok = Conn.open(url, name)
 
+    %Connections{
+      conns: %{
+        ^key => %Conn{
+          gun_state: :up,
+          used_by: [],
+          conn_state: :idle
+        }
+      }
+    } = Connections.get_state(name)
+
     conn = Connections.checkin(url, name)
     assert is_pid(conn)
     assert Process.alive?(conn)

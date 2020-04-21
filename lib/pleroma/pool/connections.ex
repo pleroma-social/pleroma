@@ -226,6 +226,7 @@ defmodule Pleroma.Pool.Connections do
           put_in(state.conns[key], %{
             conn
             | gun_state: :down,
+              conn_state: :idle,
               retries: conn.retries + 1
           })
         end

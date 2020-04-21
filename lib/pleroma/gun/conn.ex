@@ -26,7 +26,7 @@ defmodule Pleroma.Gun.Conn do
 
   defstruct conn: nil,
             gun_state: :open,
-            conn_state: :init,
+            conn_state: :idle,
             used_by: [],
             last_reference: 0,
             crf: 1,
@@ -62,7 +62,6 @@ defmodule Pleroma.Gun.Conn do
       conn = %Pleroma.Gun.Conn{
         conn: conn_pid,
         gun_state: :up,
-        conn_state: :active,
         last_reference: :os.system_time(:second)
       }
 
