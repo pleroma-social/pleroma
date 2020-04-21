@@ -95,7 +95,7 @@ defmodule Pleroma.Pool.Connections do
       with true <- Process.alive?(conn_pid),
            {key, conn} <- find_conn(state.conns, conn_pid),
            used_by <- List.keydelete(conn.used_by, pid, 0) do
-        conn_state = if used_by == [], do: :idle, else: conn.conn_state
+        conn_state = if used_by == [], do: :idle, else: :active
 
         put_in(state.conns[key], %{conn | conn_state: conn_state, used_by: used_by})
       else
@@ -186,10 +186,12 @@ defmodule Pleroma.Pool.Connections do
     state =
       with {key, conn} <- find_conn(state.conns, conn_pid, key),
            {true, key} <- {Process.alive?(conn_pid), key} do
+        conn_state = if conn.used_by == [], do: :idle, else: :active
+
         put_in(state.conns[key], %{
           conn
           | gun_state: :up,
-            conn_state: :active,
+            conn_state: conn_state,
             retries: 0
         })
       else
