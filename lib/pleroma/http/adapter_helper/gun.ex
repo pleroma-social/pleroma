@@ -46,9 +46,15 @@ defmodule Pleroma.HTTP.AdapterHelper.Gun do
   defp add_scheme_opts(opts, %{scheme: "http"}), do: opts
 
   defp add_scheme_opts(opts, %{scheme: "https"}) do
+    tls_opts = [
+      log_level: :warning,
+      session_lifetime: 6000,
+      session_cache_client_max: 250
+    ]
+
     opts
     |> Keyword.put(:certificates_verification, true)
-    |> Keyword.put(:tls_opts, log_level: :warning)
+    |> Keyword.put(:tls_opts, tls_opts)
   end
 
   defp maybe_get_conn(adapter_opts, uri, incoming_opts) do
