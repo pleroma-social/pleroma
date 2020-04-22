@@ -12,14 +12,18 @@ defmodule Mix.Tasks.Pleroma.Frontend do
   @shortdoc "Manages bundled Pleroma frontends"
   @moduledoc File.read!("docs/administration/CLI_tasks/frontend.md")
 
-  @known_frontends ~w(pleroma kenoma mastodon admin)
   @pleroma_gitlab_host "git.pleroma.social"
-  @projects %{
-    "pleroma" => "pleroma/pleroma-fe",
-    "kenoma" => "lambadalambda/kenoma",
-    "admin" => "pleroma/admin-fe",
-    "mastodon" => "pleroma/mastofe"
+  @frontends %{
+    # TODO stable
+    "admin" => %{"project" => "pleroma/admin-fe"},
+    # TODO
+    "kenoma" => %{"project" => "lambadalambda/kenoma"},
+    # TODO
+    "mastodon" => %{"project" => "pleroma/mastofe"},
+    # OK
+    "pleroma" => %{"project" => "pleroma/pleroma-fe"}
   }
+  @known_frontends Map.keys(@frontends)
 
   def run(["install", "none" | _args]) do
     shell_info("Skipping frontend installation because none was requested")
@@ -27,7 +31,7 @@ defmodule Mix.Tasks.Pleroma.Frontend do
 
   def run(["install", unknown_fe | _args]) when unknown_fe not in @known_frontends do
     shell_error(
-      "Frontend #{unknown_fe} is not known. Known frontends are: #{
+      "Frontend \"#{unknown_fe}\" is not known. Known frontends are: #{
         Enum.join(@known_frontends, ", ")
       }"
     )
@@ -49,7 +53,7 @@ defmodule Mix.Tasks.Pleroma.Frontend do
     ref = suggest_ref(options, frontend)
 
     %{"name" => bundle_name, "url" => bundle_url} =
-      get_bundle_meta(ref, @pleroma_gitlab_host, @projects[frontend])
+      get_bundle_meta(ref, @pleroma_gitlab_host, @frontends[frontend]["project"])
 
     shell_info("Installing frontend #{frontend}, version: #{bundle_name}")
 
@@ -147,12 +151,14 @@ defmodule Mix.Tasks.Pleroma.Frontend do
     url = "#{gitlab_api_url(gitlab_base_url, project)}/releases"
     %{status: 200, body: json} = Tesla.get!(http_client(), url)
 
-    [%{"commit" => %{"short_id" => commit_id}, "name" => name} | _] =
+    [%{"commit" => %{"short_id" => commit_id}, "name" => name} = data | _] =
       Enum.sort(json, fn r1, r2 ->
         {:ok, date1, _offset} = DateTime.from_iso8601(r1["created_at"])
         {:ok, date2, _offset} = DateTime.from_iso8601(r2["created_at"])
         DateTime.compare(date1, date2) != :lt
       end)
+
+    IO.inspect(data)
 
     %{
       "name" => name,
@@ -201,7 +207,9 @@ defmodule Mix.Tasks.Pleroma.Frontend do
     do: "https://#{gitlab_base_url}/api/v4/projects/#{URI.encode_www_form(project)}"
 
   defp build_url(gitlab_base_url, project, ref),
-    do: "https://#{gitlab_base_url}/#{project}/-/jobs/artifacts/#{ref}/download?job=build"
+    do:
+      "https://#{gitlab_base_url}/#{project}/-/jobs/artifacts/#{ref}/download?job=build"
+      |> IO.inspect()
 
   defp http_client do
     middleware = [
