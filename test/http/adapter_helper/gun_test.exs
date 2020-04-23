@@ -3,28 +3,27 @@
 # SPDX-License-Identifier: AGPL-3.0-only
 
 defmodule Pleroma.HTTP.AdapterHelper.GunTest do
-  use ExUnit.Case, async: true
+  use ExUnit.Case
   use Pleroma.Tests.Helpers
 
   import Mox
 
   alias Pleroma.Config
-  alias Pleroma.Gun.Conn
   alias Pleroma.HTTP.AdapterHelper.Gun
   alias Pleroma.Pool.Connections
 
   setup :verify_on_exit!
-
-  defp gun_mock(_) do
-    gun_mock()
-    :ok
-  end
+  setup :set_mox_global
 
   defp gun_mock do
     Pleroma.GunMock
-    |> stub(:open, fn _, _, _ -> Task.start_link(fn -> Process.sleep(1000) end) end)
+    |> stub(:open, fn _, _, _ ->
+      Task.start_link(fn -> Process.sleep(1000) end)
+    end)
     |> stub(:await_up, fn _, _ -> {:ok, :http} end)
     |> stub(:set_owner, fn _, _ -> :ok end)
+
+    :ok
   end
 
   describe "options/1" do
@@ -62,25 +61,6 @@ defmodule Pleroma.HTTP.AdapterHelper.GunTest do
       assert opts[:certificates_verification]
     end
 
-    test "get conn on next request" do
-      gun_mock()
-      level = Application.get_env(:logger, :level)
-      Logger.configure(level: :debug)
-      on_exit(fn -> Logger.configure(level: level) end)
-      uri = URI.parse("http://some-domain2.com")
-
-      opts = Gun.options(uri)
-
-      assert opts[:conn] == nil
-      assert opts[:close_conn] == nil
-
-      Process.sleep(50)
-      opts = Gun.options(uri)
-
-      assert is_pid(opts[:conn])
-      assert opts[:close_conn] == false
-    end
-
     test "merges with defaul http adapter config" do
       defaults = Gun.options([receive_conn: false], URI.parse("https://example.com"))
       assert Keyword.has_key?(defaults, :a)
@@ -90,8 +70,6 @@ defmodule Pleroma.HTTP.AdapterHelper.GunTest do
     test "default ssl adapter opts with connection" do
       gun_mock()
       uri = URI.parse("https://some-domain.com")
-
-      :ok = Conn.open(uri, :gun_connections)
 
       opts = Gun.options(uri)
 
@@ -134,11 +112,10 @@ defmodule Pleroma.HTTP.AdapterHelper.GunTest do
   end
 
   describe "options/1 with receive_conn parameter" do
-    setup :gun_mock
+    setup do: gun_mock()
 
     test "receive conn by default" do
       uri = URI.parse("http://another-domain.com")
-      :ok = Conn.open(uri, :gun_connections)
 
       received_opts = Gun.options(uri)
       assert received_opts[:close_conn] == false
@@ -147,7 +124,6 @@ defmodule Pleroma.HTTP.AdapterHelper.GunTest do
 
     test "don't receive conn if receive_conn is false" do
       uri = URI.parse("http://another-domain.com")
-      :ok = Conn.open(uri, :gun_connections)
 
       opts = [receive_conn: false]
       received_opts = Gun.options(opts, uri)
@@ -157,50 +133,51 @@ defmodule Pleroma.HTTP.AdapterHelper.GunTest do
   end
 
   describe "after_request/1" do
-    setup :gun_mock
+    setup do: gun_mock()
 
     test "body_as not chunks" do
-      uri = URI.parse("http://some-domain.com")
-      :ok = Conn.open(uri, :gun_connections)
+      uri = URI.parse("http://some-domain-5.com")
       opts = Gun.options(uri)
       :ok = Gun.after_request(opts)
       conn = opts[:conn]
 
-      assert %Connections{
-               conns: %{
-                 "http:some-domain.com:80" => %Pleroma.Gun.Conn{
-                   conn: ^conn,
-                   conn_state: :idle,
-                   used_by: []
+      assert match?(
+               %Connections{
+                 conns: %{
+                   "http:some-domain-5.com:80" => %Pleroma.Gun.Conn{
+                     conn: ^conn,
+                     conn_state: :idle,
+                     used_by: []
+                   }
                  }
-               }
-             } = Connections.get_state(:gun_connections)
+               },
+               Connections.get_state(:gun_connections)
+             )
     end
 
     test "body_as chunks" do
-      uri = URI.parse("http://some-domain.com")
-      :ok = Conn.open(uri, :gun_connections)
+      uri = URI.parse("http://some-domain-6.com")
       opts = Gun.options([body_as: :chunks], uri)
       :ok = Gun.after_request(opts)
       conn = opts[:conn]
       self = self()
 
-      assert %Connections{
-               conns: %{
-                 "http:some-domain.com:80" => %Pleroma.Gun.Conn{
-                   conn: ^conn,
-                   conn_state: :active,
-                   used_by: [{^self, _}]
+      assert match?(
+               %Connections{
+                 conns: %{
+                   "http:some-domain-6.com:80" => %Pleroma.Gun.Conn{
+                     conn: ^conn,
+                     conn_state: :active,
+                     used_by: [{^self, _}]
+                   }
                  }
-               }
-             } = Connections.get_state(:gun_connections)
+               },
+               Connections.get_state(:gun_connections)
+             )
     end
 
     test "with no connection" do
       uri = URI.parse("http://uniq-domain.com")
-
-      :ok = Conn.open(uri, :gun_connections)
-
       opts = Gun.options([body_as: :chunks], uri)
       conn = opts[:conn]
       opts = Keyword.delete(opts, :conn)
@@ -221,7 +198,6 @@ defmodule Pleroma.HTTP.AdapterHelper.GunTest do
 
     test "with ipv4" do
       uri = URI.parse("http://127.0.0.1")
-      :ok = Conn.open(uri, :gun_connections)
       opts = Gun.options(uri)
       :ok = Gun.after_request(opts)
       conn = opts[:conn]
@@ -239,7 +215,6 @@ defmodule Pleroma.HTTP.AdapterHelper.GunTest do
 
     test "with ipv6" do
       uri = URI.parse("http://[2a03:2880:f10c:83:face:b00c:0:25de]")
-      :ok = Conn.open(uri, :gun_connections)
       opts = Gun.options(uri)
       :ok = Gun.after_request(opts)
       conn = opts[:conn]

@@ -7,11 +7,12 @@ defmodule Pleroma.Pool.Connections do
 
   alias Pleroma.Config
   alias Pleroma.Gun
+  alias Pleroma.Gun.Conn
 
   require Logger
 
   @type domain :: String.t()
-  @type conn :: Pleroma.Gun.Conn.t()
+  @type conn :: Conn.t()
   @type seconds :: pos_integer()
 
   @type t :: %__MODULE__{
@@ -33,13 +34,11 @@ defmodule Pleroma.Pool.Connections do
   end
 
   @spec checkin(String.t() | URI.t(), atom()) :: pid() | nil
-  def checkin(url, name)
-  def checkin(url, name) when is_binary(url), do: checkin(URI.parse(url), name)
+  def checkin(url, name, opts \\ [])
+  def checkin(url, name, opts) when is_binary(url), do: checkin(URI.parse(url), name, opts)
 
-  def checkin(%URI{} = uri, name) do
-    timeout = Config.get([:connections_pool, :checkin_timeout], 250)
-
-    GenServer.call(name, {:checkin, uri}, timeout)
+  def checkin(%URI{} = uri, name, opts) do
+    GenServer.call(name, {:checkin, uri, opts, name})
   end
 
   @spec alive?(atom()) :: boolean()
@@ -71,9 +70,14 @@ defmodule Pleroma.Pool.Connections do
     GenServer.cast(name, {:checkout, conn, pid})
   end
 
-  @spec add_conn(atom(), String.t(), Pleroma.Gun.Conn.t()) :: :ok
+  @spec add_conn(atom(), String.t(), Conn.t()) :: :ok
   def add_conn(name, key, conn) do
     GenServer.cast(name, {:add_conn, key, conn})
+  end
+
+  @spec update_conn(atom(), String.t(), pid()) :: :ok
+  def update_conn(name, key, conn_pid) do
+    GenServer.cast(name, {:update_conn, key, conn_pid})
   end
 
   @spec remove_conn(atom(), String.t()) :: :ok
@@ -81,11 +85,40 @@ defmodule Pleroma.Pool.Connections do
     GenServer.cast(name, {:remove_conn, key})
   end
 
+  @spec refresh(atom()) :: :ok
+  def refresh(name) do
+    GenServer.call(name, :refresh)
+  end
+
   @impl true
   def handle_cast({:add_conn, key, conn}, state) do
-    state = put_in(state.conns[key], conn)
+    {:noreply, put_in(state.conns[key], conn)}
+  end
 
-    Process.monitor(conn.conn)
+  @impl true
+  def handle_cast({:update_conn, key, conn_pid}, state) do
+    conn = state.conns[key]
+
+    Process.monitor(conn_pid)
+
+    conn =
+      Enum.reduce(conn.awaited_by, conn, fn waiting, conn ->
+        GenServer.reply(waiting, conn_pid)
+        time = :os.system_time(:second)
+        last_reference = time - conn.last_reference
+        crf = crf(last_reference, 100, conn.crf)
+
+        %{
+          conn
+          | last_reference: time,
+            crf: crf,
+            conn_state: :active,
+            used_by: [waiting | conn.used_by]
+        }
+      end)
+
+    state = put_in(state.conns[key], %{conn | conn: conn_pid, gun_state: :up, awaited_by: []})
+
     {:noreply, state}
   end
 
@@ -113,12 +146,14 @@ defmodule Pleroma.Pool.Connections do
 
   @impl true
   def handle_cast({:remove_conn, key}, state) do
+    conn = state.conns[key]
+    Enum.each(conn.awaited_by, fn waiting -> GenServer.reply(waiting, nil) end)
     state = put_in(state.conns, Map.delete(state.conns, key))
     {:noreply, state}
   end
 
   @impl true
-  def handle_call({:checkin, uri}, from, state) do
+  def handle_call({:checkin, uri, opts, name}, from, state) do
     key = "#{uri.scheme}:#{uri.host}:#{uri.port}"
 
     case state.conns[key] do
@@ -141,13 +176,28 @@ defmodule Pleroma.Pool.Connections do
       %{gun_state: :down} ->
         {:reply, nil, state}
 
+      %{gun_state: :init} = conn ->
+        state = put_in(state.conns[key], %{conn | awaited_by: [from | conn.awaited_by]})
+        {:noreply, state}
+
       nil ->
-        {:reply, nil, state}
+        state =
+          put_in(state.conns[key], %Conn{
+            awaited_by: [from]
+          })
+
+        Task.start(Conn, :open, [uri, name, opts])
+        {:noreply, state}
     end
   end
 
   @impl true
   def handle_call(:state, _from, state), do: {:reply, state, state}
+
+  @impl true
+  def handle_call(:refresh, _from, state) do
+    {:reply, :ok, put_in(state.conns, %{})}
+  end
 
   @impl true
   def handle_call(:count, _from, state) do

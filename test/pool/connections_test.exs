@@ -3,7 +3,7 @@
 # SPDX-License-Identifier: AGPL-3.0-only
 
 defmodule Pleroma.Pool.ConnectionsTest do
-  use ExUnit.Case, async: true
+  use ExUnit.Case
   use Pleroma.Tests.Helpers
 
   import ExUnit.CaptureLog
@@ -14,11 +14,19 @@ defmodule Pleroma.Pool.ConnectionsTest do
   alias Pleroma.Pool.Connections
 
   setup :verify_on_exit!
+  setup :set_mox_global
 
   setup_all do
+    {:ok, pid} = Agent.start_link(fn -> %{} end, name: :gun_state)
+
+    on_exit(fn ->
+      if Process.alive?(pid), do: Agent.stop(pid)
+    end)
+  end
+
+  setup do
     name = :test_connections
-    {:ok, pid} = Connections.start_link({name, [checkin_timeout: 150]})
-    {:ok, _} = Registry.start_link(keys: :unique, name: Pleroma.GunMock)
+    {:ok, pid} = Connections.start_link({name, []})
 
     on_exit(fn ->
       if Process.alive?(pid), do: GenServer.stop(name)
@@ -53,28 +61,27 @@ defmodule Pleroma.Pool.ConnectionsTest do
         _ -> "http"
       end
 
-    Registry.register(GunMock, pid, %{
+    info = %{
       origin_scheme: scheme,
       origin_host: host,
       origin_port: port
-    })
+    }
+
+    Agent.update(:gun_state, &Map.put(&1, pid, %{info: info, ref: nil}))
 
     {:ok, pid}
   end
 
-  defp info(pid) do
-    [{_, info}] = Registry.lookup(GunMock, pid)
-    info
-  end
+  defp info(pid), do: Agent.get(:gun_state, & &1[pid][:info])
 
   defp connect(pid, _) do
     ref = make_ref()
-    Registry.register(GunMock, ref, pid)
+    Agent.update(:gun_state, &put_in(&1[pid][:ref], ref))
     ref
   end
 
-  defp await(pid, ref) do
-    [{_, ^pid}] = Registry.lookup(GunMock, ref)
+  defp await(pid, _ref) do
+    Agent.get(:gun_state, & &1[pid][:ref])
     {:response, :fin, 200, []}
   end
 
@@ -94,18 +101,6 @@ defmodule Pleroma.Pool.ConnectionsTest do
     open_mock()
     url = "http://some-domain.com"
     key = "http:some-domain.com:80"
-    refute Connections.checkin(url, name)
-    :ok = Conn.open(url, name)
-
-    %Connections{
-      conns: %{
-        ^key => %Conn{
-          gun_state: :up,
-          used_by: [],
-          conn_state: :idle
-        }
-      }
-    } = Connections.get_state(name)
 
     conn = Connections.checkin(url, name)
     assert is_pid(conn)
@@ -113,65 +108,74 @@ defmodule Pleroma.Pool.ConnectionsTest do
 
     self = self()
 
-    %Connections{
-      conns: %{
-        ^key => %Conn{
-          conn: ^conn,
-          gun_state: :up,
-          used_by: [{^self, _}],
-          conn_state: :active
-        }
-      }
-    } = Connections.get_state(name)
+    assert match?(
+             %Connections{
+               conns: %{
+                 ^key => %Conn{
+                   conn: ^conn,
+                   gun_state: :up,
+                   used_by: [{^self, _}],
+                   conn_state: :active
+                 }
+               }
+             },
+             Connections.get_state(name)
+           )
 
     reused_conn = Connections.checkin(url, name)
 
     assert conn == reused_conn
 
-    %Connections{
-      conns: %{
-        ^key => %Conn{
-          conn: ^conn,
-          gun_state: :up,
-          used_by: [{^self, _}, {^self, _}],
-          conn_state: :active
-        }
-      }
-    } = Connections.get_state(name)
+    assert match?(
+             %Connections{
+               conns: %{
+                 ^key => %Conn{
+                   conn: ^conn,
+                   gun_state: :up,
+                   used_by: [{^self, _}, {^self, _}],
+                   conn_state: :active
+                 }
+               }
+             },
+             Connections.get_state(name)
+           )
 
     :ok = Connections.checkout(conn, self, name)
 
-    %Connections{
-      conns: %{
-        ^key => %Conn{
-          conn: ^conn,
-          gun_state: :up,
-          used_by: [{^self, _}],
-          conn_state: :active
-        }
-      }
-    } = Connections.get_state(name)
+    assert match?(
+             %Connections{
+               conns: %{
+                 ^key => %Conn{
+                   conn: ^conn,
+                   gun_state: :up,
+                   used_by: [{^self, _}],
+                   conn_state: :active
+                 }
+               }
+             },
+             Connections.get_state(name)
+           )
 
     :ok = Connections.checkout(conn, self, name)
 
-    %Connections{
-      conns: %{
-        ^key => %Conn{
-          conn: ^conn,
-          gun_state: :up,
-          used_by: [],
-          conn_state: :idle
-        }
-      }
-    } = Connections.get_state(name)
+    assert match?(
+             %Connections{
+               conns: %{
+                 ^key => %Conn{
+                   conn: ^conn,
+                   gun_state: :up,
+                   used_by: [],
+                   conn_state: :idle
+                 }
+               }
+             },
+             Connections.get_state(name)
+           )
   end
 
   test "reuse connection for idna domains", %{name: name} do
     open_mock()
     url = "http://ですsome-domain.com"
-    refute Connections.checkin(url, name)
-
-    :ok = Conn.open(url, name)
 
     conn = Connections.checkin(url, name)
     assert is_pid(conn)
@@ -179,16 +183,19 @@ defmodule Pleroma.Pool.ConnectionsTest do
 
     self = self()
 
-    %Connections{
-      conns: %{
-        "http:ですsome-domain.com:80" => %Conn{
-          conn: ^conn,
-          gun_state: :up,
-          used_by: [{^self, _}],
-          conn_state: :active
-        }
-      }
-    } = Connections.get_state(name)
+    assert match?(
+             %Connections{
+               conns: %{
+                 "http:ですsome-domain.com:80" => %Conn{
+                   conn: ^conn,
+                   gun_state: :up,
+                   used_by: [{^self, _}],
+                   conn_state: :active
+                 }
+               }
+             },
+             Connections.get_state(name)
+           )
 
     reused_conn = Connections.checkin(url, name)
 
@@ -199,26 +206,25 @@ defmodule Pleroma.Pool.ConnectionsTest do
     open_mock()
     url = "http://127.0.0.1"
 
-    refute Connections.checkin(url, name)
-
-    :ok = Conn.open(url, name)
-
     conn = Connections.checkin(url, name)
     assert is_pid(conn)
     assert Process.alive?(conn)
 
     self = self()
 
-    %Connections{
-      conns: %{
-        "http:127.0.0.1:80" => %Conn{
-          conn: ^conn,
-          gun_state: :up,
-          used_by: [{^self, _}],
-          conn_state: :active
-        }
-      }
-    } = Connections.get_state(name)
+    assert match?(
+             %Connections{
+               conns: %{
+                 "http:127.0.0.1:80" => %Conn{
+                   conn: ^conn,
+                   gun_state: :up,
+                   used_by: [{^self, _}],
+                   conn_state: :active
+                 }
+               }
+             },
+             Connections.get_state(name)
+           )
 
     reused_conn = Connections.checkin(url, name)
 
@@ -227,25 +233,24 @@ defmodule Pleroma.Pool.ConnectionsTest do
     :ok = Connections.checkout(conn, self, name)
     :ok = Connections.checkout(reused_conn, self, name)
 
-    %Connections{
-      conns: %{
-        "http:127.0.0.1:80" => %Conn{
-          conn: ^conn,
-          gun_state: :up,
-          used_by: [],
-          conn_state: :idle
-        }
-      }
-    } = Connections.get_state(name)
+    assert match?(
+             %Connections{
+               conns: %{
+                 "http:127.0.0.1:80" => %Conn{
+                   conn: ^conn,
+                   gun_state: :up,
+                   used_by: [],
+                   conn_state: :idle
+                 }
+               }
+             },
+             Connections.get_state(name)
+           )
   end
 
   test "reuse for ipv6", %{name: name} do
     open_mock()
     url = "http://[2a03:2880:f10c:83:face:b00c:0:25de]"
-
-    refute Connections.checkin(url, name)
-
-    :ok = Conn.open(url, name)
 
     conn = Connections.checkin(url, name)
     assert is_pid(conn)
@@ -253,16 +258,19 @@ defmodule Pleroma.Pool.ConnectionsTest do
 
     self = self()
 
-    %Connections{
-      conns: %{
-        "http:2a03:2880:f10c:83:face:b00c:0:25de:80" => %Conn{
-          conn: ^conn,
-          gun_state: :up,
-          used_by: [{^self, _}],
-          conn_state: :active
-        }
-      }
-    } = Connections.get_state(name)
+    assert match?(
+             %Connections{
+               conns: %{
+                 "http:2a03:2880:f10c:83:face:b00c:0:25de:80" => %Conn{
+                   conn: ^conn,
+                   gun_state: :up,
+                   used_by: [{^self, _}],
+                   conn_state: :active
+                 }
+               }
+             },
+             Connections.get_state(name)
+           )
 
     reused_conn = Connections.checkin(url, name)
 
@@ -276,21 +284,23 @@ defmodule Pleroma.Pool.ConnectionsTest do
 
     self = self()
     url = "http://127.0.0.1"
-    :ok = Conn.open(url, name)
     conn = Connections.checkin(url, name)
     send(name, {:gun_down, conn, nil, nil, nil})
     send(name, {:gun_up, conn, nil})
 
-    %Connections{
-      conns: %{
-        "http:127.0.0.1:80" => %Conn{
-          conn: ^conn,
-          gun_state: :up,
-          used_by: [{^self, _}],
-          conn_state: :active
-        }
-      }
-    } = Connections.get_state(name)
+    assert match?(
+             %Connections{
+               conns: %{
+                 "http:127.0.0.1:80" => %Conn{
+                   conn: ^conn,
+                   gun_state: :up,
+                   used_by: [{^self, _}],
+                   conn_state: :active
+                 }
+               }
+             },
+             Connections.get_state(name)
+           )
   end
 
   test "up and down ipv6", %{name: name} do
@@ -301,21 +311,23 @@ defmodule Pleroma.Pool.ConnectionsTest do
     |> allow(self, name)
 
     url = "http://[2a03:2880:f10c:83:face:b00c:0:25de]"
-    :ok = Conn.open(url, name)
     conn = Connections.checkin(url, name)
     send(name, {:gun_down, conn, nil, nil, nil})
     send(name, {:gun_up, conn, nil})
 
-    %Connections{
-      conns: %{
-        "http:2a03:2880:f10c:83:face:b00c:0:25de:80" => %Conn{
-          conn: ^conn,
-          gun_state: :up,
-          used_by: [{^self, _}],
-          conn_state: :active
-        }
-      }
-    } = Connections.get_state(name)
+    assert match?(
+             %Connections{
+               conns: %{
+                 "http:2a03:2880:f10c:83:face:b00c:0:25de:80" => %Conn{
+                   conn: ^conn,
+                   gun_state: :up,
+                   used_by: [{^self, _}],
+                   conn_state: :active
+                 }
+               }
+             },
+             Connections.get_state(name)
+           )
   end
 
   test "reuses connection based on protocol", %{name: name} do
@@ -325,14 +337,10 @@ defmodule Pleroma.Pool.ConnectionsTest do
     https_url = "https://some-domain.com"
     https_key = "https:some-domain.com:443"
 
-    refute Connections.checkin(http_url, name)
-    :ok = Conn.open(http_url, name)
     conn = Connections.checkin(http_url, name)
     assert is_pid(conn)
     assert Process.alive?(conn)
 
-    refute Connections.checkin(https_url, name)
-    :ok = Conn.open(https_url, name)
     https_conn = Connections.checkin(https_url, name)
 
     refute conn == https_conn
@@ -343,18 +351,21 @@ defmodule Pleroma.Pool.ConnectionsTest do
 
     assert reused_https == https_conn
 
-    %Connections{
-      conns: %{
-        ^http_key => %Conn{
-          conn: ^conn,
-          gun_state: :up
-        },
-        ^https_key => %Conn{
-          conn: ^https_conn,
-          gun_state: :up
-        }
-      }
-    } = Connections.get_state(name)
+    assert match?(
+             %Connections{
+               conns: %{
+                 ^http_key => %Conn{
+                   conn: ^conn,
+                   gun_state: :up
+                 },
+                 ^https_key => %Conn{
+                   conn: ^https_conn,
+                   gun_state: :up
+                 }
+               }
+             },
+             Connections.get_state(name)
+           )
   end
 
   test "connection can't get up", %{name: name} do
@@ -362,7 +373,6 @@ defmodule Pleroma.Pool.ConnectionsTest do
     url = "http://gun-not-up.com"
 
     assert capture_log(fn ->
-             refute Conn.open(url, name)
              refute Connections.checkin(url, name)
            end) =~
              "Opening connection to http://gun-not-up.com failed with error {:error, :timeout}"
@@ -377,33 +387,38 @@ defmodule Pleroma.Pool.ConnectionsTest do
 
     url = "http://gun-down-and-up.com"
     key = "http:gun-down-and-up.com:80"
-    :ok = Conn.open(url, name)
     conn = Connections.checkin(url, name)
 
     assert is_pid(conn)
     assert Process.alive?(conn)
 
-    %Connections{
-      conns: %{
-        ^key => %Conn{
-          conn: ^conn,
-          gun_state: :up,
-          used_by: [{^self, _}]
-        }
-      }
-    } = Connections.get_state(name)
+    assert match?(
+             %Connections{
+               conns: %{
+                 ^key => %Conn{
+                   conn: ^conn,
+                   gun_state: :up,
+                   used_by: [{^self, _}]
+                 }
+               }
+             },
+             Connections.get_state(name)
+           )
 
     send(name, {:gun_down, conn, :http, nil, nil})
 
-    %Connections{
-      conns: %{
-        ^key => %Conn{
-          conn: ^conn,
-          gun_state: :down,
-          used_by: [{^self, _}]
-        }
-      }
-    } = Connections.get_state(name)
+    assert match?(
+             %Connections{
+               conns: %{
+                 ^key => %Conn{
+                   conn: ^conn,
+                   gun_state: :down,
+                   used_by: [{^self, _}]
+                 }
+               }
+             },
+             Connections.get_state(name)
+           )
 
     send(name, {:gun_up, conn, :http})
 
@@ -413,21 +428,23 @@ defmodule Pleroma.Pool.ConnectionsTest do
     assert is_pid(conn2)
     assert Process.alive?(conn2)
 
-    %Connections{
-      conns: %{
-        ^key => %Conn{
-          conn: _,
-          gun_state: :up,
-          used_by: [{^self, _}, {^self, _}]
-        }
-      }
-    } = Connections.get_state(name)
+    assert match?(
+             %Connections{
+               conns: %{
+                 ^key => %Conn{
+                   conn: _,
+                   gun_state: :up,
+                   used_by: [{^self, _}, {^self, _}]
+                 }
+               }
+             },
+             Connections.get_state(name)
+           )
   end
 
   test "async processes get same conn for same domain", %{name: name} do
     open_mock()
     url = "http://some-domain.com"
-    :ok = Conn.open(url, name)
 
     tasks =
       for _ <- 1..5 do
@@ -445,15 +462,8 @@ defmodule Pleroma.Pool.ConnectionsTest do
 
     conns = for {:ok, value} <- results, do: value
 
-    %Connections{
-      conns: %{
-        "http:some-domain.com:80" => %Conn{
-          conn: conn,
-          gun_state: :up
-        }
-      }
-    } = Connections.get_state(name)
-
+    state = Connections.get_state(name)
+    %{conn: conn} = Map.get(state.conns, "http:some-domain.com:80")
     assert Enum.all?(conns, fn res -> res == conn end)
   end
 
@@ -462,8 +472,6 @@ defmodule Pleroma.Pool.ConnectionsTest do
     self = self()
     http_url = "http://some-domain.com"
     https_url = "https://some-domain.com"
-    :ok = Conn.open(https_url, name)
-    :ok = Conn.open(http_url, name)
 
     conn1 = Connections.checkin(https_url, name)
 
@@ -474,41 +482,44 @@ defmodule Pleroma.Pool.ConnectionsTest do
 
     http_key = "http:some-domain.com:80"
 
-    %Connections{
-      conns: %{
-        ^http_key => %Conn{
-          conn: ^conn2,
-          gun_state: :up,
-          conn_state: :active,
-          used_by: [{^self, _}, {^self, _}, {^self, _}, {^self, _}]
-        },
-        "https:some-domain.com:443" => %Conn{
-          conn: ^conn1,
-          gun_state: :up,
-          conn_state: :active,
-          used_by: [{^self, _}]
-        }
-      }
-    } = Connections.get_state(name)
+    assert match?(
+             %Connections{
+               conns: %{
+                 ^http_key => %Conn{
+                   conn: ^conn2,
+                   gun_state: :up,
+                   conn_state: :active
+                 },
+                 "https:some-domain.com:443" => %Conn{
+                   conn: ^conn1,
+                   gun_state: :up,
+                   conn_state: :active
+                 }
+               }
+             },
+             Connections.get_state(name)
+           )
 
     :ok = Connections.checkout(conn1, self, name)
 
     another_url = "http://another-domain.com"
-    :ok = Conn.open(another_url, name)
     conn = Connections.checkin(another_url, name)
 
-    %Connections{
-      conns: %{
-        "http:another-domain.com:80" => %Conn{
-          conn: ^conn,
-          gun_state: :up
-        },
-        ^http_key => %Conn{
-          conn: _,
-          gun_state: :up
-        }
-      }
-    } = Connections.get_state(name)
+    assert match?(
+             %Connections{
+               conns: %{
+                 "http:another-domain.com:80" => %Conn{
+                   conn: ^conn,
+                   gun_state: :up
+                 },
+                 ^http_key => %Conn{
+                   conn: _,
+                   gun_state: :up
+                 }
+               }
+             },
+             Connections.get_state(name)
+           )
   end
 
   describe "with proxy" do
@@ -518,18 +529,19 @@ defmodule Pleroma.Pool.ConnectionsTest do
 
       url = "http://proxy-string.com"
       key = "http:proxy-string.com:80"
-      :ok = Conn.open(url, name, proxy: {{127, 0, 0, 1}, 8123})
+      conn = Connections.checkin(url, name, proxy: {{127, 0, 0, 1}, 8123})
 
-      conn = Connections.checkin(url, name)
-
-      %Connections{
-        conns: %{
-          ^key => %Conn{
-            conn: ^conn,
-            gun_state: :up
-          }
-        }
-      } = Connections.get_state(name)
+      assert match?(
+               %Connections{
+                 conns: %{
+                   ^key => %Conn{
+                     conn: ^conn,
+                     gun_state: :up
+                   }
+                 }
+               },
+               Connections.get_state(name)
+             )
 
       reused_conn = Connections.checkin(url, name)
 
@@ -541,17 +553,19 @@ defmodule Pleroma.Pool.ConnectionsTest do
       |> connect_mock()
 
       url = "http://proxy-tuple-atom.com"
-      :ok = Conn.open(url, name, proxy: {'localhost', 9050})
-      conn = Connections.checkin(url, name)
+      conn = Connections.checkin(url, name, proxy: {'localhost', 9050})
 
-      %Connections{
-        conns: %{
-          "http:proxy-tuple-atom.com:80" => %Conn{
-            conn: ^conn,
-            gun_state: :up
-          }
-        }
-      } = Connections.get_state(name)
+      assert match?(
+               %Connections{
+                 conns: %{
+                   "http:proxy-tuple-atom.com:80" => %Conn{
+                     conn: ^conn,
+                     gun_state: :up
+                   }
+                 }
+               },
+               Connections.get_state(name)
+             )
 
       reused_conn = Connections.checkin(url, name)
 
@@ -564,17 +578,19 @@ defmodule Pleroma.Pool.ConnectionsTest do
 
       url = "https://proxy-string.com"
 
-      :ok = Conn.open(url, name, proxy: {{127, 0, 0, 1}, 8123})
-      conn = Connections.checkin(url, name)
+      conn = Connections.checkin(url, name, proxy: {{127, 0, 0, 1}, 8123})
 
-      %Connections{
-        conns: %{
-          "https:proxy-string.com:443" => %Conn{
-            conn: ^conn,
-            gun_state: :up
-          }
-        }
-      } = Connections.get_state(name)
+      assert match?(
+               %Connections{
+                 conns: %{
+                   "https:proxy-string.com:443" => %Conn{
+                     conn: ^conn,
+                     gun_state: :up
+                   }
+                 }
+               },
+               Connections.get_state(name)
+             )
 
       reused_conn = Connections.checkin(url, name)
 
@@ -586,17 +602,19 @@ defmodule Pleroma.Pool.ConnectionsTest do
       |> connect_mock()
 
       url = "https://proxy-tuple-atom.com"
-      :ok = Conn.open(url, name, proxy: {'localhost', 9050})
-      conn = Connections.checkin(url, name)
+      conn = Connections.checkin(url, name, proxy: {'localhost', 9050})
 
-      %Connections{
-        conns: %{
-          "https:proxy-tuple-atom.com:443" => %Conn{
-            conn: ^conn,
-            gun_state: :up
-          }
-        }
-      } = Connections.get_state(name)
+      assert match?(
+               %Connections{
+                 conns: %{
+                   "https:proxy-tuple-atom.com:443" => %Conn{
+                     conn: ^conn,
+                     gun_state: :up
+                   }
+                 }
+               },
+               Connections.get_state(name)
+             )
 
       reused_conn = Connections.checkin(url, name)
 
@@ -608,18 +626,19 @@ defmodule Pleroma.Pool.ConnectionsTest do
 
       url = "http://proxy-socks.com"
 
-      :ok = Conn.open(url, name, proxy: {:socks5, 'localhost', 1234})
+      conn = Connections.checkin(url, name, proxy: {:socks5, 'localhost', 1234})
 
-      conn = Connections.checkin(url, name)
-
-      %Connections{
-        conns: %{
-          "http:proxy-socks.com:80" => %Conn{
-            conn: ^conn,
-            gun_state: :up
-          }
-        }
-      } = Connections.get_state(name)
+      assert match?(
+               %Connections{
+                 conns: %{
+                   "http:proxy-socks.com:80" => %Conn{
+                     conn: ^conn,
+                     gun_state: :up
+                   }
+                 }
+               },
+               Connections.get_state(name)
+             )
 
       reused_conn = Connections.checkin(url, name)
 
@@ -630,18 +649,19 @@ defmodule Pleroma.Pool.ConnectionsTest do
       open_mock()
       url = "https://proxy-socks.com"
 
-      :ok = Conn.open(url, name, proxy: {:socks4, 'localhost', 1234})
+      conn = Connections.checkin(url, name, proxy: {:socks4, 'localhost', 1234})
 
-      conn = Connections.checkin(url, name)
-
-      %Connections{
-        conns: %{
-          "https:proxy-socks.com:443" => %Conn{
-            conn: ^conn,
-            gun_state: :up
-          }
-        }
-      } = Connections.get_state(name)
+      assert match?(
+               %Connections{
+                 conns: %{
+                   "https:proxy-socks.com:443" => %Conn{
+                     conn: ^conn,
+                     gun_state: :up
+                   }
+                 }
+               },
+               Connections.get_state(name)
+             )
 
       reused_conn = Connections.checkin(url, name)
 
@@ -697,6 +717,10 @@ defmodule Pleroma.Pool.ConnectionsTest do
   end
 
   describe "get_unused_conns/1" do
+    setup %{name: name} do
+      Connections.refresh(name)
+    end
+
     test "crf is equalent, sorting by reference", %{name: name} do
       Connections.add_conn(name, "1", %Conn{
         conn_state: :idle,
@@ -794,11 +818,14 @@ defmodule Pleroma.Pool.ConnectionsTest do
     |> Process.whereis()
     |> send({:close_idle_conns, 15})
 
-    assert %Connections{
-             conns: %{
-               "3" => %Conn{},
-               "2" => %Conn{}
-             }
-           } = Connections.get_state(name)
+    assert match?(
+             %Connections{
+               conns: %{
+                 "3" => %Conn{},
+                 "2" => %Conn{}
+               }
+             },
+             Connections.get_state(name)
+           )
   end
 end

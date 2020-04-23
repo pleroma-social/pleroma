@@ -73,7 +73,6 @@ defmodule Pleroma.HTTP.AdapterHelper.Gun do
   defp checkin_conn(uri, opts) do
     case Connections.checkin(uri, :gun_connections) do
       nil ->
-        Task.start(Pleroma.Gun.Conn, :open, [uri, :gun_connections, opts])
         opts
 
       conn when is_pid(conn) ->

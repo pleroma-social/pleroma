@@ -11,23 +11,25 @@ defmodule Pleroma.Gun.Conn do
 
   require Logger
 
-  @type gun_state :: :up | :down
-  @type conn_state :: :active | :idle
+  @type gun_state :: :init | :up | :down
+  @type conn_state :: :init | :active | :idle
 
   @type t :: %__MODULE__{
           conn: pid(),
           gun_state: gun_state(),
           conn_state: conn_state(),
-          used_by: [pid()],
+          used_by: [GenServer.from()],
+          awaited_by: [GenServer.from()],
           last_reference: pos_integer(),
           crf: float(),
           retries: pos_integer()
         }
 
   defstruct conn: nil,
-            gun_state: :open,
-            conn_state: :idle,
+            gun_state: :init,
+            conn_state: :init,
             used_by: [],
+            awaited_by: [],
             last_reference: 0,
             crf: 1,
             retries: 0
@@ -51,22 +53,19 @@ defmodule Pleroma.Gun.Conn do
 
     max_connections = pool_opts[:max_connections] || 250
 
-    conn_pid =
-      if Connections.count(name) < max_connections do
-        do_open(uri, opts)
-      else
-        close_least_used_and_do_open(name, uri, opts)
-      end
-
-    if is_pid(conn_pid) do
-      conn = %Pleroma.Gun.Conn{
-        conn: conn_pid,
-        gun_state: :up,
-        last_reference: :os.system_time(:second)
-      }
-
+    with {:ok, conn_pid} <- try_open(name, uri, opts, max_connections) do
       :ok = Gun.set_owner(conn_pid, Process.whereis(name))
-      Connections.add_conn(name, key, conn)
+      Connections.update_conn(name, key, conn_pid)
+    else
+      _error -> Connections.remove_conn(name, key)
+    end
+  end
+
+  defp try_open(name, uri, opts, max_connections) do
+    if Connections.count(name) < max_connections do
+      do_open(uri, opts)
+    else
+      close_least_used_and_do_open(name, uri, opts)
     end
   end
 
@@ -104,7 +103,7 @@ defmodule Pleroma.Gun.Conn do
          {:ok, _} <- Gun.await_up(conn, opts[:await_up_timeout]),
          stream <- Gun.connect(conn, connect_opts),
          {:response, :fin, 200, _} <- Gun.await(conn, stream) do
-      conn
+      {:ok, conn}
     else
       error ->
         Logger.warn(
@@ -140,7 +139,7 @@ defmodule Pleroma.Gun.Conn do
 
     with {:ok, conn} <- Gun.open(proxy_host, proxy_port, opts),
          {:ok, _} <- Gun.await_up(conn, opts[:await_up_timeout]) do
-      conn
+      {:ok, conn}
     else
       error ->
         Logger.warn(
@@ -158,7 +157,7 @@ defmodule Pleroma.Gun.Conn do
 
     with {:ok, conn} <- Gun.open(host, port, opts),
          {:ok, _} <- Gun.await_up(conn, opts[:await_up_timeout]) do
-      conn
+      {:ok, conn}
     else
       error ->
         Logger.warn(
