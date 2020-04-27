@@ -27,7 +27,7 @@ defmodule Pleroma.Web.MongooseIM.MongooseIMController do
 
   def check_password(conn, %{"user" => username, "pass" => password}) do
     with %User{password_hash: password_hash} <-
-           Repo.get_by(User, nickname: username, local: true),
+           Repo.get_by(User, nickname: username, local: true, deactivated: false),
          true <- Pbkdf2.checkpw(password, password_hash) do
       conn
       |> json(true)

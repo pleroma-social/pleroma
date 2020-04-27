@@ -9,6 +9,7 @@ defmodule Pleroma.Web.MongooseIMController do
   test "/user_exists", %{conn: conn} do
     _user = insert(:user, nickname: "lain")
     _remote_user = insert(:user, nickname: "alice", local: false)
+    _deactivated_user = insert(:user, nickname: "meanie", deactivated: true)
 
     res =
       conn
@@ -30,10 +31,20 @@ defmodule Pleroma.Web.MongooseIMController do
       |> json_response(404)
 
     assert res == false
+
+    res =
+      conn
+      |> get(mongoose_im_path(conn, :user_exists), user: "meanie")
+      |> json_response(404)
+
+    assert res == false
   end
 
   test "/check_password", %{conn: conn} do
     user = insert(:user, password_hash: Comeonin.Pbkdf2.hashpwsalt("cool"))
+
+    deactivated_user =
+      insert(:user, password_hash: Comeonin.Pbkdf2.hashpwsalt("cool"), deactivated: true)
 
     res =
       conn
@@ -52,6 +63,16 @@ defmodule Pleroma.Web.MongooseIMController do
     res =
       conn
       |> get(mongoose_im_path(conn, :check_password), user: "nobody", pass: "cool")
+      |> json_response(404)
+
+    assert res == false
+
+    res =
+      conn
+      |> get(mongoose_im_path(conn, :check_password),
+        user: deactivated_user.nickname,
+        pass: "cool"
+      )
       |> json_response(404)
 
     assert res == false
