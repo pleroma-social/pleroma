@@ -339,8 +339,8 @@ defmodule Pleroma.Pool.Connections do
   end
 
   defp schedule_close_idle_conns do
-    max_idle_time = Config.get([:connections_pool, :max_idle_time], 10) * 60
-    interval = Config.get([:connections_pool, :closing_idle_conns_interval], 10) * 60 * 1000
+    max_idle_time = Config.get([:connections_pool, :max_idle_time], 1) * 60
+    interval = Config.get([:connections_pool, :closing_idle_conns_interval], 1) * 60 * 1000
     Process.send_after(self(), {:close_idle_conns, max_idle_time}, interval)
   end
 

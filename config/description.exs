@@ -2945,15 +2945,15 @@ config :pleroma, :config_description, [
         key: :max_idle_time,
         type: :integer,
         description:
-          "Maximum of time in minutes, while connection can be idle. Default: 5 minutes.",
-        suggestions: [5]
+          "Maximum of time in minutes, while connection can be idle. Default: 1 minute.",
+        suggestions: [1]
       },
       %{
         key: :closing_idle_conns_interval,
         type: :integer,
         description:
-          "Interval between cleaning pool in minutes from idle connections. Default: 5 minutes.",
-        suggestions: [5]
+          "Interval between cleaning pool in minutes from idle connections. Default: 1 minute.",
+        suggestions: [1]
       },
       %{
         key: :retry,
