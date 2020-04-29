@@ -394,9 +394,9 @@ For each pool, the options are:
 
 Advanced settings for connections pool. Pool with opened connections. These connections can be reused in worker pools.
 
-For big instances it's recommended to increase `max_connections` up to 500-1000. It will increase memory usage, but federation would work faster.
+For big instances it's recommended to increase `max_connections` up to 250-500. It will increase memory usage, but federation would work faster.
 
-* `:max_connections` - maximum number of connections in the pool. Default: 250 connections.
+* `:max_connections` - maximum number of opened connections in the pool. Default: 125 connections.
 * `:max_idle_time` - maximum of time in minutes, while connection can be idle. Default: 1 minute.
 * `:closing_idle_conns_interval` - interval between cleaning pool in minutes from idle connections. Default: 1 minute.
 * `:retry` - number of retries, while `gun` will try to reconnect if connection goes down. Default: 1.

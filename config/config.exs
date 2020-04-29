@@ -606,7 +606,7 @@ config :pleroma, Pleroma.Repo,
   prepare: :unnamed
 
 config :pleroma, :connections_pool,
-  max_connections: 250,
+  max_connections: 125,
   max_idle_time: 1,
   closing_idle_conns_interval: 1,
   retry: 1,

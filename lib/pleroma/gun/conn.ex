@@ -51,7 +51,7 @@ defmodule Pleroma.Gun.Conn do
 
     key = "#{uri.scheme}:#{uri.host}:#{uri.port}"
 
-    max_connections = pool_opts[:max_connections] || 250
+    max_connections = pool_opts[:max_connections] || 125
 
     with {:ok, conn_pid} <- try_open(name, uri, opts, max_connections) do
       :ok = Gun.set_owner(conn_pid, Process.whereis(name))

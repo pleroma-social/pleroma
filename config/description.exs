@@ -2932,7 +2932,7 @@ config :pleroma, :config_description, [
       %{
         key: :max_connections,
         type: :integer,
-        description: "Maximum number of connections in the pool. Default: 250 connections.",
+        description: "Maximum number of connections in the pool. Default: 125 connections.",
         suggestions: [250]
       },
       %{
