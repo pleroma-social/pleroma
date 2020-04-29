@@ -1,14 +1,18 @@
+# Pleroma: A lightweight social networking server
+# Copyright © 2017-2020 Pleroma Authors <https://pleroma.social/>
+# SPDX-License-Identifier: AGPL-3.0-only
+
 defmodule Pleroma.HTTP.Hackney do
   @spec options(keyword(), URI.t()) :: keyword()
   def options(opts \\ [], %URI{} = uri) do
-    merge_with_defaults()
+    merge_defaults_with_config()
     |> add_scheme_opts(uri)
     |> maybe_add_proxy()
     |> merge_with_incoming_opts(opts)
     |> add_pool_timeout()
   end
 
-  defp merge_with_defaults do
+  defp merge_defaults_with_config do
     config = Pleroma.Config.get([:http, :adapter], [])
 
     defaults = [

@@ -112,12 +112,18 @@ defmodule Pleroma.Pool.Connections do
           conn
           | last_reference: time,
             crf: crf,
-            conn_state: :active,
             used_by: [waiting | conn.used_by]
         }
       end)
 
-    state = put_in(state.conns[key], %{conn | conn: conn_pid, gun_state: :up, awaited_by: []})
+    state =
+      put_in(state.conns[key], %{
+        conn
+        | conn: conn_pid,
+          conn_state: :active,
+          gun_state: :up,
+          awaited_by: []
+      })
 
     {:noreply, state}
   end

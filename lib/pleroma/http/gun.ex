@@ -7,7 +7,7 @@ defmodule Pleroma.HTTP.Gun do
 
   @spec options(keyword(), URI.t()) :: keyword()
   def options(opts \\ [], %URI{} = uri) do
-    merge_with_defaults()
+    merge_defaults_with_config()
     |> add_scheme_opts(uri)
     |> maybe_add_proxy()
     |> Keyword.merge(opts)
@@ -16,7 +16,7 @@ defmodule Pleroma.HTTP.Gun do
     |> add_pool_alive_flag()
   end
 
-  defp merge_with_defaults do
+  defp merge_defaults_with_config do
     config = Config.get([:http, :adapter], [])
 
     defaults = [
@@ -59,7 +59,7 @@ defmodule Pleroma.HTTP.Gun do
 
   defp add_pool_alive_flag(opts) do
     pid = Process.whereis(opts[:pool])
-    pool_alive? = !is_nil(pid) && Process.alive?(pid)
+    pool_alive? = is_pid(pid) && Process.alive?(pid)
     Keyword.put(opts, :pool_alive?, pool_alive?)
   end
 end

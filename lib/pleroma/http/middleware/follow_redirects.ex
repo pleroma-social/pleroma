@@ -1,13 +1,10 @@
+# Pleroma: A lightweight social networking server
+# Copyright © 2017-2020 Pleroma Authors <https://pleroma.social/>
+# SPDX-License-Identifier: AGPL-3.0-only
+
 defmodule Pleroma.HTTP.Middleware.FollowRedirects do
   @moduledoc """
   Follow 3xx redirects
-  ## Example
-  ```
-  defmodule MyClient do
-    use Tesla
-    plug Tesla.Middleware.FollowRedirects, max_redirects: 3 # defaults to 5
-  end
-  ```
   ## Options
   - `:max_redirects` - limit number of redirects (default: `5`)
   """
