@@ -7,9 +7,8 @@ defmodule Pleroma.HTTP do
     Wrapper for `Tesla.request/2`.
   """
 
-  alias Pleroma.HTTP.Connection
   alias Pleroma.HTTP.Request
-  alias Pleroma.HTTP.RequestBuilder, as: Builder
+  alias Pleroma.HTTP.Request.Builder
   alias Tesla.Client
   alias Tesla.Env
 
@@ -56,44 +55,25 @@ defmodule Pleroma.HTTP do
           {:ok, Env.t()} | {:error, any()}
   def request(method, url, body, headers, options) when is_binary(url) do
     uri = URI.parse(url)
-    adapter_opts = Connection.options(uri, options[:adapter] || [])
+    adapter_opts = Pleroma.HTTP.Connection.options(uri, options[:adapter] || [])
     options = put_in(options[:adapter], adapter_opts)
-    params = options[:params] || []
-    request = build_request(method, headers, options, url, body, params)
 
     adapter = Application.get_env(:tesla, :adapter)
-    client = Tesla.client([Tesla.Middleware.FollowRedirects], adapter)
 
-    pid = Process.whereis(adapter_opts[:pool])
+    client = Tesla.client([Pleroma.HTTP.Middleware.FollowRedirects], adapter)
+    request = build_request(method, headers, options, url, body)
 
-    pool_alive? =
-      if adapter == Tesla.Adapter.Gun && pid do
-        Process.alive?(pid)
-      else
-        false
-      end
-
-    request_opts =
-      adapter_opts
-      |> Enum.into(%{})
-      |> Map.put(:env, Pleroma.Config.get([:env]))
-      |> Map.put(:pool_alive?, pool_alive?)
-
-    response = request(client, request, request_opts)
-
-    Connection.after_request(adapter_opts)
-
-    response
+    request(client, request, Enum.into(adapter_opts, %{}))
   end
 
   @spec request(Client.t(), keyword(), map()) :: {:ok, Env.t()} | {:error, any()}
-  def request(%Client{} = client, request, %{env: :test}), do: request(client, request)
+  def request(client, request, %{env: :test}), do: request(client, request)
 
-  def request(%Client{} = client, request, %{body_as: :chunks}), do: request(client, request)
+  def request(client, request, %{body_as: :chunks}), do: request(client, request)
 
-  def request(%Client{} = client, request, %{pool_alive?: false}), do: request(client, request)
+  def request(client, request, %{pool_alive?: false}), do: request(client, request)
 
-  def request(%Client{} = client, request, %{pool: pool, timeout: timeout}) do
+  def request(client, request, %{pool: pool, timeout: timeout}) do
     :poolboy.transaction(
       pool,
       &Pleroma.Pool.Request.execute(&1, client, request, timeout),
@@ -104,14 +84,13 @@ defmodule Pleroma.HTTP do
   @spec request(Client.t(), keyword()) :: {:ok, Env.t()} | {:error, any()}
   def request(client, request), do: Tesla.request(client, request)
 
-  defp build_request(method, headers, options, url, body, params) do
+  defp build_request(method, headers, options, url, body) do
     Builder.new()
     |> Builder.method(method)
     |> Builder.headers(headers)
     |> Builder.opts(options)
     |> Builder.url(url)
     |> Builder.add_param(:body, :body, body)
-    |> Builder.add_param(:query, :query, params)
     |> Builder.convert_to_keyword()
   end
 end

@@ -2,26 +2,26 @@
 # Copyright © 2017-2020 Pleroma Authors <https://pleroma.social/>
 # SPDX-License-Identifier: AGPL-3.0-only
 
-defmodule Pleroma.HTTP.RequestBuilderTest do
+defmodule Pleroma.HTTP.Request.BuilderTest do
   use ExUnit.Case, async: true
   use Pleroma.Tests.Helpers
   alias Pleroma.Config
   alias Pleroma.HTTP.Request
-  alias Pleroma.HTTP.RequestBuilder
+  alias Pleroma.HTTP.Request.Builder
 
   describe "headers/2" do
     setup do: clear_config([:http, :send_user_agent])
     setup do: clear_config([:http, :user_agent])
 
     test "don't send pleroma user agent" do
-      assert RequestBuilder.headers(%Request{}, []) == %Request{headers: []}
+      assert Builder.headers(%Request{}, []) == %Request{headers: []}
     end
 
     test "send pleroma user agent" do
       Config.put([:http, :send_user_agent], true)
       Config.put([:http, :user_agent], :default)
 
-      assert RequestBuilder.headers(%Request{}, []) == %Request{
+      assert Builder.headers(%Request{}, []) == %Request{
                headers: [{"user-agent", Pleroma.Application.user_agent()}]
              }
     end
@@ -30,7 +30,7 @@ defmodule Pleroma.HTTP.RequestBuilderTest do
       Config.put([:http, :send_user_agent], true)
       Config.put([:http, :user_agent], "totally-not-pleroma")
 
-      assert RequestBuilder.headers(%Request{}, []) == %Request{
+      assert Builder.headers(%Request{}, []) == %Request{
                headers: [{"user-agent", "totally-not-pleroma"}]
              }
     end
@@ -55,7 +55,7 @@ defmodule Pleroma.HTTP.RequestBuilderTest do
             }
           ]
         }
-      } = RequestBuilder.add_param(%Request{}, :file, "filename.png", "some-path/filename.png")
+      } = Builder.add_param(%Request{}, :file, "filename.png", "some-path/filename.png")
     end
 
     test "add key to body" do
@@ -71,17 +71,17 @@ defmodule Pleroma.HTTP.RequestBuilderTest do
             }
           ]
         }
-      } = RequestBuilder.add_param(%{}, :body, "somekey", "someval")
+      } = Builder.add_param(%{}, :body, "somekey", "someval")
     end
 
     test "add form parameter" do
-      assert RequestBuilder.add_param(%{}, :form, "somename", "someval") == %{
+      assert Builder.add_param(%{}, :form, "somename", "someval") == %{
                body: %{"somename" => "someval"}
              }
     end
 
     test "add for location" do
-      assert RequestBuilder.add_param(%{}, :some_location, "somekey", "someval") == %{
+      assert Builder.add_param(%{}, :some_location, "somekey", "someval") == %{
                some_location: [{"somekey", "someval"}]
              }
     end

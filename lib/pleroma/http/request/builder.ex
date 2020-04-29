@@ -2,7 +2,7 @@
 # Copyright © 2017-2020 Pleroma Authors <https://pleroma.social/>
 # SPDX-License-Identifier: AGPL-3.0-only
 
-defmodule Pleroma.HTTP.RequestBuilder do
+defmodule Pleroma.HTTP.Request.Builder do
   @moduledoc """
   Helper functions for building Tesla requests
   """
@@ -53,8 +53,6 @@ defmodule Pleroma.HTTP.RequestBuilder do
   Add optional parameters to the request
   """
   @spec add_param(Request.t(), atom(), atom(), any()) :: Request.t()
-  def add_param(request, :query, :query, values), do: %{request | query: values}
-
   def add_param(request, :body, :body, value), do: %{request | body: value}
 
   def add_param(request, :body, key, value) do

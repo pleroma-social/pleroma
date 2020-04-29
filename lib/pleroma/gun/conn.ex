@@ -72,14 +72,17 @@ defmodule Pleroma.Gun.Conn do
   defp maybe_add_tls_opts(opts, %URI{scheme: "http"}), do: opts
 
   defp maybe_add_tls_opts(opts, %URI{scheme: "https", host: host}) do
+    charlist_host =
+      host
+      |> to_charlist()
+      |> :idna.encode()
+
     tls_opts = [
       verify: :verify_peer,
       cacertfile: CAStore.file_path(),
       depth: 20,
       reuse_sessions: false,
-      verify_fun:
-        {&:ssl_verify_hostname.verify_fun/3,
-         [check_hostname: Pleroma.HTTP.Connection.format_host(host)]}
+      verify_fun: {&:ssl_verify_hostname.verify_fun/3, [check_hostname: charlist_host]}
     ]
 
     tls_opts =
@@ -153,7 +156,7 @@ defmodule Pleroma.Gun.Conn do
   end
 
   defp do_open(%URI{host: host, port: port} = uri, opts) do
-    host = Pleroma.HTTP.Connection.parse_host(host)
+    host = Pleroma.HTTP.Connection.format_host(host)
 
     with {:ok, conn} <- Gun.open(host, port, opts),
          {:ok, _} <- Gun.await_up(conn, opts[:await_up_timeout]) do
@@ -169,7 +172,7 @@ defmodule Pleroma.Gun.Conn do
   end
 
   defp destination_opts(%URI{host: host, port: port}) do
-    host = Pleroma.HTTP.Connection.parse_host(host)
+    host = Pleroma.HTTP.Connection.format_host(host)
     %{host: host, port: port}
   end
 

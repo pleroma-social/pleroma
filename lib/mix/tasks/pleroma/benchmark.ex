@@ -92,13 +92,13 @@ defmodule Mix.Tasks.Pleroma.Benchmark do
         "Without conn and without pool" => fn ->
           {:ok, %Tesla.Env{}} =
             Pleroma.HTTP.get("https://httpbin.org/stream-bytes/1500", [],
-              adapter: [pool: :no_pool, receive_conn: false]
+              adapter: [pool: :no_pool, reuse_conn: false]
             )
         end,
         "Without conn and with pool" => fn ->
           {:ok, %Tesla.Env{}} =
             Pleroma.HTTP.get("https://httpbin.org/stream-bytes/1500", [],
-              adapter: [receive_conn: false]
+              adapter: [reuse_conn: false]
             )
         end,
         "With reused conn and without pool" => fn ->
