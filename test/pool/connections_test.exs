@@ -784,7 +784,7 @@ defmodule Pleroma.Pool.ConnectionsTest do
 
   test "count/1" do
     name = :test_count
-    {:ok, _} = Connections.start_link({name, [checkin_timeout: 150]})
+    {:ok, _} = Connections.start_link({name, []})
     assert Connections.count(name) == 0
     Connections.add_conn(name, "1", %Conn{conn: self()})
     assert Connections.count(name) == 1

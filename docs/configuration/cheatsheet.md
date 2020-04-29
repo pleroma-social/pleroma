@@ -396,7 +396,6 @@ Advanced settings for connections pool. Pool with opened connections. These conn
 
 For big instances it's recommended to increase `max_connections` up to 500-1000. It will increase memory usage, but federation would work faster.
 
-* `:checkin_timeout` - timeout to checkin connection from pool. Default: 250ms.
 * `:max_connections` - maximum number of connections in the pool. Default: 250 connections.
 * `:max_idle_time` - maximum of time in minutes, while connection can be idle. Default: 1 minute.
 * `:closing_idle_conns_interval` - interval between cleaning pool in minutes from idle connections. Default: 1 minute.

@@ -2930,12 +2930,6 @@ config :pleroma, :config_description, [
     description: "Advanced settings for `gun` connections pool",
     children: [
       %{
-        key: :checkin_timeout,
-        type: :integer,
-        description: "Timeout to checkin connection from pool. Default: 250ms.",
-        suggestions: [250]
-      },
-      %{
         key: :max_connections,
         type: :integer,
         description: "Maximum number of connections in the pool. Default: 250 connections.",
