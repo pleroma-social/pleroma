@@ -26,7 +26,7 @@ defmodule Pleroma.Pool.ConnectionsTest do
 
   setup do
     name = :test_connections
-    {:ok, pid} = Connections.start_link({name, []})
+    {:ok, pid} = Connections.start_link(name)
 
     on_exit(fn ->
       if Process.alive?(pid), do: GenServer.stop(name)
@@ -94,6 +94,66 @@ defmodule Pleroma.Pool.ConnectionsTest do
 
     test "returns false if not started" do
       refute Connections.alive?(:some_random_name)
+    end
+  end
+
+  describe "pool overflow" do
+    setup do: clear_config([:connections_pool, :max_connections], 2)
+
+    test "when all conns are active return nil", %{name: name} do
+      open_mock(2)
+      conn1 = Connections.checkin("https://example1.com", name)
+      conn2 = Connections.checkin("https://example2.com", name)
+      refute Connections.checkin("https://example3.com", name)
+
+      self = self()
+
+      assert match?(
+               %Connections{
+                 conns: %{
+                   "https:example1.com:443" => %Conn{
+                     conn: ^conn1,
+                     used_by: [{^self, _}]
+                   },
+                   "https:example2.com:443" => %Conn{
+                     conn: ^conn2,
+                     used_by: [{^self, _}]
+                   }
+                 }
+               },
+               Connections.get_state(name)
+             )
+
+      assert Connections.count(name) == 2
+    end
+
+    test "close idle conn", %{name: name} do
+      open_mock(3)
+      |> expect(:close, fn _ -> :ok end)
+
+      self = self()
+      conn1 = Connections.checkin("https://example1.com", name)
+      Connections.checkout(conn1, self, name)
+      conn2 = Connections.checkin("https://example2.com", name)
+      conn3 = Connections.checkin("https://example3.com", name)
+
+      assert match?(
+               %Connections{
+                 conns: %{
+                   "https:example2.com:443" => %Conn{
+                     conn: ^conn2,
+                     used_by: [{^self, _}]
+                   },
+                   "https:example3.com:443" => %Conn{
+                     conn: ^conn3,
+                     used_by: [{^self, _}]
+                   }
+                 }
+               },
+               Connections.get_state(name)
+             )
+
+      assert Connections.count(name) == 2
     end
   end
 
@@ -376,6 +436,9 @@ defmodule Pleroma.Pool.ConnectionsTest do
              refute Connections.checkin(url, name)
            end) =~
              "Opening connection to http://gun-not-up.com failed with error {:error, :timeout}"
+
+    state = Connections.get_state(name)
+    assert state.conns == %{}
   end
 
   test "process gun_down message and then gun_up", %{name: name} do
@@ -784,7 +847,7 @@ defmodule Pleroma.Pool.ConnectionsTest do
 
   test "count/1" do
     name = :test_count
-    {:ok, _} = Connections.start_link({name, []})
+    {:ok, _} = Connections.start_link(name)
     assert Connections.count(name) == 0
     Connections.add_conn(name, "1", %Conn{conn: self()})
     assert Connections.count(name) == 1

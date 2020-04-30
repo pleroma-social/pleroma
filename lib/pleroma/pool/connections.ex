@@ -16,21 +16,20 @@ defmodule Pleroma.Pool.Connections do
   @type seconds :: pos_integer()
 
   @type t :: %__MODULE__{
-          conns: %{domain() => conn()},
-          opts: keyword()
+          conns: %{domain() => conn()}
         }
 
-  defstruct conns: %{}, opts: []
+  defstruct conns: %{}
 
-  @spec start_link({atom(), keyword()}) :: {:ok, pid()}
-  def start_link({name, opts}) do
-    GenServer.start_link(__MODULE__, opts, name: name)
+  @spec start_link(atom()) :: {:ok, pid()}
+  def start_link(name) do
+    GenServer.start_link(__MODULE__, [], name: name)
   end
 
   @impl true
-  def init(opts) do
+  def init(_) do
     schedule_close_idle_conns()
-    {:ok, %__MODULE__{conns: %{}, opts: opts}}
+    {:ok, %__MODULE__{conns: %{}}}
   end
 
   @spec checkin(String.t() | URI.t(), atom()) :: pid() | nil
@@ -43,11 +42,8 @@ defmodule Pleroma.Pool.Connections do
 
   @spec alive?(atom()) :: boolean()
   def alive?(name) do
-    if pid = Process.whereis(name) do
-      Process.alive?(pid)
-    else
-      false
-    end
+    pid = Process.whereis(name)
+    is_pid(pid) and Process.alive?(pid)
   end
 
   @spec get_state(atom()) :: t()

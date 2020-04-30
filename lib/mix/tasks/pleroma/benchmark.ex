@@ -79,12 +79,6 @@ defmodule Mix.Tasks.Pleroma.Benchmark do
   def run(["adapters"]) do
     start_pleroma()
 
-    :ok =
-      Pleroma.Gun.Conn.open(
-        "https://httpbin.org/stream-bytes/1500",
-        :gun_connections
-      )
-
     Process.sleep(1_500)
 
     Benchee.run(

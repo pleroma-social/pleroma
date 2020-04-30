@@ -9,6 +9,14 @@ defmodule Pleroma.HTTP.GunTest do
   alias Pleroma.HTTP.Gun
 
   describe "options/1" do
+    test "http" do
+      uri = URI.parse("http://example.com")
+
+      opts = Gun.options([reuse_conn: false], uri)
+
+      assert opts[:reuse_conn] == false
+    end
+
     test "https url with default port" do
       uri = URI.parse("https://example.com")
 

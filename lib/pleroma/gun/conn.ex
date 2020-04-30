@@ -34,11 +34,8 @@ defmodule Pleroma.Gun.Conn do
             crf: 1,
             retries: 0
 
-  @spec open(String.t() | URI.t(), atom(), keyword()) :: :ok | nil
-  def open(url, name, opts \\ [])
-  def open(url, name, opts) when is_binary(url), do: open(URI.parse(url), name, opts)
-
-  def open(%URI{} = uri, name, opts) do
+  @spec open(URI.t(), atom(), keyword()) :: :ok
+  def open(%URI{} = uri, name, opts \\ []) do
     pool_opts = Pleroma.Config.get([:connections_pool], [])
 
     opts =
@@ -62,7 +59,7 @@ defmodule Pleroma.Gun.Conn do
   end
 
   defp try_open(name, uri, opts, max_connections) do
-    if Connections.count(name) < max_connections do
+    if Connections.count(name) <= max_connections do
       do_open(uri, opts)
     else
       close_least_used_and_do_open(name, uri, opts)

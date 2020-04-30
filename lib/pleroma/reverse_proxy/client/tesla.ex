@@ -33,8 +33,6 @@ defmodule Pleroma.ReverseProxy.Client.Tesla do
       else
         {:ok, response.status, response.headers}
       end
-    else
-      {:error, error} -> {:error, error}
     end
   end
 
