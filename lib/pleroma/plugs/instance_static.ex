@@ -3,6 +3,8 @@
 # SPDX-License-Identifier: AGPL-3.0-only
 
 defmodule Pleroma.Plugs.InstanceStatic do
+  require Pleroma.Constants
+
   @moduledoc """
   This is a shim to call `Plug.Static` but with runtime `from` configuration.
 
@@ -37,11 +39,11 @@ defmodule Pleroma.Plugs.InstanceStatic do
     |> Plug.Static.init()
   end
 
+  # for only <- Pleroma.Constants.static_only_files() do
   for path <- @fe_prefixed_paths do
     def call(%{request_path: "/" <> unquote(path) <> _} = conn, opts) do
       fe_path = get_fe_path(conn)
       opts = %{opts | at: Plug.Router.Utils.split(unquote(path)), from: fe_path}
-
       Plug.Static.call(conn, opts)
     end
   end

@@ -75,7 +75,6 @@ defmodule Pleroma.Application do
         Pleroma.Repo,
         Config.TransferTask,
         Pleroma.Emoji,
-        Pleroma.Captcha,
         Pleroma.Plugs.RateLimiter.Supervisor
       ] ++
         cachex_children() ++
