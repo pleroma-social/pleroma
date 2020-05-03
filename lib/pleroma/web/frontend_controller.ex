@@ -69,7 +69,8 @@ defmodule Pleroma.Web.FrontendController do
         {:ok, priv_path}
 
       true ->
-        {:error, "index.html file was not found"}
+        {:error,
+         "index.html file was not found in #{inspect([instance_path, frontend_path, priv_path])}"}
     end
   end
 end

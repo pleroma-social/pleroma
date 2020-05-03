@@ -10,9 +10,15 @@ defmodule Pleroma.Web.RuntimeStaticPlugTest do
   @fe_dir Path.join([@dir, "frontends", @primary_fe["name"], @primary_fe["ref"]])
 
   setup do
-    [@dir, "frontends", @primary_fe["name"], @primary_fe["ref"], "static"]
-    |> Path.join()
-    |> File.mkdir_p()
+    frontend_dir = Path.join([@dir, "frontends", @primary_fe["name"], @primary_fe["ref"]])
+
+    frontend_dir
+    |> Path.join("static")
+    |> File.mkdir_p!()
+
+    frontend_dir
+    |> Path.join("index.html")
+    |> File.write!("<html></html>")
 
     [@dir, "static"]
     |> Path.join()
