@@ -58,7 +58,7 @@ defmodule Mix.Tasks.Pleroma.RelayTest do
       Mix.Tasks.Pleroma.Relay.run(["unfollow", target_instance])
 
       cancelled_activity = Activity.get_by_ap_id(follow_activity.data["id"])
-      assert cancelled_activity.data["state"] == "cancelled"
+      refute cancelled_activity
 
       [undo_activity] =
         ActivityPub.fetch_activities([], %{
@@ -70,7 +70,7 @@ defmodule Mix.Tasks.Pleroma.RelayTest do
 
       assert undo_activity.data["type"] == "Undo"
       assert undo_activity.data["actor"] == local_user.ap_id
-      assert undo_activity.data["object"] == cancelled_activity.data
+      assert undo_activity.data["object"] == follow_activity.data["id"]
       refute "#{target_instance}/followers" in User.following(local_user)
     end
   end

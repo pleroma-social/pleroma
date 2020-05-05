@@ -7,6 +7,7 @@ defmodule Pleroma.Web.ActivityPub.Relay do
   alias Pleroma.Object
   alias Pleroma.User
   alias Pleroma.Web.ActivityPub.ActivityPub
+  alias Pleroma.Web.CommonAPI
   require Logger
 
   @relay_nickname "relay"
@@ -39,8 +40,7 @@ defmodule Pleroma.Web.ActivityPub.Relay do
   def unfollow(target_instance) do
     with %User{} = local_user <- get_actor(),
          {:ok, %User{} = target_user} <- User.get_or_fetch_by_ap_id(target_instance),
-         {:ok, activity} <- ActivityPub.unfollow(local_user, target_user) do
-      User.unfollow(local_user, target_user)
+         {:ok, activity} <- CommonAPI.unfollow(local_user, target_user) do
       Logger.info("relay: unfollowed instance: #{target_instance}: id=#{activity.data["id"]}")
       {:ok, activity}
     else

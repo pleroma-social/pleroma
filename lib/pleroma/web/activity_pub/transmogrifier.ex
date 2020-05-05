@@ -666,6 +666,12 @@ defmodule Pleroma.Web.ActivityPub.Transmogrifier do
     end
   end
 
+  def handle_incoming(%{"type" => "Undo"} = data, _options) do
+    with {:ok, activity, _} <- Pipeline.common_pipeline(data, local: false) do
+      {:ok, activity}
+    end
+  end
+
   def handle_incoming(
         %{
           "type" => "EmojiReact",
@@ -765,56 +771,6 @@ defmodule Pleroma.Web.ActivityPub.Transmogrifier do
 
       _e ->
         :error
-    end
-  end
-
-  def handle_incoming(
-        %{
-          "type" => "Undo",
-          "object" => %{"type" => "Follow", "object" => followed},
-          "actor" => follower,
-          "id" => id
-        } = _data,
-        _options
-      ) do
-    with %User{local: true} = followed <- User.get_cached_by_ap_id(followed),
-         {:ok, %User{} = follower} <- User.get_or_fetch_by_ap_id(follower),
-         {:ok, activity} <- ActivityPub.unfollow(follower, followed, id, false) do
-      User.unfollow(follower, followed)
-      {:ok, activity}
-    else
-      _e -> :error
-    end
-  end
-
-  def handle_incoming(
-        %{
-          "type" => "Undo",
-          "object" => %{"type" => type}
-        } = data,
-        _options
-      )
-      when type in ["Like", "EmojiReact", "Announce", "Block"] do
-    with {:ok, activity, _} <- Pipeline.common_pipeline(data, local: false) do
-      {:ok, activity}
-    end
-  end
-
-  # For Undos that don't have the complete object attached, try to find it in our database.
-  def handle_incoming(
-        %{
-          "type" => "Undo",
-          "object" => object
-        } = activity,
-        options
-      )
-      when is_binary(object) do
-    with %Activity{data: data} <- Activity.get_by_ap_id(object) do
-      activity
-      |> Map.put("object", data)
-      |> handle_incoming(options)
-    else
-      _e -> :error
     end
   end
 

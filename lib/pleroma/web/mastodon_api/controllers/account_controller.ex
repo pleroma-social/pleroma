@@ -321,7 +321,7 @@ defmodule Pleroma.Web.MastodonAPI.AccountController do
   end
 
   def unfollow(%{assigns: %{user: follower, account: followed}} = conn, _params) do
-    with {:ok, follower} <- CommonAPI.unfollow(follower, followed) do
+    with {:ok, _unfollow} <- CommonAPI.unfollow(follower, followed) do
       render(conn, "relationship.json", user: follower, target: followed)
     end
   end

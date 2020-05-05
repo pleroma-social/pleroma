@@ -17,9 +17,11 @@ defmodule Pleroma.Web.ActivityPub.ActivityPub do
   alias Pleroma.Repo
   alias Pleroma.Upload
   alias Pleroma.User
+  alias Pleroma.Web.ActivityPub.Builder
   alias Pleroma.Web.ActivityPub.MRF
   alias Pleroma.Web.ActivityPub.Transmogrifier
   alias Pleroma.Web.ActivityPub.Utils
+  alias Pleroma.Web.ActivityPub.Pipeline
   alias Pleroma.Web.Streamer
   alias Pleroma.Web.WebFinger
   alias Pleroma.Workers.BackgroundWorker
@@ -421,28 +423,6 @@ defmodule Pleroma.Web.ActivityPub.ActivityPub do
     end
   end
 
-  @spec unfollow(User.t(), User.t(), String.t() | nil, boolean()) ::
-          {:ok, Activity.t()} | nil | {:error, any()}
-  def unfollow(follower, followed, activity_id \\ nil, local \\ true) do
-    with {:ok, result} <-
-           Repo.transaction(fn -> do_unfollow(follower, followed, activity_id, local) end) do
-      result
-    end
-  end
-
-  defp do_unfollow(follower, followed, activity_id, local) do
-    with %Activity{} = follow_activity <- fetch_latest_follow(follower, followed),
-         {:ok, follow_activity} <- update_follow_state(follow_activity, "cancelled"),
-         unfollow_data <- make_unfollow_data(follower, followed, follow_activity, activity_id),
-         {:ok, activity} <- insert(unfollow_data, local),
-         :ok <- maybe_federate(activity) do
-      {:ok, activity}
-    else
-      nil -> nil
-      {:error, error} -> Repo.rollback(error)
-    end
-  end
-
   @spec delete(User.t() | Object.t(), keyword()) :: {:ok, User.t() | Object.t()} | {:error, any()}
   def delete(entity, options \\ []) do
     with {:ok, result} <- Repo.transaction(fn -> do_delete(entity, options) end) do
@@ -518,8 +498,11 @@ defmodule Pleroma.Web.ActivityPub.ActivityPub do
     unfollow_blocked = Config.get([:activitypub, :unfollow_blocked])
 
     if unfollow_blocked do
-      follow_activity = fetch_latest_follow(blocker, blocked)
-      if follow_activity, do: unfollow(blocker, blocked, nil, local)
+      with %Activity{} = follow_activity <- fetch_latest_follow(blocker, blocked),
+           {:ok, undo_data, _} <- Builder.undo(blocker, follow_activity),
+           {:ok, _undo, _} <- Pipeline.common_pipeline(undo_data, local: local) do
+        :ok
+      end
     end
 
     with true <- outgoing_blocks,

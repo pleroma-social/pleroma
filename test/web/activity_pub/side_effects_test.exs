@@ -21,12 +21,15 @@ defmodule Pleroma.Web.ActivityPub.SideEffectsTest do
     setup do
       poster = insert(:user)
       user = insert(:user)
+      followed = insert(:user)
       {:ok, post} = CommonAPI.post(poster, %{"status" => "hey"})
       {:ok, like} = CommonAPI.favorite(user, post.id)
       {:ok, reaction, _} = CommonAPI.react_with_emoji(post.id, user, "👍")
       {:ok, announce, _} = CommonAPI.repeat(post.id, user)
       {:ok, block} = ActivityPub.block(user, poster)
       User.block(user, poster)
+      {:ok, user, followed, follow} = CommonAPI.follow(user, followed)
+      User.subscribe(user, followed)
 
       {:ok, undo_data, _meta} = Builder.undo(user, like)
       {:ok, like_undo, _meta} = ActivityPub.persist(undo_data, local: true)
@@ -40,6 +43,9 @@ defmodule Pleroma.Web.ActivityPub.SideEffectsTest do
       {:ok, undo_data, _meta} = Builder.undo(user, block)
       {:ok, block_undo, _meta} = ActivityPub.persist(undo_data, local: true)
 
+      {:ok, undo_data, _meta} = Builder.undo(user, follow)
+      {:ok, follow_undo, _meta} = ActivityPub.persist(undo_data, local: true)
+
       %{
         like_undo: like_undo,
         post: post,
@@ -50,9 +56,29 @@ defmodule Pleroma.Web.ActivityPub.SideEffectsTest do
         announce: announce,
         block_undo: block_undo,
         block: block,
+        follow_undo: follow_undo,
+        follow: follow,
         poster: poster,
-        user: user
+        user: user,
+        followed: followed
       }
+    end
+
+    test "deletes the original follow", %{follow_undo: follow_undo, follow: follow} do
+      {:ok, _follow_undo, _} = SideEffects.handle(follow_undo)
+      refute Activity.get_by_id(follow.id)
+    end
+
+    test "unfollows and unsubscribes the followed user", %{
+      follow_undo: follow_undo,
+      follow: follow
+    } do
+      follower = User.get_by_ap_id(follow.data["actor"])
+      followed = User.get_by_ap_id(follow.data["object"])
+
+      {:ok, _follow_undo, _} = SideEffects.handle(follow_undo)
+      refute User.following?(follower, followed)
+      refute User.subscribed_to?(follower, followed)
     end
 
     test "deletes the original block", %{block_undo: block_undo, block: block} do

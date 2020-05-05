@@ -331,21 +331,6 @@ defmodule Pleroma.NotificationTest do
       assert %{type: "follow"} = NotificationView.render("show.json", render_opts)
     end
 
-    test "it doesn't create a notification for follow-unfollow-follow chains" do
-      user = insert(:user)
-      followed_user = insert(:user, locked: false)
-
-      {:ok, _, _, _activity} = CommonAPI.follow(user, followed_user)
-      assert FollowingRelationship.following?(user, followed_user)
-      assert [notification] = Notification.for_user(followed_user)
-
-      CommonAPI.unfollow(user, followed_user)
-      {:ok, _, _, _activity_dupe} = CommonAPI.follow(user, followed_user)
-
-      notification_id = notification.id
-      assert [%{id: ^notification_id}] = Notification.for_user(followed_user)
-    end
-
     test "dismisses the notification on follow request rejection" do
       user = insert(:user, locked: true)
       follower = insert(:user)

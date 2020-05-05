@@ -1052,23 +1052,6 @@ defmodule Pleroma.Web.ActivityPub.ActivityPubTest do
       assert Repo.aggregate(Object, :count, :id) == 0
     end
 
-    test "it reverts unfollow activity" do
-      follower = insert(:user)
-      followed = insert(:user)
-
-      {:ok, follow_activity} = ActivityPub.follow(follower, followed)
-
-      with_mock(Utils, [:passthrough], maybe_federate: fn _ -> {:error, :reverted} end) do
-        assert {:error, :reverted} = ActivityPub.unfollow(follower, followed)
-      end
-
-      activity = Activity.get_by_id(follow_activity.id)
-      assert activity.data["type"] == "Follow"
-      assert activity.data["actor"] == follower.ap_id
-
-      assert activity.data["object"] == followed.ap_id
-    end
-
     test "creates a follow activity" do
       follower = insert(:user)
       followed = insert(:user)
@@ -1077,40 +1060,6 @@ defmodule Pleroma.Web.ActivityPub.ActivityPubTest do
       assert activity.data["type"] == "Follow"
       assert activity.data["actor"] == follower.ap_id
       assert activity.data["object"] == followed.ap_id
-    end
-
-    test "creates an undo activity for the last follow" do
-      follower = insert(:user)
-      followed = insert(:user)
-
-      {:ok, follow_activity} = ActivityPub.follow(follower, followed)
-      {:ok, activity} = ActivityPub.unfollow(follower, followed)
-
-      assert activity.data["type"] == "Undo"
-      assert activity.data["actor"] == follower.ap_id
-
-      embedded_object = activity.data["object"]
-      assert is_map(embedded_object)
-      assert embedded_object["type"] == "Follow"
-      assert embedded_object["object"] == followed.ap_id
-      assert embedded_object["id"] == follow_activity.data["id"]
-    end
-
-    test "creates an undo activity for a pending follow request" do
-      follower = insert(:user)
-      followed = insert(:user, %{locked: true})
-
-      {:ok, follow_activity} = ActivityPub.follow(follower, followed)
-      {:ok, activity} = ActivityPub.unfollow(follower, followed)
-
-      assert activity.data["type"] == "Undo"
-      assert activity.data["actor"] == follower.ap_id
-
-      embedded_object = activity.data["object"]
-      assert is_map(embedded_object)
-      assert embedded_object["type"] == "Follow"
-      assert embedded_object["object"] == followed.ap_id
-      assert embedded_object["id"] == follow_activity.data["id"]
     end
   end
 

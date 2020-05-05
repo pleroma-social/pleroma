@@ -10,6 +10,18 @@ defmodule Pleroma.Web.ActivityPub.Builder do
   alias Pleroma.Web.ActivityPub.Utils
   alias Pleroma.Web.ActivityPub.Visibility
 
+  @spec follow(User.t(), User.t()) :: {:ok, map(), keyword()}
+  def follow(follower, followed) do
+    {:ok,
+     %{
+       "id" => Utils.generate_activity_id(),
+       "actor" => follower.ap_id,
+       "type" => "Follow",
+       "object" => followed.ap_id,
+       "to" => [followed.ap_id]
+     }, []}
+  end
+
   @spec undo(User.t(), Activity.t()) :: {:ok, map(), keyword()}
   def undo(actor, object) do
     {:ok,

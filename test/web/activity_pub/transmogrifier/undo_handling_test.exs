@@ -34,14 +34,15 @@ defmodule Pleroma.Web.ActivityPub.Transmogrifier.UndoHandlingTest do
 
   test "it returns an error for incoming unlikes wihout a like activity" do
     user = insert(:user)
-    {:ok, activity} = CommonAPI.post(user, %{"status" => "leave a like pls"})
+    {:ok, _activity} = CommonAPI.post(user, %{"status" => "leave a like pls"})
 
     data =
       File.read!("test/fixtures/mastodon-undo-like.json")
       |> Poison.decode!()
-      |> Map.put("object", activity.data["object"])
+      |> Map.put("object", user.ap_id <> "/activities/likes/1")
+      |> Map.put("actor", user.ap_id)
 
-    assert Transmogrifier.handle_incoming(data) == :error
+    assert {:error, _} = Transmogrifier.handle_incoming(data)
   end
 
   test "it works for incoming unlikes with an existing like activity" do
@@ -150,9 +151,7 @@ defmodule Pleroma.Web.ActivityPub.Transmogrifier.UndoHandlingTest do
     {:ok, %Activity{data: data, local: false}} = Transmogrifier.handle_incoming(data)
 
     assert data["type"] == "Undo"
-    assert data["object"]["type"] == "Follow"
-    assert data["object"]["object"] == user.ap_id
-    assert data["actor"] == "http://mastodon.example.org/users/admin"
+    assert data["object"] == follow_data["id"]
 
     refute User.following?(User.get_cached_by_ap_id(data["actor"]), user)
   end

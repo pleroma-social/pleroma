@@ -14,6 +14,7 @@ defmodule Pleroma.Web.CommonAPITest do
   alias Pleroma.Web.CommonAPI
 
   import Pleroma.Factory
+  import ExUnit.CaptureLog
 
   require Pleroma.Constants
 
@@ -601,6 +602,17 @@ defmodule Pleroma.Web.CommonAPITest do
   end
 
   describe "unfollow/2" do
+    test "still works if we don't have an existing follow activity" do
+      [follower, followed] = insert_pair(:user)
+
+      # No activity created here
+      {:ok, follower} = User.follow(follower, followed)
+
+      assert capture_log(fn ->
+               assert {:ok, _undo} = CommonAPI.unfollow(follower, followed)
+             end) =~ "No follow activity found"
+    end
+
     test "also unsubscribes a user" do
       [follower, followed] = insert_pair(:user)
       {:ok, follower, followed, _} = CommonAPI.follow(follower, followed)
@@ -608,7 +620,7 @@ defmodule Pleroma.Web.CommonAPITest do
 
       assert User.subscribed_to?(follower, followed)
 
-      {:ok, follower} = CommonAPI.unfollow(follower, followed)
+      {:ok, _undo} = CommonAPI.unfollow(follower, followed)
 
       refute User.subscribed_to?(follower, followed)
     end
@@ -621,18 +633,10 @@ defmodule Pleroma.Web.CommonAPITest do
                CommonAPI.follow(follower, followed)
 
       assert User.get_follow_state(follower, followed) == :follow_pending
-      assert {:ok, follower} = CommonAPI.unfollow(follower, followed)
+      assert {:ok, _undo} = CommonAPI.unfollow(follower, followed)
       assert User.get_follow_state(follower, followed) == nil
 
-      assert %{id: ^activity_id, data: %{"state" => "cancelled"}} =
-               Pleroma.Web.ActivityPub.Utils.fetch_latest_follow(follower, followed)
-
-      assert %{
-               data: %{
-                 "type" => "Undo",
-                 "object" => %{"type" => "Follow", "state" => "cancelled"}
-               }
-             } = Pleroma.Web.ActivityPub.Utils.fetch_latest_undo(follower)
+      refute Pleroma.Web.ActivityPub.Utils.fetch_latest_follow(follower, followed)
     end
 
     test "cancels a pending follow for a remote user" do
@@ -643,18 +647,10 @@ defmodule Pleroma.Web.CommonAPITest do
                CommonAPI.follow(follower, followed)
 
       assert User.get_follow_state(follower, followed) == :follow_pending
-      assert {:ok, follower} = CommonAPI.unfollow(follower, followed)
+      assert {:ok, _undo} = CommonAPI.unfollow(follower, followed)
       assert User.get_follow_state(follower, followed) == nil
 
-      assert %{id: ^activity_id, data: %{"state" => "cancelled"}} =
-               Pleroma.Web.ActivityPub.Utils.fetch_latest_follow(follower, followed)
-
-      assert %{
-               data: %{
-                 "type" => "Undo",
-                 "object" => %{"type" => "Follow", "state" => "cancelled"}
-               }
-             } = Pleroma.Web.ActivityPub.Utils.fetch_latest_undo(follower)
+      refute Pleroma.Web.ActivityPub.Utils.fetch_latest_follow(follower, followed)
     end
   end
 

@@ -1149,8 +1149,8 @@ defmodule Pleroma.UserTest do
       {:ok, like_two} = CommonAPI.favorite(follower, activity.id)
       {:ok, repeat, _} = CommonAPI.repeat(activity_two.id, user)
 
-      {:ok, job} = User.delete(user)
-      {:ok, _user} = ObanHelpers.perform(job)
+      {:ok, _job} = User.delete(user)
+      ObanHelpers.perform_all()
 
       follower = User.get_cached_by_id(follower.id)
 

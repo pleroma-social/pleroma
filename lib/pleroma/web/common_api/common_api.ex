@@ -32,6 +32,28 @@ defmodule Pleroma.Web.CommonAPI do
     end
   end
 
+  def unfollow(follower, followed) do
+    with {_, %Activity{} = follow} <-
+           {:fetch_follow, Utils.fetch_latest_follow(follower, followed)},
+         {:ok, unfollow_data, _} <- Builder.undo(follower, follow),
+         {:ok, unfollow, _} <- Pipeline.common_pipeline(unfollow_data, local: true) do
+      {:ok, unfollow}
+    else
+      {:fetch_follow, nil} ->
+        Logger.warn(
+          "No follow activity found for #{follower.ap_id} and #{followed.ap_id}, inserting one and starting over"
+        )
+
+        with {:ok, follow_data, _} <- Builder.follow(follower, followed),
+             {:ok, _follow, _} <- ActivityPub.persist(follow_data, local: true) do
+          unfollow(follower, followed)
+        end
+
+      e ->
+        e
+    end
+  end
+
   def follow(follower, followed) do
     timeout = Pleroma.Config.get([:activitypub, :follow_handshake_timeout])
 
@@ -39,14 +61,6 @@ defmodule Pleroma.Web.CommonAPI do
          {:ok, activity} <- ActivityPub.follow(follower, followed),
          {:ok, follower, followed} <- User.wait_and_refresh(timeout, follower, followed) do
       {:ok, follower, followed, activity}
-    end
-  end
-
-  def unfollow(follower, unfollowed) do
-    with {:ok, follower, _follow_activity} <- User.unfollow(follower, unfollowed),
-         {:ok, _activity} <- ActivityPub.unfollow(follower, unfollowed),
-         {:ok, _subscription} <- User.unsubscribe(follower, unfollowed) do
-      {:ok, follower}
     end
   end
 

@@ -63,6 +63,18 @@ defmodule Pleroma.Web.ActivityPub.SideEffects do
   end
 
   def handle_undoing(
+        %{data: %{"type" => "Follow", "actor" => follower, "object" => followed}} = object
+      ) do
+    with %User{} = follower <- User.get_cached_by_ap_id(follower),
+         %User{} = followed <- User.get_cached_by_ap_id(followed),
+         {:ok, _, _} <- User.unfollow(follower, followed),
+         _ <- User.unsubscribe(follower, followed),
+         {:ok, _} <- Repo.delete(object) do
+      :ok
+    end
+  end
+
+  def handle_undoing(
         %{data: %{"type" => "Block", "actor" => blocker, "object" => blocked}} = object
       ) do
     with %User{} = blocker <- User.get_cached_by_ap_id(blocker),
