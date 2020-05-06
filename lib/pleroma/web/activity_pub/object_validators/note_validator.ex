@@ -5,6 +5,7 @@
 defmodule Pleroma.Web.ActivityPub.ObjectValidators.NoteValidator do
   use Ecto.Schema
 
+  alias Pleroma.Web.ActivityPub.ObjectValidators
   alias Pleroma.Web.ActivityPub.ObjectValidators.Types
 
   import Ecto.Changeset
@@ -29,8 +30,7 @@ defmodule Pleroma.Web.ActivityPub.ObjectValidators.NoteValidator do
     # TODO: Write type
     field(:emoji, :map, default: %{})
     field(:sensitive, :boolean, default: false)
-    # TODO: Write type
-    field(:attachment, {:array, :map}, default: [])
+    embeds_many(:attachment, ObjectValidators.AttachmentValidator)
     field(:replies_count, :integer, default: 0)
     field(:like_count, :integer, default: 0)
     field(:announcement_count, :integer, default: 0)
@@ -53,7 +53,8 @@ defmodule Pleroma.Web.ActivityPub.ObjectValidators.NoteValidator do
 
   def cast_data(data) do
     %__MODULE__{}
-    |> cast(data, __schema__(:fields))
+    |> cast(data, __schema__(:fields) -- [:attachment])
+    |> cast_embed(:attachment)
   end
 
   def validate_data(data_cng) do
