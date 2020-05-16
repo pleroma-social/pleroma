@@ -120,8 +120,11 @@ defmodule Pleroma.Notification do
     notification_muted_ap_ids =
       opts[:notification_muted_users_ap_ids] || User.notification_muted_users_ap_ids(user)
 
+    domain_mutes = user.domain_mutes || []
+
     query
     |> where([n, a], a.actor not in ^notification_muted_ap_ids)
+    |> where([n, a], fragment("not split_part(?, '/', 3) = ANY(?)", a.actor, ^domain_mutes))
     |> join(:left, [n, a], tm in ThreadMute,
       on: tm.user_id == ^user.id and tm.context == fragment("?->>'context'", a.data)
     )

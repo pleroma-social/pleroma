@@ -226,7 +226,8 @@ defmodule Pleroma.Web.MastodonAPI.StatusViewTest do
         expires_at: nil,
         direct_conversation_id: nil,
         thread_muted: false,
-        emoji_reactions: []
+        emoji_reactions: [],
+        instance_muted: false
       }
     }
 

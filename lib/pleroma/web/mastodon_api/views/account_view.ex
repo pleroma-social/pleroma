@@ -109,7 +109,7 @@ defmodule Pleroma.Web.MastodonAPI.AccountView do
           :mute,
           reading_user,
           target,
-          &User.mutes?(&1, &2)
+          &User.mutes_user?(&1, &2)
         ),
       muting_notifications:
         UserRelationship.exists?(

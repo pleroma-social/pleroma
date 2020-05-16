@@ -479,6 +479,30 @@ defmodule Pleroma.Web.MastodonAPI.NotificationControllerTest do
     assert length(json_response_and_validate_schema(conn, 200)) == 1
   end
 
+  describe "muting domain" do
+    setup do
+      %{user: user, conn: conn} = oauth_access(["read:notifications"])
+      user2 = insert(:user, ap_id: "https://example.com/users/other_user")
+      {:ok, user, _, _} = CommonAPI.follow(user, user2)
+      {:ok, user} = User.mute_domain(user, "example.com")
+      {:ok, _} = CommonAPI.post(user2, %{status: "hello @#{user.nickname}"})
+      conn = assign(conn, :user, user)
+      [conn: conn]
+    end
+
+    test "see notifications with_muted parameter", %{conn: conn} do
+      conn = get(conn, "/api/v1/notifications?with_muted=true")
+
+      assert length(json_response_and_validate_schema(conn, 200)) == 1
+    end
+
+    test "doesn't see notifications without with_muted parameter", %{conn: conn} do
+      conn = get(conn, "/api/v1/notifications")
+
+      assert json_response_and_validate_schema(conn, 200) == []
+    end
+  end
+
   @tag capture_log: true
   test "see move notifications" do
     old_user = insert(:user)

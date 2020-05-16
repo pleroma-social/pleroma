@@ -267,6 +267,10 @@ defmodule Pleroma.Web.Router do
     get("/accounts/mfa/setup/:method", TwoFactorAuthenticationController, :setup)
     post("/accounts/mfa/confirm/:method", TwoFactorAuthenticationController, :confirm)
     delete("/accounts/mfa/:method", TwoFactorAuthenticationController, :disable)
+
+    get("/domain_mutes", DomainMuteController, :index)
+    post("/domain_mutes", DomainMuteController, :create)
+    delete("/domain_mutes", DomainMuteController, :delete)
   end
 
   scope "/oauth", Pleroma.Web.OAuth do

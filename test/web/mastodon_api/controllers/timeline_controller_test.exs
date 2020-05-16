@@ -57,6 +57,63 @@ defmodule Pleroma.Web.MastodonAPI.TimelineControllerTest do
     end
   end
 
+  describe "home timeline and user muting" do
+    setup do: oauth_access(["read:statuses"])
+
+    setup %{user: user} do
+      other_user = insert(:user, ap_id: "https://example.com/users/other_user")
+      {:ok, user} = User.follow(user, other_user)
+      {:ok, activity} = CommonAPI.post(other_user, %{status: "Some status"})
+
+      {:ok, _} = User.mute(user, other_user)
+      [activity: activity]
+    end
+
+    test "returns statuses with_muted = true", %{conn: conn, activity: activity} do
+      conn = get(conn, "/api/v1/timelines/home?with_muted=true")
+
+      [status] = json_response_and_validate_schema(conn, :ok)
+      assert activity.id == status["id"]
+      assert status["muted"]
+      refute status["pleroma"]["instance_muted"]
+    end
+
+    test "doesn't return statuses with_muted = false", %{conn: conn} do
+      conn = get(conn, "/api/v1/timelines/home?with_muted=false")
+
+      assert json_response_and_validate_schema(conn, :ok) == []
+    end
+  end
+
+  describe "home timeline and domain muting" do
+    setup do: oauth_access(["read:statuses"])
+
+    setup %{user: user, conn: conn} do
+      other_user = insert(:user, ap_id: "https://example.com/users/other_user")
+      {:ok, user} = User.follow(user, other_user)
+      {:ok, activity} = CommonAPI.post(other_user, %{status: "Some Status"})
+
+      {:ok, user} = User.mute_domain(user, "example.com")
+      conn = assign(conn, :user, user)
+      [activity: activity, conn: conn]
+    end
+
+    test "returns statuses with_muted = true", %{conn: conn, activity: activity} do
+      conn = get(conn, "/api/v1/timelines/home?with_muted=true")
+
+      [status] = json_response_and_validate_schema(conn, :ok)
+      assert activity.id == status["id"]
+      assert status["muted"]
+      assert status["pleroma"]["instance_muted"]
+    end
+
+    test "doesn't return statuses with_muted = false", %{conn: conn} do
+      conn = get(conn, "/api/v1/timelines/home?with_muted=false")
+
+      assert json_response_and_validate_schema(conn, :ok) == []
+    end
+  end
+
   describe "public" do
     @tag capture_log: true
     test "the public timeline", %{conn: conn} do

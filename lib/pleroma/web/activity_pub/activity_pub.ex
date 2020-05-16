@@ -924,11 +924,13 @@ defmodule Pleroma.Web.ActivityPub.ActivityPub do
 
   defp restrict_muted(query, %{"muting_user" => %User{} = user} = opts) do
     mutes = opts["muted_users_ap_ids"] || User.muted_users_ap_ids(user)
+    domain_mutes = user.domain_mutes || []
 
     query =
       from([activity] in query,
         where: fragment("not (? = ANY(?))", activity.actor, ^mutes),
-        where: fragment("not (?->'to' \\?| ?)", activity.data, ^mutes)
+        where: fragment("not (?->'to' \\?| ?)", activity.data, ^mutes),
+        where: fragment("not split_part(?, '/', 3) = ANY(?)", activity.actor, ^domain_mutes)
       )
 
     unless opts["skip_preload"] do

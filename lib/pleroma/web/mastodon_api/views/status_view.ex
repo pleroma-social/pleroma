@@ -308,6 +308,7 @@ defmodule Pleroma.Web.MastodonAPI.StatusView do
         _ -> []
       end
 
+    mutes_domain? = User.mutes_domain?(opts[:for], user)
     # Status muted state (would do 1 request per status unless user mutes are preloaded)
     muted =
       thread_muted? ||
@@ -316,8 +317,8 @@ defmodule Pleroma.Web.MastodonAPI.StatusView do
           :mute,
           opts[:for],
           user,
-          fn for_user, user -> User.mutes?(for_user, user) end
-        )
+          fn for_user, user -> User.mutes_user?(for_user, user) end
+        ) || mutes_domain?
 
     %{
       id: to_string(activity.id),
@@ -364,7 +365,8 @@ defmodule Pleroma.Web.MastodonAPI.StatusView do
         expires_at: expires_at,
         direct_conversation_id: direct_conversation_id,
         thread_muted: thread_muted?,
-        emoji_reactions: emoji_reactions
+        emoji_reactions: emoji_reactions,
+        instance_muted: mutes_domain?
       }
     }
   end
