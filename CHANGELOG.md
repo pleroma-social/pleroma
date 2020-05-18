@@ -32,6 +32,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Mastodon API: Add support for filtering replies in public and home timelines
 - Admin API: endpoints for create/update/delete OAuth Apps.
 - Admin API: endpoint for status view.
+- Pleroma API: support for domain muting.
 </details>
 
 ### Fixed
@@ -45,7 +46,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Fixed
 - Healthcheck reporting the number of memory currently used, rather than allocated in total
-- `InsertSkeletonsForDeletedUsers` failing on some instances 
+- `InsertSkeletonsForDeletedUsers` failing on some instances
 
 ## [2.0.3] - 2020-05-02
 

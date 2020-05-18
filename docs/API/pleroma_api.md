@@ -547,3 +547,43 @@ Emoji reactions work a lot like favourites do. They make it possible to react to
   {"name": "😀", "count": 2, "me": true, "accounts": [{"id" => "xyz.."...}, {"id" => "zyx..."}]}
 ]
 ```
+
+# Domain muting
+
+View and update domain mutes.
+
+## `GET /api/pleroma/domain_mutes`
+### View domains the user has muted.
+* Method: `GET`
+* Authentication: required
+* Params: None
+* Response: JSON, a list of muted domains.
+* Example Response:
+```json
+[
+  "example.com",
+  "example.2.com"
+]
+```
+
+## `POST /api/pleroma/domain_mutes`
+### Mute domain
+* Method: `POST`
+* Authentication: required
+* Params:
+  * `domain` - domain to mute
+* Example Response:
+```json
+{}
+```
+
+## `DELETE /api/pleroma/domain_mutes`
+### Unmute domain
+* Method: `DELETE`
+* Authentication: required
+* Params:
+  * `domain` - domain to unmute
+* Example Response:
+```json
+{}
+```
