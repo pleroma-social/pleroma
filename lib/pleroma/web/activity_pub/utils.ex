@@ -115,7 +115,9 @@ defmodule Pleroma.Web.ActivityPub.Utils do
   end
 
   def make_date do
-    DateTime.utc_now() |> DateTime.to_iso8601()
+    System.system_time()
+    |> DateTime.from_unix!(:native, Calendar.ISO)
+    |> DateTime.to_iso8601()
   end
 
   def generate_activity_id do
