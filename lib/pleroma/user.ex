@@ -979,14 +979,14 @@ defmodule Pleroma.User do
   @spec get_followers_query(User.t()) :: Ecto.Query.t()
   def get_followers_query(user), do: get_followers_query(user, nil)
 
-  @spec get_followers(User.t(), pos_integer() | nil) :: [User.t()]
+  @spec get_followers(t(), pos_integer() | nil) :: [t()]
   def get_followers(user, page \\ nil) do
     user
     |> get_followers_query(page)
     |> Repo.all()
   end
 
-  @spec get_external_followers(User.t(), pos_integer() | nil) :: [User.t()]
+  @spec get_external_followers(t(), pos_integer() | nil) :: [t()]
   def get_external_followers(user, page \\ nil) do
     user
     |> get_followers_query(page)
@@ -1001,7 +1001,7 @@ defmodule Pleroma.User do
     |> Repo.all()
   end
 
-  @spec get_friends_query(User.t(), pos_integer() | nil) :: Ecto.Query.t()
+  @spec get_friends_query(t(), pos_integer() | nil) :: Ecto.Query.t()
   def get_friends_query(%User{} = user, nil) do
     User.Query.build(%{friends: user, deactivated: false})
   end
@@ -1289,19 +1289,19 @@ defmodule Pleroma.User do
     unblock(blocker, get_cached_by_ap_id(ap_id))
   end
 
-  @spec mutes?(User.t() | nil, User.t()) :: boolean()
+  @spec mutes?(t() | nil, t()) :: boolean()
   def mutes?(nil, _), do: false
 
   def mutes?(%User{} = user, %User{} = target) do
     mutes_user?(user, target) || mutes_domain?(user, target)
   end
 
-  @spec mutes_user?(User.t(), User.t()) :: boolean()
+  @spec mutes_user?(t(), t()) :: boolean()
   def mutes_user?(%User{} = user, %User{} = target) do
     UserRelationship.mute_exists?(user, target)
   end
 
-  @spec mutes_domain?(User.t() | nil, User.t()) :: boolean()
+  @spec mutes_domain?(t() | nil, t()) :: boolean()
   def mutes_domain?(nil, _), do: false
 
   def mutes_domain?(%User{} = user, %User{} = target) do
@@ -2147,12 +2147,12 @@ defmodule Pleroma.User do
     |> update_and_set_cache()
   end
 
-  @spec mute_domain(User.t(), String.t()) :: {:ok, User.t()}
+  @spec mute_domain(t(), String.t()) :: {:ok, t()}
   def mute_domain(%User{} = user, muted_domain) do
     set_domain_mutes(user, Enum.uniq([muted_domain | user.domain_mutes]))
   end
 
-  @spec unmute_domain(User.t(), String.t()) :: {:ok, User.t()}
+  @spec unmute_domain(t(), String.t()) :: {:ok, t()}
   def unmute_domain(user, muted_domain) do
     set_domain_mutes(user, List.delete(user.domain_mutes, muted_domain))
   end
