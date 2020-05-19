@@ -56,9 +56,7 @@ defmodule Pleroma.Web.ApiSpec.DomainMuteOperation do
       operationId: "DomainMuteController.delete",
       requestBody: domain_mute_request(),
       security: [%{"oAuth" => ["follow", "write:mutes"]}],
-      responses: %{
-        200 => Operation.response("Empty object", "application/json", %Schema{type: :object})
-      }
+      responses: %{200 => empty_object_response()}
     }
   end
 
