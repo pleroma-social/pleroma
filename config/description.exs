@@ -1762,7 +1762,9 @@ config :pleroma, :config_description, [
       %{
         key: :script_path,
         type: :string,
-        description: "Path to a custom script to automate cache invalidation."
+        description:
+          "Path to a custom script to automate cache invalidation." <>
+            "See `installation/nginx-cache-purge.sh.example` for additional help."
       }
     ]
   },
