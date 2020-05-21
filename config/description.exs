@@ -1658,6 +1658,43 @@ config :pleroma, :config_description, [
         ]
       },
       %{
+        key: Pleroma.Web.MediaProxy.Invalidation.Http,
+        type: :group,
+        description: "MediaProxy Cache Invalidation Http Settings",
+        children: [
+          %{
+            key: :method,
+            type: :string,
+            description: "HTTP method for invalidation requests.",
+            suggestions: ["purge"]
+          },
+          %{
+            key: :headers,
+            type: :string,
+            description: "Additional HTTP headers for invalidation requests."
+          },
+          %{
+            key: :options,
+            type: :string,
+            description: "Additional HTTP request options for invalidation requests."
+          }
+        ]
+      },
+      %{
+        key: Pleroma.Web.MediaProxy.Invalidation.Script,
+        type: :group,
+        description: "MediaProxy Cache Invalidation Script Settings",
+        children: [
+          %{
+            key: :script_path,
+            type: :string,
+            description:
+              "Path to a custom script to automate cache invalidation." <>
+                "See `installation/nginx-cache-purge.sh.example` for additional help."
+          }
+        ]
+      },
+      %{
         key: :proxy_opts,
         type: :keyword,
         description: "Options for Pleroma.ReverseProxy",
@@ -1726,45 +1763,6 @@ config :pleroma, :config_description, [
         type: {:list, :string},
         description: "List of domains to bypass the mediaproxy",
         suggestions: ["example.com"]
-      }
-    ]
-  },
-  %{
-    group: :pleroma,
-    key: Pleroma.Web.MediaProxy.Invalidation.Http,
-    type: :group,
-    description: "MediaProxy Cache Invalidation Http Settings",
-    children: [
-      %{
-        key: :method,
-        type: :string,
-        description: "HTTP method for invalidation requests.",
-        suggestions: ["purge"]
-      },
-      %{
-        key: :headers,
-        type: :string,
-        description: "Additional HTTP headers for invalidation requests."
-      },
-      %{
-        key: :options,
-        type: :string,
-        description: "Additional HTTP request options for invalidation requests."
-      }
-    ]
-  },
-  %{
-    group: :pleroma,
-    key: Pleroma.Web.MediaProxy.Invalidation.Script,
-    type: :group,
-    description: "MediaProxy Cache Invalidation Script Settings",
-    children: [
-      %{
-        key: :script_path,
-        type: :string,
-        description:
-          "Path to a custom script to automate cache invalidation." <>
-            "See `installation/nginx-cache-purge.sh.example` for additional help."
       }
     ]
   },
