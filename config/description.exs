@@ -1633,6 +1633,31 @@ config :pleroma, :config_description, [
         suggestions: ["https://example.com"]
       },
       %{
+        key: :invalidation,
+        type: :keyword,
+        description: "Cache invalidation for MediaProxy",
+        suggestions: [
+          enabled: false,
+          provider: Pleroma.Web.MediaProxy.Invalidation.Script
+        ],
+        children: [
+          %{
+            key: :enabled,
+            type: :boolean,
+            description: "Enable cache invalidation when object is deleted."
+          },
+          %{
+            key: :provider,
+            type: {:dropdown, :atom},
+            suggestions: [
+              "Pleroma.Web.MediaProxy.Invalidation.Http",
+              "Pleroma.Web.MediaProxy.Invalidation.Script"
+            ],
+            description: "Invalidate cached objects via HTTP or a custom script."
+          }
+        ]
+      },
+      %{
         key: :proxy_opts,
         type: :keyword,
         description: "Options for Pleroma.ReverseProxy",
@@ -1701,6 +1726,43 @@ config :pleroma, :config_description, [
         type: {:list, :string},
         description: "List of domains to bypass the mediaproxy",
         suggestions: ["example.com"]
+      }
+    ]
+  },
+  %{
+    group: :pleroma,
+    key: Pleroma.Web.MediaProxy.Invalidation.Http,
+    type: :group,
+    description: "MediaProxy Cache Invalidation Http Settings",
+    children: [
+      %{
+        key: :method,
+        type: :string,
+        description: "HTTP method for invalidation requests.",
+        suggestions: ["purge"]
+      },
+      %{
+        key: :headers,
+        type: :string,
+        description: "Additional HTTP headers for invalidation requests."
+      },
+      %{
+        key: :options,
+        type: :string,
+        description: "Additional HTTP request options for invalidation requests."
+      }
+    ]
+  },
+  %{
+    group: :pleroma,
+    key: Pleroma.Web.MediaProxy.Invalidation.Script,
+    type: :group,
+    description: "MediaProxy Cache Invalidation Script Settings",
+    children: [
+      %{
+        key: :script_path,
+        type: :string,
+        description: "Path to a custom script to automate cache invalidation."
       }
     ]
   },
