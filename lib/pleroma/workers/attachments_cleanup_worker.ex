@@ -27,20 +27,8 @@ defmodule Pleroma.Workers.AttachmentsCleanupWorker do
 
     uploader = Pleroma.Config.get([Pleroma.Upload, :uploader])
 
-    prefix =
-      case Pleroma.Config.get([Pleroma.Upload, :base_url]) do
-        nil -> "media"
-        _ -> ""
-      end
-
-    base_url =
-      String.trim_trailing(
-        Pleroma.Config.get([Pleroma.Upload, :base_url], Pleroma.Web.base_url()),
-        "/"
-      )
-
     # find all objects for copies of the attachments, name and actor doesn't matter here
-    object_ids_and_hrefs =
+    delete_ids =
       from(o in Object,
         where:
           fragment(
@@ -79,28 +67,29 @@ defmodule Pleroma.Workers.AttachmentsCleanupWorker do
       |> Enum.map(fn {href, %{id: id, count: count}} ->
         # only delete files that have single instance
         with 1 <- count do
-          href
-          |> String.trim_leading("#{base_url}/#{prefix}")
-          |> uploader.delete_file()
+          prefix =
+            case Pleroma.Config.get([Pleroma.Upload, :base_url]) do
+              nil -> "media"
+              _ -> ""
+            end
 
-          {id, href}
-        else
-          _ -> {id, nil}
+          base_url =
+            String.trim_trailing(
+              Pleroma.Config.get([Pleroma.Upload, :base_url], Pleroma.Web.base_url()),
+              "/"
+            )
+
+          file_path = String.trim_leading(href, "#{base_url}/#{prefix}")
+
+          uploader.delete_file(file_path)
         end
+
+        id
       end)
 
-    object_ids = Enum.map(object_ids_and_hrefs, fn {id, _} -> id end)
-
-    from(o in Object, where: o.id in ^object_ids)
+    from(o in Object, where: o.id in ^delete_ids)
     |> Repo.delete_all()
-
-    object_ids_and_hrefs
-    |> Enum.filter(fn {_, href} -> not is_nil(href) end)
-    |> Enum.map(&elem(&1, 1))
-    |> Pleroma.Web.MediaProxy.Invalidation.purge()
-
-    {:ok, :success}
   end
 
-  def perform(%{"op" => "cleanup_attachments", "object" => _object}, _job), do: {:ok, :skip}
+  def perform(%{"op" => "cleanup_attachments", "object" => _object}, _job), do: :ok
 end
