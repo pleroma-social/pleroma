@@ -17,7 +17,8 @@ defmodule Pleroma.Web.MediaProxy.Invalidation.Http do
     Logger.debug("Running cache purge: #{inspect(urls)}")
 
     Enum.each(urls, fn url ->
-      with {:error, error} <- do_purge(method, url, headers, options) do
+      with {:error, error} <-
+             do_purge(method, url |> Pleroma.Web.MediaProxy.url(), headers, options) do
         Logger.error("Error while cache purge: url - #{url}, error: #{inspect(error)}")
       end
     end)

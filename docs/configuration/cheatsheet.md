@@ -283,10 +283,11 @@ This strategy allow perform custom http request to purge cache.
 
 Example:
 ```elixir
-config :pleroma, Pleroma.Web.MediaProxy.Invalidation.Http,
-  method: :purge,
-  headers: [],
-  options: []
+config :pleroma, Pleroma.Web.MediaProxy.Invalidation.Http, %{
+  "method" => :purge,
+  "headers" => [],
+  "options" => []
+}
 ```
 
 ## Link previews
