@@ -5,9 +5,10 @@
 defmodule Pleroma.Web.MediaProxy.Invalidation do
   @moduledoc false
 
-  @callback purge(list(String.t()), map()) :: {:ok, String.t()} | {:error, String.t()}
+  @callback purge(list(String.t()), Keyword.t()) :: {:ok, String.t()} | {:error, String.t()}
 
   alias Pleroma.Config
+  alias Pleroma.Web.MediaProxy
 
   @spec purge(list(String.t())) :: {:ok, String.t()} | {:error, String.t()}
   def purge(urls) do
@@ -19,7 +20,11 @@ defmodule Pleroma.Web.MediaProxy.Invalidation do
   defp do_purge(true, urls) do
     provider = Config.get([:media_proxy, :invalidation, :provider])
     options = Config.get(provider)
-    provider.purge(urls, options)
+
+    urls
+    |> List.wrap()
+    |> Enum.map(&MediaProxy.url(&1))
+    |> provider.purge(options)
   end
 
   defp do_purge(_, _), do: :ok

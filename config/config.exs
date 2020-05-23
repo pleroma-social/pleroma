@@ -405,11 +405,10 @@ config :pleroma, :media_proxy,
   ],
   whitelist: []
 
-config :pleroma, Pleroma.Web.MediaProxy.Invalidation.Http, %{
-  "method" => :purge,
-  "headers" => [],
-  "options" => []
-}
+config :pleroma, Pleroma.Web.MediaProxy.Invalidation.Http,
+  method: :purge,
+  headers: [],
+  options: []
 
 config :pleroma, Pleroma.Web.MediaProxy.Invalidation.Script, script_path: nil
 

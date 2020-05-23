@@ -14,7 +14,7 @@ defmodule Pleroma.Web.MediaProxy.Invalidation.HttpTest do
     refute capture_log(fn ->
              assert Invalidation.Http.purge(
                       ["http://example.com/media/example.jpg"],
-                      %{}
+                      []
                     ) == {:ok, "success"}
            end) =~ "Error while cache purge"
   end
@@ -28,7 +28,7 @@ defmodule Pleroma.Web.MediaProxy.Invalidation.HttpTest do
     assert capture_log(fn ->
              assert Invalidation.Http.purge(
                       ["http://example.com/media/example1.jpg"],
-                      %{}
+                      []
                     ) == {:ok, "success"}
            end) =~ "Error while cache purge: url - http://example.com/media/example1.jpg"
   end
