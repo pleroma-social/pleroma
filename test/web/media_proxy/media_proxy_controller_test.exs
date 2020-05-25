@@ -66,4 +66,16 @@ defmodule Pleroma.Web.MediaProxy.MediaProxyControllerTest do
       assert %Plug.Conn{status: :success} = get(conn, url)
     end
   end
+
+  test "it returns 404 when url contains in deleted_urls cache", %{conn: conn} do
+    Config.put([:media_proxy, :enabled], true)
+    Config.put([Pleroma.Web.Endpoint, :secret_key_base], "00000000000")
+    url = Pleroma.Web.MediaProxy.encode_url("https://google.fn/test.png")
+    Pleroma.Web.MediaProxy.put_in_deleted_urls("https://google.fn/test.png")
+
+    with_mock Pleroma.ReverseProxy,
+      call: fn _conn, _url, _opts -> %Plug.Conn{status: :success} end do
+      assert %Plug.Conn{status: 404, resp_body: "Not Found"} = get(conn, url)
+    end
+  end
 end

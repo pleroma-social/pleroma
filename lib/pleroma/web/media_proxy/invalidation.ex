@@ -5,27 +5,32 @@
 defmodule Pleroma.Web.MediaProxy.Invalidation do
   @moduledoc false
 
-  @callback purge(list(String.t()), Keyword.t()) :: {:ok, String.t()} | {:error, String.t()}
+  @callback purge(list(String.t()), Keyword.t()) :: {:ok, list(String.t())} | {:error, String.t()}
 
   alias Pleroma.Config
   alias Pleroma.Web.MediaProxy
 
-  @spec purge(list(String.t())) :: {:ok, String.t()} | {:error, String.t()}
+  @spec purge(list(String.t()) | String.t()) :: {:ok, list(String.t())} | {:error, String.t()}
   def purge(urls) do
-    [:media_proxy, :invalidation, :enabled]
-    |> Config.get()
-    |> do_purge(urls)
+    prepared_urls = prepare_urls(urls)
+
+    if Config.get([:media_proxy, :invalidation, :enabled]) do
+      result = do_purge(prepared_urls)
+      MediaProxy.remove_from_deleted_urls(prepared_urls)
+      result
+    else
+      {:ok, prepared_urls}
+    end
   end
 
-  defp do_purge(true, urls) do
+  defp do_purge(urls) do
     provider = Config.get([:media_proxy, :invalidation, :provider])
-    options = Config.get(provider)
+    provider.purge(urls, Config.get(provider))
+  end
 
+  defp prepare_urls(urls) do
     urls
     |> List.wrap()
     |> Enum.map(&MediaProxy.url(&1))
-    |> provider.purge(options)
   end
-
-  defp do_purge(_, _), do: :ok
 end

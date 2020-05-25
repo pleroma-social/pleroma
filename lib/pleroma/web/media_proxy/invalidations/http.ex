@@ -22,7 +22,7 @@ defmodule Pleroma.Web.MediaProxy.Invalidation.Http do
       end
     end)
 
-    {:ok, "success"}
+    {:ok, urls}
   end
 
   defp do_purge(method, url, headers, options) do

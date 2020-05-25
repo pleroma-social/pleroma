@@ -20,7 +20,7 @@ defmodule Pleroma.Web.MediaProxy.Invalidation.Script do
     opts
     |> Keyword.get(:script_path, nil)
     |> do_purge([args])
-    |> handle_error
+    |> handle_result(urls)
   end
 
   defp do_purge(script_path, args) when is_binary(script_path) do
@@ -33,10 +33,10 @@ defmodule Pleroma.Web.MediaProxy.Invalidation.Script do
 
   defp do_purge(_, _), do: {:error, "not found script path"}
 
-  defp handle_error({_result, 0}), do: {:ok, "success"}
-  defp handle_error({:error, error}), do: handle_error(error)
+  defp handle_result({_result, 0}, urls), do: {:ok, urls}
+  defp handle_result({:error, error}, urls), do: handle_result(error, urls)
 
-  defp handle_error(error) do
+  defp handle_result(error, _) do
     Logger.error("Error while cache purge: #{inspect(error)}")
     {:error, inspect(error)}
   end
