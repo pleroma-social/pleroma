@@ -11,7 +11,7 @@ defmodule Pleroma.Web.MediaProxy.MediaProxyControllerTest do
   setup do: clear_config([Pleroma.Web.Endpoint, :secret_key_base])
 
   setup do
-    on_exit(fn -> Cachex.purge(:deleted_urls_cache) end)
+    on_exit(fn -> Cachex.clear(:deleted_urls_cache) end)
     :ok
   end
 
