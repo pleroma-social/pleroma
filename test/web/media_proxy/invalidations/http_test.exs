@@ -5,6 +5,11 @@ defmodule Pleroma.Web.MediaProxy.Invalidation.HttpTest do
   import ExUnit.CaptureLog
   import Tesla.Mock
 
+  setup do
+    on_exit(fn -> Cachex.purge(:deleted_urls_cache) end)
+    :ok
+  end
+
   test "logs hasn't error message when request is valid" do
     mock(fn
       %{method: :purge, url: "http://example.com/media/example.jpg"} ->

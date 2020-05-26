@@ -10,10 +10,10 @@ defmodule Pleroma.Web.MediaProxy do
   @base64_opts [padding: false]
 
   @spec in_deleted_urls(String.t()) :: boolean()
-  def in_deleted_urls(url), do: !!Cachex.get!(:deleted_urls_cache, url)
+  def in_deleted_urls(url), do: elem(Cachex.exists?(:deleted_urls_cache, url), 1)
 
   def remove_from_deleted_urls(urls) when is_list(urls) do
-    Enum.each(urls, &remove_from_deleted_urls(&1))
+    Enum.each(urls, &remove_from_deleted_urls/1)
   end
 
   def remove_from_deleted_urls(url) when is_binary(url) do
@@ -21,7 +21,7 @@ defmodule Pleroma.Web.MediaProxy do
   end
 
   def put_in_deleted_urls(urls) when is_list(urls) do
-    Enum.each(urls, &put_in_deleted_urls(&1))
+    Enum.each(urls, &put_in_deleted_urls/1)
   end
 
   def put_in_deleted_urls(url) when is_binary(url) do
