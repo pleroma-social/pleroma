@@ -13,7 +13,9 @@ defmodule Pleroma.Web.MediaProxy do
   def in_deleted_urls(url), do: elem(Cachex.exists?(:deleted_urls_cache, url), 1)
 
   def remove_from_deleted_urls(urls) when is_list(urls) do
-    Enum.each(urls, &remove_from_deleted_urls/1)
+    Cachex.execute!(:deleted_urls_cache, fn cache ->
+      Enum.each(urls, &Cachex.del(cache, &1))
+    end)
   end
 
   def remove_from_deleted_urls(url) when is_binary(url) do
@@ -21,7 +23,9 @@ defmodule Pleroma.Web.MediaProxy do
   end
 
   def put_in_deleted_urls(urls) when is_list(urls) do
-    Enum.each(urls, &put_in_deleted_urls/1)
+    Cachex.execute!(:deleted_urls_cache, fn cache ->
+      Enum.each(urls, &Cachex.put(cache, &1, true))
+    end)
   end
 
   def put_in_deleted_urls(url) when is_binary(url) do

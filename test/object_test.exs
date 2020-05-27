@@ -76,6 +76,7 @@ defmodule Pleroma.ObjectTest do
   describe "delete attachments" do
     setup do: clear_config([Pleroma.Upload])
     setup do: clear_config([:instance, :cleanup_attachments])
+    setup do: clear_config([:media_proxy])
 
     test "Disabled via config" do
       Pleroma.Config.put([Pleroma.Upload, :uploader], Pleroma.Uploaders.Local)
@@ -109,6 +110,7 @@ defmodule Pleroma.ObjectTest do
       refute Object.get_by_id(attachment.id) == nil
 
       assert {:ok, ["an_image.jpg"]} == File.ls("#{uploads_dir}/#{path}")
+      refute Pleroma.Web.MediaProxy.in_deleted_urls(href)
     end
 
     test "in subdirectories" do

@@ -7,6 +7,7 @@ defmodule Pleroma.Workers.AttachmentsCleanupWorker do
 
   alias Pleroma.Object
   alias Pleroma.Repo
+  alias Pleroma.Web.MediaProxy
 
   use Pleroma.Workers.WorkerHelper, queue: "attachments_cleanup"
 
@@ -50,7 +51,7 @@ defmodule Pleroma.Workers.AttachmentsCleanupWorker do
         end
       end)
 
-    Pleroma.Web.MediaProxy.put_in_deleted_urls(attachment_urls)
+    lock_attachments(MediaProxy.Invalidation.enabled(), attachment_urls)
 
     Enum.each(attachment_urls, fn href ->
       href
@@ -60,20 +61,28 @@ defmodule Pleroma.Workers.AttachmentsCleanupWorker do
 
     Repo.delete_all(from(o in Object, where: o.id in ^object_ids))
 
-    cache_purge(attachment_urls)
+    cache_purge(MediaProxy.Invalidation.enabled(), attachment_urls)
 
     {:ok, :success}
   end
 
   def perform(%{"op" => "cleanup_attachments", "object" => _object}, _job), do: {:ok, :skip}
 
-  defp cache_purge(attachment_urls) do
-    Pleroma.Web.MediaProxy.Invalidation.purge(attachment_urls)
+  defp cache_purge(true, attachment_urls) do
+    MediaProxy.Invalidation.purge(attachment_urls)
   end
+
+  defp cache_purge(_, _), do: :ok
+
+  defp lock_attachments(true, attachment_urls) do
+    MediaProxy.put_in_deleted_urls(attachment_urls)
+  end
+
+  defp lock_attachments(_, _), do: :ok
 
   # we should delete 1 object for any given attachment, but don't delete
   # files if there are more than 1 object for it
-  def prepare_objects(objects, actor, names) do
+  defp prepare_objects(objects, actor, names) do
     objects
     |> Enum.reduce(%{}, fn %{
                              id: id,

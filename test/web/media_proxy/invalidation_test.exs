@@ -38,7 +38,7 @@ defmodule Pleroma.Web.MediaProxy.InvalidationTest do
       assert capture_log(fn ->
                assert Pleroma.Web.MediaProxy.in_deleted_urls(image_url)
                assert Invalidation.purge([image_url]) == {:ok, [image_url]}
-               refute Pleroma.Web.MediaProxy.in_deleted_urls(image_url)
+               assert Pleroma.Web.MediaProxy.in_deleted_urls(image_url)
              end) =~ "Running cache purge: [\"#{image_url}\"]"
     end
   end
@@ -57,7 +57,7 @@ defmodule Pleroma.Web.MediaProxy.InvalidationTest do
         assert capture_log(fn ->
                  assert Pleroma.Web.MediaProxy.in_deleted_urls(image_url)
                  assert Invalidation.purge([image_url]) == {:ok, [image_url]}
-                 refute Pleroma.Web.MediaProxy.in_deleted_urls(image_url)
+                 assert Pleroma.Web.MediaProxy.in_deleted_urls(image_url)
                end) =~ "Running cache purge: [\"#{image_url}\"]"
       end
     end
