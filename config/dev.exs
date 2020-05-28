@@ -52,6 +52,8 @@ config :pleroma, Pleroma.Repo,
   hostname: "localhost",
   pool_size: 10
 
+config :pleroma, Pleroma.Web.ApiSpec.CastAndValidate, strict: true
+
 config :pleroma, :frontends,
   primary: %{"name" => "pleroma", "ref" => "develop"},
   mastodon: %{"name" => "mastodon", "ref" => "develop"},

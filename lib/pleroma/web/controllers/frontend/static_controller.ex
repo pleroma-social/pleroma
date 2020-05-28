@@ -15,7 +15,7 @@ defmodule Pleroma.Web.Frontend.StaticController do
   plug(:put_layout, :static_fe)
 
   plug(Pleroma.Plugs.EnsureAuthenticatedPlug,
-    unless_func: &Pleroma.Web.FederatingPlug.federating?/0
+    unless_func: &Pleroma.Web.FederatingPlug.federating?/1
   )
 
   @page_keys ["max_id", "min_id", "limit", "since_id", "order"]
