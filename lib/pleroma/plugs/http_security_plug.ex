@@ -50,7 +50,7 @@ defmodule Pleroma.Plugs.HTTPSecurityPlug do
   end
 
   defp csp_string do
-    scheme = Config.get([Pleroma.Web.Endpoint, :url])[:scheme]
+    scheme = Config.get([Pleroma.Web.Endpoint, :url, :scheme])
     static_url = Pleroma.Web.Endpoint.static_url()
     websocket_url = Pleroma.Web.Endpoint.websocket_url()
     report_uri = Config.get([:http_security, :report_uri])
@@ -75,8 +75,8 @@ defmodule Pleroma.Plugs.HTTPSecurityPlug do
       "default-src 'none'",
       "base-uri 'self'",
       "frame-ancestors 'none'",
-      "img-src 'self' data: blob: https:",
-      "media-src 'self' https:",
+      "img-src 'self' data: blob: #{scheme}:",
+      "media-src 'self' #{scheme}:",
       "style-src 'self' 'unsafe-inline'",
       "font-src 'self'",
       "manifest-src 'self'",
