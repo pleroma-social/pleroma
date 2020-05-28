@@ -20,6 +20,7 @@ defmodule Pleroma.Web.ActivityPub.ActivityPub do
   alias Pleroma.Web.ActivityPub.MRF
   alias Pleroma.Web.ActivityPub.Transmogrifier
   alias Pleroma.Web.ActivityPub.Utils
+  alias Pleroma.Web.MediaProxy
   alias Pleroma.Web.Streamer
   alias Pleroma.Web.WebFinger
   alias Pleroma.Workers.BackgroundWorker
@@ -86,6 +87,24 @@ defmodule Pleroma.Web.ActivityPub.ActivityPub do
   end
 
   defp check_remote_limit(_), do: true
+
+  @spec remove_deleted_attachements_from_cache(boolean(), map()) :: :ok
+  def remove_deleted_attachements_from_cache(true, %{
+        "object" => %{"attachment" => [_ | _] = attachments}
+      }) do
+    Task.start(fn ->
+      attachments
+      |> Enum.flat_map(fn
+        %{"url" => urls} -> Enum.map(urls, & &1["href"])
+        _ -> []
+      end)
+      |> MediaProxy.remove_from_deleted_urls()
+    end)
+
+    :ok
+  end
+
+  def remove_deleted_attachements_from_cache(_, _), do: :ok
 
   def increase_note_count_if_public(actor, object) do
     if is_public?(object), do: User.increase_note_count(actor), else: {:ok, actor}
@@ -275,16 +294,15 @@ defmodule Pleroma.Web.ActivityPub.ActivityPub do
          {:fake, false, activity} <- {:fake, fake, activity},
          _ <- increase_replies_count_if_reply(create_data),
          _ <- increase_poll_votes_if_vote(create_data),
+         _ <-
+           remove_deleted_attachements_from_cache(MediaProxy.Invalidation.enabled(), create_data),
          {:quick_insert, false, activity} <- {:quick_insert, quick_insert?, activity},
          {:ok, _actor} <- increase_note_count_if_public(actor, activity),
          _ <- notify_and_stream(activity),
          :ok <- maybe_federate(activity) do
       {:ok, activity}
     else
-      {:quick_insert, true, activity} ->
-        {:ok, activity}
-
-      {:fake, true, activity} ->
+      {type, true, activity} when type in [:fake, :quick_insert] ->
         {:ok, activity}
 
       {:error, message} ->
