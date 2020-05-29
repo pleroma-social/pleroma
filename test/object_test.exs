@@ -9,10 +9,12 @@ defmodule Pleroma.ObjectTest do
   import Pleroma.Factory
   import Tesla.Mock
   alias Pleroma.Activity
+  alias Pleroma.Config
   alias Pleroma.Object
   alias Pleroma.Repo
   alias Pleroma.Tests.ObanHelpers
   alias Pleroma.Web.CommonAPI
+  alias Pleroma.Web.MediaProxy.Invalidation
 
   setup do
     mock(fn env -> apply(HttpRequestMock, :request, [env]) end)
@@ -114,8 +116,10 @@ defmodule Pleroma.ObjectTest do
     end
 
     test "in subdirectories" do
-      Pleroma.Config.put([Pleroma.Upload, :uploader], Pleroma.Uploaders.Local)
-      Pleroma.Config.put([:instance, :cleanup_attachments], true)
+      Config.put([Pleroma.Upload, :uploader], Pleroma.Uploaders.Local)
+      Config.put([:instance, :cleanup_attachments], true)
+      Config.put([:media_proxy, :invalidation, :enabled], true)
+      Config.put([:media_proxy, :invalidation, :provider], Invalidation.Mock)
 
       file = %Plug.Upload{
         content_type: "image/jpg",
@@ -145,12 +149,15 @@ defmodule Pleroma.ObjectTest do
       assert Object.get_by_id(attachment.id) == nil
 
       assert {:ok, []} == File.ls("#{uploads_dir}/#{path}")
+      assert Pleroma.Web.MediaProxy.in_deleted_urls(href)
     end
 
     test "with dedupe enabled" do
-      Pleroma.Config.put([Pleroma.Upload, :uploader], Pleroma.Uploaders.Local)
-      Pleroma.Config.put([Pleroma.Upload, :filters], [Pleroma.Upload.Filter.Dedupe])
-      Pleroma.Config.put([:instance, :cleanup_attachments], true)
+      Config.put([Pleroma.Upload, :uploader], Pleroma.Uploaders.Local)
+      Config.put([Pleroma.Upload, :filters], [Pleroma.Upload.Filter.Dedupe])
+      Config.put([:instance, :cleanup_attachments], true)
+      Config.put([:media_proxy, :invalidation, :enabled], true)
+      Config.put([:media_proxy, :invalidation, :provider], Invalidation.Mock)
 
       uploads_dir = Pleroma.Config.get!([Pleroma.Uploaders.Local, :uploads])
 
@@ -183,11 +190,14 @@ defmodule Pleroma.ObjectTest do
       assert Object.get_by_id(attachment.id) == nil
       assert {:ok, files} = File.ls(uploads_dir)
       refute filename in files
+      assert Pleroma.Web.MediaProxy.in_deleted_urls(href)
     end
 
     test "with objects that have legacy data.url attribute" do
-      Pleroma.Config.put([Pleroma.Upload, :uploader], Pleroma.Uploaders.Local)
-      Pleroma.Config.put([:instance, :cleanup_attachments], true)
+      Config.put([Pleroma.Upload, :uploader], Pleroma.Uploaders.Local)
+      Config.put([:instance, :cleanup_attachments], true)
+      Config.put([:media_proxy, :invalidation, :enabled], true)
+      Config.put([:media_proxy, :invalidation, :provider], Invalidation.Mock)
 
       file = %Plug.Upload{
         content_type: "image/jpg",
@@ -219,12 +229,15 @@ defmodule Pleroma.ObjectTest do
       assert Object.get_by_id(attachment.id) == nil
 
       assert {:ok, []} == File.ls("#{uploads_dir}/#{path}")
+      assert Pleroma.Web.MediaProxy.in_deleted_urls(href)
     end
 
     test "With custom base_url" do
-      Pleroma.Config.put([Pleroma.Upload, :uploader], Pleroma.Uploaders.Local)
-      Pleroma.Config.put([Pleroma.Upload, :base_url], "https://sub.domain.tld/dir/")
-      Pleroma.Config.put([:instance, :cleanup_attachments], true)
+      Config.put([Pleroma.Upload, :uploader], Pleroma.Uploaders.Local)
+      Config.put([Pleroma.Upload, :base_url], "https://sub.domain.tld/dir/")
+      Config.put([:instance, :cleanup_attachments], true)
+      Config.put([:media_proxy, :invalidation, :enabled], true)
+      Config.put([:media_proxy, :invalidation, :provider], Invalidation.Mock)
 
       file = %Plug.Upload{
         content_type: "image/jpg",
@@ -254,6 +267,7 @@ defmodule Pleroma.ObjectTest do
       assert Object.get_by_id(attachment.id) == nil
 
       assert {:ok, []} == File.ls("#{uploads_dir}/#{path}")
+      assert Pleroma.Web.MediaProxy.in_deleted_urls(href)
     end
   end
 
