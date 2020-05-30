@@ -88,8 +88,8 @@ defmodule Pleroma.Web.ActivityPub.ActivityPub do
 
   defp check_remote_limit(_), do: true
 
-  @spec remove_deleted_attachements_from_cache(boolean(), map()) :: :ok
-  def remove_deleted_attachements_from_cache(true, %{
+  @spec maybe_remove_mediaproxy_invalidation(boolean, map()) :: :ok
+  def maybe_remove_mediaproxy_invalidation(true, %{
         "object" => %{"attachment" => [_ | _] = attachments}
       }) do
     Task.start(fn ->
@@ -104,7 +104,7 @@ defmodule Pleroma.Web.ActivityPub.ActivityPub do
     :ok
   end
 
-  def remove_deleted_attachements_from_cache(_, _), do: :ok
+  def maybe_remove_mediaproxy_invalidation(_, _), do: :ok
 
   def increase_note_count_if_public(actor, object) do
     if is_public?(object), do: User.increase_note_count(actor), else: {:ok, actor}
@@ -295,7 +295,7 @@ defmodule Pleroma.Web.ActivityPub.ActivityPub do
          _ <- increase_replies_count_if_reply(create_data),
          _ <- increase_poll_votes_if_vote(create_data),
          _ <-
-           remove_deleted_attachements_from_cache(MediaProxy.Invalidation.enabled(), create_data),
+           maybe_remove_mediaproxy_invalidation(MediaProxy.Invalidation.enabled(), create_data),
          {:quick_insert, false, activity} <- {:quick_insert, quick_insert?, activity},
          {:ok, _actor} <- increase_note_count_if_public(actor, activity),
          _ <- notify_and_stream(activity),
