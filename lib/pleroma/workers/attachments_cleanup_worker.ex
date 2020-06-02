@@ -39,19 +39,20 @@ defmodule Pleroma.Workers.AttachmentsCleanupWorker do
       )
 
     # find all objects for copies of the attachments, name and actor doesn't matter here
-    {object_ids, attachment_urls} =
+    {object_ids, attachment_urls, exclude_urls} =
       hrefs
       |> fetch_objects
       |> prepare_objects(actor, Enum.map(attachments, & &1["name"]))
-      |> Enum.reduce({[], []}, fn {href, %{id: id, count: count}}, {ids, hrefs} ->
+      |> Enum.reduce({[], [], []}, fn {href, %{id: id, count: count}},
+                                      {ids, hrefs, exclude_urls} ->
         with 1 <- count do
-          {ids ++ [id], hrefs ++ [href]}
+          {ids ++ [id], hrefs ++ [href], exclude_urls}
         else
-          _ -> {ids ++ [id], hrefs}
+          _ -> {ids ++ [id], hrefs, exclude_urls ++ [href]}
         end
       end)
 
-    lock_attachments(MediaProxy.Invalidation.enabled(), attachment_urls)
+    lock_attachments(MediaProxy.Invalidation.enabled(), hrefs -- exclude_urls)
 
     Enum.each(attachment_urls, fn href ->
       href
@@ -59,14 +60,20 @@ defmodule Pleroma.Workers.AttachmentsCleanupWorker do
       |> uploader.delete_file()
     end)
 
-    Repo.delete_all(from(o in Object, where: o.id in ^object_ids))
+    delete_objects(object_ids)
 
-    cache_purge(MediaProxy.Invalidation.enabled(), attachment_urls)
+    cache_purge(MediaProxy.Invalidation.enabled(), hrefs -- exclude_urls)
 
     {:ok, :success}
   end
 
   def perform(%{"op" => "cleanup_attachments", "object" => _object}, _job), do: {:ok, :skip}
+
+  defp delete_objects([_ | _] = object_ids) do
+    Repo.delete_all(from(o in Object, where: o.id in ^object_ids))
+  end
+
+  defp delete_objects(_), do: :ok
 
   defp cache_purge(true, urls), do: MediaProxy.Invalidation.purge(urls)
   defp cache_purge(_, _), do: :ok
@@ -76,7 +83,7 @@ defmodule Pleroma.Workers.AttachmentsCleanupWorker do
 
   # we should delete 1 object for any given attachment, but don't delete
   # files if there are more than 1 object for it
-  defp prepare_objects(objects, actor, names) do
+  def prepare_objects(objects, actor, names) do
     objects
     |> Enum.reduce(%{}, fn %{
                              id: id,
@@ -101,7 +108,7 @@ defmodule Pleroma.Workers.AttachmentsCleanupWorker do
     end)
   end
 
-  defp fetch_objects(hrefs) do
+  def fetch_objects(hrefs) do
     from(o in Object,
       where:
         fragment(

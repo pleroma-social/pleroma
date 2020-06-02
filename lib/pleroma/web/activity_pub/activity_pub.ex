@@ -95,7 +95,7 @@ defmodule Pleroma.Web.ActivityPub.ActivityPub do
     Task.start(fn ->
       attachments
       |> Enum.flat_map(fn
-        %{"url" => urls} -> Enum.map(urls, & &1["href"])
+        %{"url" => urls} -> Enum.map(urls, &MediaProxy.url(&1["href"]))
         _ -> []
       end)
       |> MediaProxy.remove_from_deleted_urls()
