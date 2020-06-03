@@ -75,7 +75,7 @@ defmodule Pleroma.Workers.AttachmentsCleanupWorker do
 
   defp delete_objects(_), do: :ok
 
-  defp cache_purge(true, urls), do: MediaProxy.Invalidation.purge(urls)
+  defp cache_purge(true, [_ | _] = urls), do: MediaProxy.Invalidation.purge(urls)
   defp cache_purge(_, _), do: :ok
 
   defp lock_attachments(true, urls), do: MediaProxy.put_in_deleted_urls(urls)

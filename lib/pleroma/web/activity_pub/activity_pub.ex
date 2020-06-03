@@ -302,7 +302,7 @@ defmodule Pleroma.Web.ActivityPub.ActivityPub do
          :ok <- maybe_federate(activity) do
       {:ok, activity}
     else
-      {type, true, activity} when type in [:fake, :quick_insert] ->
+      {error, true, activity} when error in [:fake, :quick_insert] ->
         {:ok, activity}
 
       {:error, message} ->

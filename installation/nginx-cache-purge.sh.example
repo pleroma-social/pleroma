@@ -13,7 +13,7 @@ CACHE_DIRECTORY="/tmp/pleroma-media-cache"
 ## $3 - (optional) the number of parallel processes to run for grep.
 get_cache_files() {
     local max_parallel=${3-16}
-    find $2 -maxdepth 2 -type d | xargs -P $max_parallel -n 1 grep -E Rl "^KEY:.*$1" | sort -u
+    find $2 -maxdepth 2 -type d | xargs -P $max_parallel -n 1 grep -E -Rl "^KEY:.*$1" | sort -u
 }
 
 ## Removes an item from the given cache zone.
@@ -33,8 +33,9 @@ purge() {
   do
     echo "$SCRIPTNAME delete \`$url\` from cache ($CACHE_DIRECTORY)"
     purge_item $url $CACHE_DIRECTORY
+    echo "\n"
   done
 
 }
 
-purge $1
+purge $@
