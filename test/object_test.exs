@@ -149,7 +149,7 @@ defmodule Pleroma.ObjectTest do
       assert Object.get_by_id(attachment.id) == nil
 
       assert {:ok, []} == File.ls("#{uploads_dir}/#{path}")
-      assert Pleroma.Web.MediaProxy.in_deleted_urls(href)
+      refute Pleroma.Web.MediaProxy.in_deleted_urls(href)
     end
 
     test "with dedupe enabled" do
@@ -190,7 +190,7 @@ defmodule Pleroma.ObjectTest do
       assert Object.get_by_id(attachment.id) == nil
       assert {:ok, files} = File.ls(uploads_dir)
       refute filename in files
-      assert Pleroma.Web.MediaProxy.in_deleted_urls(href)
+      refute Pleroma.Web.MediaProxy.in_deleted_urls(href)
     end
 
     test "with objects that have legacy data.url attribute" do
@@ -229,7 +229,7 @@ defmodule Pleroma.ObjectTest do
       assert Object.get_by_id(attachment.id) == nil
 
       assert {:ok, []} == File.ls("#{uploads_dir}/#{path}")
-      assert Pleroma.Web.MediaProxy.in_deleted_urls(href)
+      refute Pleroma.Web.MediaProxy.in_deleted_urls(href)
     end
 
     test "With custom base_url" do
@@ -267,7 +267,7 @@ defmodule Pleroma.ObjectTest do
       assert Object.get_by_id(attachment.id) == nil
 
       assert {:ok, []} == File.ls("#{uploads_dir}/#{path}")
-      assert Pleroma.Web.MediaProxy.in_deleted_urls(href)
+      refute Pleroma.Web.MediaProxy.in_deleted_urls(href)
     end
   end
 
