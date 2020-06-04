@@ -28,7 +28,7 @@ defmodule Pleroma.Web.MediaProxy.Invalidation do
     provider.purge(urls, Config.get(provider))
   end
 
-  defp prepare_urls(urls) do
+  def prepare_urls(urls) do
     urls
     |> List.wrap()
     |> Enum.map(&MediaProxy.url(&1))

@@ -92,14 +92,12 @@ defmodule Pleroma.Web.ActivityPub.ActivityPub do
   def maybe_remove_mediaproxy_invalidation(true, %{
         "object" => %{"attachment" => [_ | _] = attachments}
       }) do
-    Task.start(fn ->
-      attachments
-      |> Enum.flat_map(fn
-        %{"url" => urls} -> Enum.map(urls, &MediaProxy.url(&1["href"]))
-        _ -> []
-      end)
-      |> MediaProxy.remove_from_deleted_urls()
+    attachments
+    |> Enum.flat_map(fn
+      %{"url" => urls} -> Enum.map(urls, & &1["href"])
+      _ -> []
     end)
+    |> MediaProxy.remove_from_deleted_urls()
 
     :ok
   end
