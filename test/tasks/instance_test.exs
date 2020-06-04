@@ -63,7 +63,7 @@ defmodule Mix.Tasks.Pleroma.InstanceTest do
         "--uploads-dir",
         "test/uploads",
         "--static-dir",
-        "./test/../test/instance/static/",
+        "./test/../test/instance_static/",
         "--fe-primary",
         "pleroma",
         "--fe-primary-ref",
@@ -101,7 +101,7 @@ defmodule Mix.Tasks.Pleroma.InstanceTest do
     assert generated_config =~ ~s(admin: %{"name" => "admin", "ref" => "develop"})
     assert generated_config =~ "static: true"
     assert File.read!(tmp_path() <> "setup.psql") == generated_setup_psql()
-    assert File.exists?(Path.expand("./test/instance/static/robots.txt"))
+    assert File.exists?(Path.expand("./test/instance_static/robots.txt"))
   end
 
   defp generated_setup_psql do

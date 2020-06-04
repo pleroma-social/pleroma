@@ -151,14 +151,12 @@ defmodule Mix.Tasks.Pleroma.Frontend do
     url = "#{gitlab_api_url(gitlab_base_url, project)}/releases"
     %{status: 200, body: json} = Tesla.get!(http_client(), url)
 
-    [%{"commit" => %{"short_id" => commit_id}, "name" => name} = data | _] =
+    [%{"commit" => %{"short_id" => commit_id}, "name" => name} | _] =
       Enum.sort(json, fn r1, r2 ->
         {:ok, date1, _offset} = DateTime.from_iso8601(r1["created_at"])
         {:ok, date2, _offset} = DateTime.from_iso8601(r2["created_at"])
         DateTime.compare(date1, date2) != :lt
       end)
-
-    IO.inspect(data)
 
     %{
       "name" => name,
@@ -207,9 +205,7 @@ defmodule Mix.Tasks.Pleroma.Frontend do
     do: "https://#{gitlab_base_url}/api/v4/projects/#{URI.encode_www_form(project)}"
 
   defp build_url(gitlab_base_url, project, ref),
-    do:
-      "https://#{gitlab_base_url}/#{project}/-/jobs/artifacts/#{ref}/download?job=build"
-      |> IO.inspect()
+    do: "https://#{gitlab_base_url}/#{project}/-/jobs/artifacts/#{ref}/download?job=build"
 
   defp http_client do
     middleware = [
