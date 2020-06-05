@@ -1769,7 +1769,7 @@ config :pleroma, :config_description, [
         key: :script_path,
         type: :string,
         description: "Path to shell script. Which will run purge cache.",
-        suggestions: "./installation/nginx-cache-purge.sh.example"
+        suggestions: ["./installation/nginx-cache-purge.sh.example"]
       }
     ]
   },
