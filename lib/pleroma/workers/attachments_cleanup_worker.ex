@@ -78,7 +78,12 @@ defmodule Pleroma.Workers.AttachmentsCleanupWorker do
   defp cache_purge(true, [_ | _] = urls), do: MediaProxy.Invalidation.purge(urls)
   defp cache_purge(_, _), do: :ok
 
-  defp lock_attachments(true, urls), do: MediaProxy.put_in_deleted_urls(urls)
+  defp lock_attachments(true, [_ | _] = urls) do
+    urls
+    |> Enum.filter(&MediaProxy.is_url_proxiable?(&1))
+    |> MediaProxy.put_in_deleted_urls()
+  end
+
   defp lock_attachments(_, _), do: :ok
 
   # we should delete 1 object for any given attachment, but don't delete

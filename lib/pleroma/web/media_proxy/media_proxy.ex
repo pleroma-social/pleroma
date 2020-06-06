@@ -30,11 +30,7 @@ defmodule Pleroma.Web.MediaProxy do
   end
 
   def put_in_deleted_urls(url) when is_binary(url) do
-    if is_url_proxiable?(url) do
-      Cachex.put(:deleted_urls_cache, url(url), true)
-    else
-      true
-    end
+    Cachex.put(:deleted_urls_cache, url(url), true)
   end
 
   def url(url) when is_nil(url) or url == "", do: nil
@@ -48,6 +44,7 @@ defmodule Pleroma.Web.MediaProxy do
     end
   end
 
+  @spec is_url_proxiable?(String.t()) :: boolean()
   def is_url_proxiable?(url) do
     if local?(url) or whitelisted?(url) do
       false
