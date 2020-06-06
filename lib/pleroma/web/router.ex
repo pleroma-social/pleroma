@@ -194,9 +194,9 @@ defmodule Pleroma.Web.Router do
     delete("/statuses/:id", StatusController, :delete)
     get("/statuses", StatusController, :index)
 
-    get("/config", AdminAPIController, :config_show)
-    post("/config", AdminAPIController, :config_update)
-    get("/config/descriptions", AdminAPIController, :config_descriptions)
+    get("/config", ConfigController, :show)
+    post("/config", ConfigController, :update)
+    get("/config/descriptions", ConfigController, :descriptions)
     get("/need_reboot", AdminAPIController, :need_reboot)
     get("/restart", AdminAPIController, :restart)
 
@@ -570,13 +570,6 @@ defmodule Pleroma.Web.Router do
     get("/mailer/unsubscribe/:token", Mailer.SubscriptionController, :unsubscribe)
   end
 
-  scope "/", Pleroma.Web.ActivityPub do
-    # XXX: not really ostatus
-    pipe_through(:ostatus)
-
-    get("/users/:nickname/outbox", ActivityPubController, :outbox)
-  end
-
   pipeline :ap_service_actor do
     plug(:accepts, ["activity+json", "json"])
   end
@@ -601,6 +594,7 @@ defmodule Pleroma.Web.Router do
     get("/api/ap/whoami", ActivityPubController, :whoami)
     get("/users/:nickname/inbox", ActivityPubController, :read_inbox)
 
+    get("/users/:nickname/outbox", ActivityPubController, :outbox)
     post("/users/:nickname/outbox", ActivityPubController, :update_outbox)
     post("/api/ap/upload_media", ActivityPubController, :upload_media)
 
