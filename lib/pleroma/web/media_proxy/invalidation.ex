@@ -10,13 +10,14 @@ defmodule Pleroma.Web.MediaProxy.Invalidation do
   alias Pleroma.Config
   alias Pleroma.Web.MediaProxy
 
-  def enabled, do: Config.get([:media_proxy, :invalidation, :enabled])
+  @spec enabled?() :: boolean()
+  def enabled?, do: Config.get([:media_proxy, :invalidation, :enabled])
 
   @spec purge(list(String.t()) | String.t()) :: {:ok, list(String.t())} | {:error, String.t()}
   def purge(urls) do
     prepared_urls = prepare_urls(urls)
 
-    if enabled() do
+    if enabled?() do
       do_purge(prepared_urls)
     else
       {:ok, prepared_urls}

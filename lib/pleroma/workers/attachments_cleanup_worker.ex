@@ -52,7 +52,7 @@ defmodule Pleroma.Workers.AttachmentsCleanupWorker do
         end
       end)
 
-    lock_attachments(MediaProxy.Invalidation.enabled(), hrefs -- exclude_urls)
+    lock_attachments(MediaProxy.Invalidation.enabled?(), hrefs -- exclude_urls)
 
     Enum.each(attachment_urls, fn href ->
       href
@@ -62,7 +62,7 @@ defmodule Pleroma.Workers.AttachmentsCleanupWorker do
 
     delete_objects(object_ids)
 
-    cache_purge(MediaProxy.Invalidation.enabled(), hrefs -- exclude_urls)
+    cache_purge(MediaProxy.Invalidation.enabled?(), hrefs -- exclude_urls)
 
     {:ok, :success}
   end

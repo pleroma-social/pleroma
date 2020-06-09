@@ -277,7 +277,7 @@ defmodule Pleroma.Web.ActivityPub.ActivityPub do
          _ <- increase_replies_count_if_reply(create_data),
          _ <- increase_poll_votes_if_vote(create_data),
          _ <-
-           maybe_remove_mediaproxy_invalidation(MediaProxy.Invalidation.enabled(), create_data),
+           maybe_remove_mediaproxy_invalidation(MediaProxy.Invalidation.enabled?(), create_data),
          {:quick_insert, false, activity} <- {:quick_insert, quick_insert?, activity},
          {:ok, _actor} <- increase_note_count_if_public(actor, activity),
          _ <- notify_and_stream(activity),
