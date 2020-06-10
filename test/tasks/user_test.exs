@@ -436,11 +436,14 @@ defmodule Mix.Tasks.Pleroma.UserTest do
 
       {:ok, user} = User.follow(user, kawen)
 
-      assert [moon.id, kawen.id] == User.Search.search("moon") |> Enum.map(& &1.id)
+      # One "typo" in nickname makes `moot` score better than `kawen` despite of name match
+      assert [moon.id, moot.id, kawen.id] == User.Search.search("moon") |> Enum.map(& &1.id)
+
       res = User.search("moo") |> Enum.map(& &1.id)
       assert moon.id in res
       assert moot.id in res
       assert kawen.id in res
+
       assert [moon.id, kawen.id] == User.Search.search("moon fediverse") |> Enum.map(& &1.id)
 
       assert [kawen.id, moon.id] ==

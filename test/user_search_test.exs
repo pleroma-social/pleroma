@@ -37,6 +37,10 @@ defmodule Pleroma.UserSearchTest do
       assert length(User.search("john", limit: 3, offset: 3)) == 2
     end
 
+    defp clear_virtual_fields(user) do
+      Map.merge(user, %{search_rank: nil, search_type: nil, levenshtein_distance: nil})
+    end
+
     test "finds a user by full or partial nickname" do
       user = insert(:user, %{nickname: "john"})
 
@@ -44,8 +48,7 @@ defmodule Pleroma.UserSearchTest do
         assert user ==
                  User.search(query)
                  |> List.first()
-                 |> Map.put(:search_rank, nil)
-                 |> Map.put(:search_type, nil)
+                 |> clear_virtual_fields()
       end)
     end
 
@@ -56,8 +59,8 @@ defmodule Pleroma.UserSearchTest do
         assert user ==
                  User.search(query)
                  |> List.first()
-                 |> Map.put(:search_rank, nil)
-                 |> Map.put(:search_type, nil)
+                 |> Map.merge(%{search_rank: nil, search_type: nil, levenshtein_distance: nil})
+                 |> clear_virtual_fields()
       end)
     end
 
@@ -66,6 +69,23 @@ defmodule Pleroma.UserSearchTest do
       u2 = insert(:user, %{name: "Word Word Bar Bar Bar"})
 
       assert [u2.id, u1.id] == Enum.map(User.search("bar word"), & &1.id)
+    end
+
+    test "considers Levenshtein distance between query and nickname for short queries" do
+      clear_config([:instance, :limit_to_local_content], false)
+
+      user = insert(:user, %{nickname: "hj@shigusegubu.club"})
+      insert(:user, %{nickname: "xyz@sample.com"})
+      insert(:user, %{nickname: "zyx@hj.com"})
+
+      # Note: "h.j." and "hhhj" are matched since 4+ char queries allow for 2 typos
+      for query <- ["hj", "hhj", "h j", "lj", "hi", "jj", "h.j.", "hhhj"] do
+        assert [user.id] == Enum.map(User.search(query), & &1.id)
+      end
+
+      for query <- ["ajay", "gg"] do
+        assert [] == User.search(query)
+      end
     end
 
     test "finds users, boosting ranks of friends and followers" do
