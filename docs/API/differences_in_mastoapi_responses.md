@@ -106,7 +106,7 @@ Has these additional fields under the `pleroma` object:
 
 ### Move Notification
 
-The `type` value is `move`. Has an additional field:
+The `type` value is `pleroma:move`. Has an additional field:
 
 - `target`: new account
 

@@ -139,9 +139,7 @@ defmodule Pleroma.Web.MastodonAPI.NotificationViewTest do
     test_notifications_rendering([notification], followed, [expected])
 
     User.perform(:delete, follower)
-    notification = Notification |> Repo.one() |> Repo.preload(:activity)
-
-    test_notifications_rendering([notification], followed, [])
+    refute Repo.one(Notification)
   end
 
   @tag capture_log: true
@@ -174,7 +172,7 @@ defmodule Pleroma.Web.MastodonAPI.NotificationViewTest do
     expected = %{
       id: to_string(notification.id),
       pleroma: %{is_seen: false},
-      type: "move",
+      type: "pleroma:move",
       account: AccountView.render("show.json", %{user: old_user, for: follower}),
       target: AccountView.render("show.json", %{user: new_user, for: follower}),
       created_at: Utils.to_masto_date(notification.inserted_at)
