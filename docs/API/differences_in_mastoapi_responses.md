@@ -287,6 +287,12 @@ For viewing remote server timelines, there are `public:remote` and `public:remot
 
 Both user muting and thread muting can be done for only a certain time by adding an `expires_in` parameter to the API calls and giving the expiration time in seconds.
 
+## Subscriptions
+
+Has additional field in parameters:
+
+- `pleroma:emoji_reaction`: Receive emoji reaction notifications?
+
 ## Not implemented
 
 Pleroma is generally compatible with the Mastodon 2.7.2 API, but some newer features and non-essential features are omitted. These features usually return an HTTP 200 status code, but with an empty response. While they may be added in the future, they are considered low priority.

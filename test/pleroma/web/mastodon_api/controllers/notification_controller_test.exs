@@ -408,6 +408,83 @@ defmodule Pleroma.Web.MastodonAPI.NotificationControllerTest do
     assert [%{"id" => ^reblog_notification_id}] = json_response_and_validate_schema(conn_res, 200)
   end
 
+  defp update_notification_settings_and_conn(user, conn, exclude_types) do
+    {:ok, user} =
+      User.update_notification_settings(user, %{
+        "exclude_types" => exclude_types
+      })
+
+    conn
+    |> assign(:user, user)
+    |> get("/api/v1/notifications")
+  end
+
+  test "filters notifications with user settings for exclude_types" do
+    %{user: user, conn: conn} = oauth_access(["read:notifications"])
+
+    other_user = insert(:user)
+
+    {:ok, mention_activity} = CommonAPI.post(other_user, %{status: "hey @#{user.nickname}"})
+    {:ok, create_activity} = CommonAPI.post(user, %{status: "hey"})
+    {:ok, favorite_activity} = CommonAPI.favorite(other_user, create_activity.id)
+    {:ok, reblog_activity} = CommonAPI.repeat(create_activity.id, other_user)
+    {:ok, _, _, follow_activity} = CommonAPI.follow(other_user, user)
+
+    mention_notification_id = get_notification_id_by_activity(mention_activity)
+    favorite_notification_id = get_notification_id_by_activity(favorite_activity)
+    reblog_notification_id = get_notification_id_by_activity(reblog_activity)
+    follow_notification_id = get_notification_id_by_activity(follow_activity)
+
+    conn_res =
+      update_notification_settings_and_conn(user, conn, ["mention", "favourite", "reblog"])
+
+    assert [%{"id" => ^follow_notification_id}] = json_response_and_validate_schema(conn_res, 200)
+
+    conn_res =
+      update_notification_settings_and_conn(user, conn, ["favourite", "reblog", "follow"])
+
+    assert [%{"id" => ^mention_notification_id}] =
+             json_response_and_validate_schema(conn_res, 200)
+
+    conn_res = update_notification_settings_and_conn(user, conn, ["reblog", "follow", "mention"])
+
+    assert [%{"id" => ^favorite_notification_id}] =
+             json_response_and_validate_schema(conn_res, 200)
+
+    conn_res =
+      update_notification_settings_and_conn(user, conn, ["follow", "mention", "favourite"])
+
+    assert [%{"id" => ^reblog_notification_id}] = json_response_and_validate_schema(conn_res, 200)
+  end
+
+  test "exclude_types params have high priority than user settings" do
+    %{user: user, conn: conn} = oauth_access(["read:notifications"])
+
+    other_user = insert(:user)
+
+    {:ok, _mention_activity} = CommonAPI.post(other_user, %{status: "hey @#{user.nickname}"})
+    {:ok, create_activity} = CommonAPI.post(user, %{status: "hey"})
+    {:ok, _favorite_activity} = CommonAPI.favorite(other_user, create_activity.id)
+    {:ok, _reblog_activity} = CommonAPI.repeat(create_activity.id, other_user)
+    {:ok, _, _, follow_activity} = CommonAPI.follow(other_user, user)
+
+    follow_notification_id = get_notification_id_by_activity(follow_activity)
+
+    {:ok, user} =
+      User.update_notification_settings(user, %{
+        "exclude_types" => ["favourite", "reblog", "follow", "mention"]
+      })
+
+    query = params_to_query(%{exclude_types: ["mention", "favourite", "reblog"]})
+
+    conn_res =
+      conn
+      |> assign(:user, user)
+      |> get("/api/v1/notifications?" <> query)
+
+    assert [%{"id" => ^follow_notification_id}] = json_response_and_validate_schema(conn_res, 200)
+  end
+
   test "filters notifications using include_types" do
     %{user: user, conn: conn} = oauth_access(["read:notifications"])
     other_user = insert(:user)

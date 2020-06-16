@@ -69,6 +69,27 @@ defmodule Pleroma.Web.Push.ImplTest do
     assert Impl.perform(notif) == {:ok, [:ok, :ok]}
   end
 
+  test "notification for follow_request" do
+    user = insert(:user)
+    reaction_user = insert(:user)
+
+    insert(:push_subscription, user: user, data: %{alerts: %{"pleroma:emoji_reaction" => true}})
+    insert(:push_subscription, user: user, data: %{alerts: %{"pleroma:emoji_reaction" => false}})
+
+    {:ok, activity} = CommonAPI.post(user, %{status: "<Lorem ipsum dolor sit amet."})
+
+    {:ok, reaction_activity} = CommonAPI.react_with_emoji(activity.id, reaction_user, "☕")
+
+    notif =
+      insert(:notification,
+        user: user,
+        activity: reaction_activity,
+        type: "pleroma:emoji_reaction"
+      )
+
+    assert Impl.perform(notif) == {:ok, [:ok]}
+  end
+
   @tag capture_log: true
   test "returns error if notif does not match " do
     assert Impl.perform(%{}) == {:error, :unknown_type}

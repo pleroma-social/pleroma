@@ -299,12 +299,20 @@ See [Admin-API](admin_api.md)
   Can only accept images - any attempt to upload non-image files will be met with `HTTP 415 Unsupported Media Type`.
 
 ## `/api/pleroma/notification_settings`
+
 ### Updates user notification settings
+
 * Method `PUT`
 * Authentication: required
 * Params:
-    * `block_from_strangers`: BOOLEAN field, blocks notifications from accounts you do not follow
-    * `hide_notification_contents`: BOOLEAN field. When set to true, it removes the contents of a message from the push notification.
+  * `block_from_strangers`: BOOLEAN field, blocks notifications from accounts you do not follow
+  * `hide_notification_contents`: BOOLEAN field. When set to true, it removes the contents of a message from the push notification.
+  * `followers`: BOOLEAN field, receives notifications from followers
+  * `follows`: BOOLEAN field, receives notifications from people the user follows
+  * `remote`: BOOLEAN field, receives notifications from people on remote instances
+  * `local`: BOOLEAN field, receives notifications from people on the local instance
+  * `privacy_option`: BOOLEAN field. When set to true, it removes the contents of a message from the push notification.
+  * `exclude_types`: ARRAY field. What notification types to exclude.
 * Response: JSON. Returns `{"status": "success"}` if the update was successful, otherwise returns `{"error": "error_msg"}`
 
 ## `/api/pleroma/healthcheck`

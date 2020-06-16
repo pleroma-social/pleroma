@@ -74,6 +74,8 @@ defmodule Pleroma.Notification do
     reblog
   }
 
+  def types, do: @notification_types
+
   def changeset(%Notification{} = notification, attrs) do
     notification
     |> cast(attrs, [:seen, :type])

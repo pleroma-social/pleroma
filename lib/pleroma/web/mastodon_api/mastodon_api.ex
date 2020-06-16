@@ -52,6 +52,15 @@ defmodule Pleroma.Web.MastodonAPI.MastodonAPI do
   def get_notifications(user, params \\ %{}) do
     options = cast_params(params)
 
+    user_exclude_types = user.notification_settings.exclude_types
+
+    options =
+      if (!options[:exclude_types] or options[:exclude_types] == []) and user_exclude_types != [] do
+        Map.put(options, :exclude_types, user_exclude_types)
+      else
+        options
+      end
+
     user
     |> Notification.for_user_query(options)
     |> restrict(:include_types, options)

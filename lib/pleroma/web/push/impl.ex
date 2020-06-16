@@ -19,7 +19,7 @@ defmodule Pleroma.Web.Push.Impl do
   @types ["Create", "Follow", "Announce", "Like", "Move", "EmojiReact"]
 
   @doc "Performs sending notifications for user subscriptions"
-  @spec perform(Notification.t()) :: list(any) | :error | {:error, :unknown_type}
+  @spec perform(Notification.t()) :: {:ok, list(any)} | {:error, :unknown_type}
   def perform(
         %{
           activity: %{data: %{"type" => activity_type}} = activity,
@@ -164,13 +164,14 @@ defmodule Pleroma.Web.Push.Impl do
         _object,
         mastodon_type
       )
-      when type in ["Follow", "Like"] do
+      when type in ["Follow", "Like", "EmojiReact"] do
     mastodon_type = mastodon_type || notification.type
 
     case mastodon_type do
       "follow" -> "@#{actor.nickname} has followed you"
       "follow_request" -> "@#{actor.nickname} has requested to follow you"
       "favourite" -> "@#{actor.nickname} has favorited your post"
+      "pleroma:emoji_reaction" -> "@#{actor.nickname} has reacted to your post"
     end
   end
 

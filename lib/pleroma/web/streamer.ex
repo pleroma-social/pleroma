@@ -180,8 +180,15 @@ defmodule Pleroma.Web.Streamer do
     end
   end
 
-  def filtered_by_user?(%User{} = user, %Notification{activity: activity}, _) do
-    filtered_by_user?(user, activity, :notification)
+  def filtered_by_user?(
+        %User{} = user,
+        %Notification{activity: activity, type: notification_type},
+        _
+      ) do
+    notification_settings = user.notification_settings
+
+    notification_type not in notification_settings.exclude_types and
+      filtered_by_user?(user, activity, :notification)
   end
 
   defp do_stream("direct", item) do
