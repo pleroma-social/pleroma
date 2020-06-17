@@ -14,6 +14,8 @@ defmodule Pleroma.Web.Push.Subscription do
 
   @type t :: %__MODULE__{}
 
+  @supported_alert_types Enum.map(Pleroma.Notification.types(), &String.to_atom/1)
+
   schema "push_subscriptions" do
     belongs_to(:user, User, type: FlakeId.Ecto.CompatType)
     belongs_to(:token, Token)
@@ -29,8 +31,7 @@ defmodule Pleroma.Web.Push.Subscription do
   @supported_alert_types ~w[follow favourite mention reblog pleroma:chat_mention pleroma:emoji_reaction]a
 
   defp alerts(%{data: %{alerts: alerts}}) do
-    types = Enum.map(Pleroma.Notification.types(), &String.to_atom/1)
-    alerts = Map.take(alerts, types)
+    alerts = Map.take(alerts, @supported_alert_types)
     %{"alerts" => alerts}
   end
 
