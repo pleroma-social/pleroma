@@ -54,12 +54,8 @@ defmodule Pleroma.Web.MastoFEController do
     with {:ok, user} <- User.mastodon_settings_update(user, settings) do
       if settings = get_in(user.settings, ["notifications", "shows"]) do
         notify_settings =
-          Enum.map(settings, fn {k, v} ->
-            if v == false do
-              k
-            end
-          end)
-          |> Enum.filter(& &1)
+          Enum.map(settings, fn {k, v} -> if v == false, do: k end)
+          |> Enum.reject(&is_nil/1)
 
         notification_settings =
           user.notification_settings
