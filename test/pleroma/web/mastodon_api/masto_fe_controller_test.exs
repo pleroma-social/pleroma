@@ -47,7 +47,7 @@ defmodule Pleroma.Web.MastodonAPI.MastoFEControllerTest do
                      "follow_request" => false,
                      "mention" => false,
                      "poll" => false,
-                     "reblog" => false
+                     "reblog" => true
                    },
                    "sounds" => %{
                      "favourite" => true,
@@ -80,7 +80,7 @@ defmodule Pleroma.Web.MastodonAPI.MastoFEControllerTest do
                    "follow_request" => false,
                    "mention" => false,
                    "poll" => false,
-                   "reblog" => false
+                   "reblog" => true
                  },
                  "sounds" => %{
                    "favourite" => true,
@@ -98,8 +98,7 @@ defmodule Pleroma.Web.MastodonAPI.MastoFEControllerTest do
                "follow",
                "follow_request",
                "mention",
-               "poll",
-               "reblog"
+               "poll"
              ]
     end
   end
