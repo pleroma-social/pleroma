@@ -74,7 +74,11 @@ defmodule Pleroma.Notification do
     reblog
   }
 
+  @notification_types_excluding_chat List.delete(@notification_types, "pleroma:chat_mention")
+
   def types, do: @notification_types
+
+  def types_excluding_chat, do: @notification_types_excluding_chat
 
   def changeset(%Notification{} = notification, attrs) do
     notification

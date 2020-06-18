@@ -42,19 +42,11 @@ defmodule Pleroma.Web.MastodonAPI.NotificationController do
     end
   end
 
-  @default_notification_types ~w{
-    mention
-    follow
-    follow_request
-    reblog
-    favourite
-    move
-    pleroma:emoji_reaction
-  }
   def index(%{assigns: %{user: user}} = conn, params) do
     params =
-      Map.new(params, fn {k, v} -> {to_string(k), v} end)
-      |> Map.put_new("include_types", @default_notification_types)
+      params
+      |> Map.new(fn {k, v} -> {to_string(k), v} end)
+      |> Map.put_new("include_types", Pleroma.Notification.types_excluding_chat())
 
     notifications = MastodonAPI.get_notifications(user, params)
 
