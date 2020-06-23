@@ -467,6 +467,8 @@ defmodule Pleroma.Web.Router do
   scope "/api/web", Pleroma.Web do
     pipe_through(:authenticated_api)
 
+    # Backend-obscure settings blob for MastoFE, don't parse/reuse elsewhere
+    # put("/settings", MastoFEController, :put_settings)
     put("/settings", FrontendController, :put_settings, as: :frontend_mastodon)
   end
 
