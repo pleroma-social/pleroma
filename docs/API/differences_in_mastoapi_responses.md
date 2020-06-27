@@ -289,9 +289,7 @@ Both user muting and thread muting can be done for only a certain time by adding
 
 ## Subscriptions
 
-Has additional field in parameters:
-
-- `pleroma:emoji_reaction`: Receive emoji reaction notifications?
+Subscription `alerts` field contains new boolean setting for emoji reactions - `pleroma:emoji_reaction`. Can be passed with other `alerts` settings in POST/PUT `/api/v1/push/subscription` endpoints.
 
 ## Not implemented
 
