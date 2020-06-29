@@ -51,21 +51,7 @@ defmodule Pleroma.Web.MastoFEController do
 
   @doc "PUT /api/web/settings: Backend-obscure settings blob for MastoFE, don't parse/reuse elsewhere"
   def put_settings(%{assigns: %{user: user}} = conn, %{"data" => settings} = _params) do
-    with {:ok, user} <- User.mastodon_settings_update(user, settings) do
-      if settings = get_in(user.settings, ["notifications", "shows"]) do
-        notify_settings =
-          settings
-          |> Enum.map(fn {k, v} -> if v == false, do: k end)
-          |> Enum.reject(&is_nil/1)
-
-        notification_settings =
-          user.notification_settings
-          |> Map.from_struct()
-          |> Map.put(:exclude_types, notify_settings)
-
-        User.update_notification_settings(user, notification_settings)
-      end
-
+    with {:ok, _} <- User.mastodon_settings_update(user, settings) do
       json(conn, %{})
     else
       e ->

@@ -12,94 +12,19 @@ defmodule Pleroma.Web.MastodonAPI.MastoFEControllerTest do
 
   setup do: clear_config([:instance, :public])
 
-  describe "put_settings/2" do
-    setup do
-      %{conn: conn, user: user} = oauth_access(["write:accounts"])
-      [conn: conn, user: user]
-    end
+  test "put settings", %{conn: conn} do
+    user = insert(:user)
 
-    test "common", %{conn: conn, user: user} do
-      assert conn
-             |> put("/api/web/settings", %{"data" => %{"programming" => "socks"}})
-             |> json_response(200)
+    conn =
+      conn
+      |> assign(:user, user)
+      |> assign(:token, insert(:oauth_token, user: user, scopes: ["write:accounts"]))
+      |> put("/api/web/settings", %{"data" => %{"programming" => "socks"}})
+
+      assert _result = json_response(conn, 200)
 
       user = User.get_cached_by_ap_id(user.ap_id)
       assert user.mastofe_settings == %{"programming" => "socks"}
-    end
-
-    test "saves notification settings", %{conn: conn, user: user} do
-      assert conn
-             |> put("/api/web/settings", %{
-               "data" => %{
-                 "notifications" => %{
-                   "alerts" => %{
-                     "favourite" => true,
-                     "follow" => true,
-                     "follow_request" => true,
-                     "mention" => true,
-                     "poll" => true,
-                     "reblog" => true
-                   },
-                   "quickFilter" => %{"active" => "all", "advanced" => true, "show" => true},
-                   "shows" => %{
-                     "favourite" => false,
-                     "follow" => false,
-                     "follow_request" => false,
-                     "mention" => false,
-                     "poll" => false,
-                     "reblog" => true
-                   },
-                   "sounds" => %{
-                     "favourite" => true,
-                     "follow" => true,
-                     "follow_request" => true,
-                     "mention" => true,
-                     "poll" => true,
-                     "reblog" => true
-                   }
-                 }
-               }
-             })
-
-      user = User.get_cached_by_ap_id(user.ap_id)
-
-      assert user.settings == %{
-               "notifications" => %{
-                 "alerts" => %{
-                   "favourite" => true,
-                   "follow" => true,
-                   "follow_request" => true,
-                   "mention" => true,
-                   "poll" => true,
-                   "reblog" => true
-                 },
-                 "quickFilter" => %{"active" => "all", "advanced" => true, "show" => true},
-                 "shows" => %{
-                   "favourite" => false,
-                   "follow" => false,
-                   "follow_request" => false,
-                   "mention" => false,
-                   "poll" => false,
-                   "reblog" => true
-                 },
-                 "sounds" => %{
-                   "favourite" => true,
-                   "follow" => true,
-                   "follow_request" => true,
-                   "mention" => true,
-                   "poll" => true,
-                   "reblog" => true
-                 }
-               }
-             }
-
-      assert user.notification_settings.exclude_types == [
-               "favourite",
-               "follow",
-               "follow_request",
-               "mention",
-               "poll"
-             ]
     end
   end
 
