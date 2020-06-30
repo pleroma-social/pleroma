@@ -434,6 +434,12 @@ config :pleroma, Pleroma.Web.Metadata,
   ],
   unfurl_nsfw: false
 
+config :pleroma, Pleroma.Web.Preload,
+  providers: [
+    Pleroma.Web.Preload.Providers.Instance,
+    Pleroma.Web.Preload.Providers.StatusNet
+  ]
+
 config :pleroma, :http_security,
   enabled: true,
   sts: false,
@@ -694,6 +700,10 @@ config :pleroma, :mrf,
   policies: Pleroma.Web.ActivityPub.MRF.NoOpPolicy,
   transparency: true,
   transparency_exclusions: []
+
+config :tzdata, :http_client, Pleroma.HTTP.Tzdata
+
+config :ex_aws, http_client: Pleroma.HTTP.ExAws
 
 # Import environment specific config. This must remain at the bottom
 # of this file so it overrides the configuration defined above.
