@@ -10,6 +10,7 @@ defmodule Pleroma.Web.Frontend.PleromaController do
 
   alias Pleroma.User
   alias Pleroma.Web.Metadata
+  alias Pleroma.Web.Preload
 
   def index_with_meta(conn, %{"maybe_nickname_or_id" => maybe_nickname_or_id} = params) do
     case User.get_cached_by_nickname_or_id(maybe_nickname_or_id) do
@@ -39,10 +40,36 @@ defmodule Pleroma.Web.Frontend.PleromaController do
           ""
       end
 
-    response = String.replace(index_content, "<!--server-generated-meta-->", tags)
+    preloads = preload_data(conn, params)
+
+    response = String.replace(index_content, "<!--server-generated-meta-->", tags <> preloads)
+
+    html(conn, response)
+  end
+
+  def index_with_preload(conn, params) do
+    {:ok, path} = index_file_path()
+    {:ok, index_content} = File.read(path)
+    preloads = preload_data(conn, params)
+
+    response = String.replace(index_content, "<!--server-generated-meta-->", preloads)
 
     html(conn, response)
   end
 
   defdelegate registration_page(conn, params), to: __MODULE__, as: :index
+
+  defp preload_data(conn, params) do
+    try do
+      Preload.build_tags(conn, params)
+    rescue
+      e ->
+        Logger.error(
+          "Preloading for #{conn.request_path} failed.\n" <>
+            Exception.format(:error, e, __STACKTRACE__)
+        )
+
+        ""
+    end
+  end
 end
