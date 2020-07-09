@@ -10,8 +10,7 @@ defmodule Pleroma.Plugs.StaticFEPlug do
   def call(%{private: %{frontend: %{static: true}}} = conn, _) do
     action = Phoenix.Controller.action_name(conn)
 
-    if accepts_html?(conn) and
-         function_exported?(Pleroma.Web.Frontend.StaticController, action, 2) do
+    if requires_html?(conn) and has_action?(action) do
       conn
       |> Pleroma.Web.FrontendController.call(action)
       |> halt()
@@ -22,10 +21,8 @@ defmodule Pleroma.Plugs.StaticFEPlug do
 
   def call(conn, _), do: conn
 
-  defp accepts_html?(conn) do
-    case get_req_header(conn, "accept") do
-      [accept | _] -> String.contains?(accept, "text/html")
-      _ -> false
-    end
-  end
+  defp requires_html?(conn), do: Phoenix.Controller.get_format(conn) == "html"
+
+  defp has_action?(action),
+    do: function_exported?(Pleroma.Web.Frontend.StaticController, action, 2)
 end

@@ -111,6 +111,8 @@ config :pleroma, Pleroma.Plugs.RemoteIp, enabled: false
 
 config :pleroma, Pleroma.Web.ApiSpec.CastAndValidate, strict: true
 
+config :pleroma, :instances_favicons, enabled: true
+
 config :pleroma, :frontends,
   primary: %{"name" => "pleroma", "ref" => "develop"},
   mastodon: %{"name" => "mastodon", "ref" => "develop"},
