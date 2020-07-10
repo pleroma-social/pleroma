@@ -719,7 +719,7 @@ defmodule Pleroma.Web.Router do
 
   scope "/", Pleroma.Web do
     get("/registration/:token", FrontendController, :registration_page)
-    get("/:maybe_nickname_or_id", FrontendController, :index_with_meta)
+    get("/:maybe_nickname_or_id", FrontendController, :index_with_meta_and_user)
     get("/api*path", FrontendController, :api_not_implemented)
     get("/*path", FrontendController, :index_with_preload)
 

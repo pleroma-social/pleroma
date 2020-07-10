@@ -4,6 +4,7 @@
 
 defmodule Pleroma.Web.Frontend.MastodonController do
   use Pleroma.Web, :controller
+  use Pleroma.Web.Frontend.DefaultController
 
   alias Pleroma.Plugs.OAuthScopesPlug
   alias Pleroma.User
@@ -17,7 +18,10 @@ defmodule Pleroma.Web.Frontend.MastodonController do
     when action == :index
   )
 
-  plug(Pleroma.Plugs.EnsurePublicOrAuthenticatedPlug when action != :index)
+  plug(
+    Pleroma.Plugs.EnsurePublicOrAuthenticatedPlug
+    when action != :index
+  )
 
   def index(%{assigns: %{user: user, token: token}} = conn, _params)
       when not is_nil(user) and not is_nil(token) do

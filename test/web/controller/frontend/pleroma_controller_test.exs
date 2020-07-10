@@ -15,10 +15,10 @@ defmodule Pleroma.Web.Frontend.PleromaControllerTest do
   test "index_with_meta", %{conn: conn} do
     user = insert(:user)
 
-    conn = get(conn, frontend_path(conn, :index_with_meta, "nonexistinguser"))
+    conn = get(conn, frontend_path(conn, :index_with_meta_and_user, "nonexistinguser"))
     assert html_response(conn, 200) =~ "<!--server-generated-meta-->"
 
-    conn = get(conn, frontend_path(conn, :index_with_meta, user.nickname))
+    conn = get(conn, frontend_path(conn, :index_with_meta_and_user, user.nickname))
     refute html_response(conn, 200) =~ "<!--server-generated-meta-->"
   end
 end

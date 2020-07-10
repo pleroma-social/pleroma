@@ -6,13 +6,9 @@ defmodule Pleroma.Web.Frontend.PleromaController do
   use Pleroma.Web, :controller
   use Pleroma.Web.Frontend.DefaultController
 
-  require Logger
-
   alias Pleroma.User
-  alias Pleroma.Web.Metadata
-  alias Pleroma.Web.Preload
 
-  def index_with_meta(conn, %{"maybe_nickname_or_id" => maybe_nickname_or_id} = params) do
+  def index_with_meta_and_user(conn, %{"maybe_nickname_or_id" => maybe_nickname_or_id} = params) do
     case User.get_cached_by_nickname_or_id(maybe_nickname_or_id) do
       %User{} = user ->
         index_with_meta(conn, %{user: user})
@@ -22,54 +18,5 @@ defmodule Pleroma.Web.Frontend.PleromaController do
     end
   end
 
-  # not intended to be matched from router, but can be called from the app internally
-  def index_with_meta(conn, params) do
-    {:ok, path} = fe_file_path("index.html")
-    {:ok, index_content} = File.read(path)
-
-    tags =
-      try do
-        Metadata.build_tags(params)
-      rescue
-        e ->
-          Logger.error(
-            "Metadata rendering for #{conn.request_path} failed.\n" <>
-              Exception.format(:error, e, __STACKTRACE__)
-          )
-
-          ""
-      end
-
-    preloads = preload_data(conn, params)
-
-    response = String.replace(index_content, "<!--server-generated-meta-->", tags <> preloads)
-
-    html(conn, response)
-  end
-
-  def index_with_preload(conn, params) do
-    {:ok, path} = fe_file_path("index.html")
-    {:ok, index_content} = File.read(path)
-    preloads = preload_data(conn, params)
-
-    response = String.replace(index_content, "<!--server-generated-meta-->", preloads)
-
-    html(conn, response)
-  end
-
-  defdelegate registration_page(conn, params), to: __MODULE__, as: :index
-
-  defp preload_data(conn, params) do
-    try do
-      Preload.build_tags(conn, params)
-    rescue
-      e ->
-        Logger.error(
-          "Preloading for #{conn.request_path} failed.\n" <>
-            Exception.format(:error, e, __STACKTRACE__)
-        )
-
-        ""
-    end
-  end
+  defdelegate registration_page(conn, params), to: __MODULE__, as: :index_with_preload
 end

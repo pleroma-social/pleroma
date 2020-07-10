@@ -7,6 +7,8 @@ defmodule Pleroma.Web.Frontend.DefaultController do
     quote do
       import Pleroma.Frontend, only: [fe_file_path: 1, fe_file_path: 2]
 
+      require Logger
+
       def index(conn, _params) do
         status = conn.status || 200
 
@@ -15,6 +17,40 @@ defmodule Pleroma.Web.Frontend.DefaultController do
         conn
         |> put_resp_content_type("text/html")
         |> send_file(status, index_file_path)
+      end
+
+      def index_with_meta(conn, params) do
+        {:ok, path} = fe_file_path("index.html")
+        {:ok, index_content} = File.read(path)
+
+        tags =
+          try do
+            Pleroma.Web.Metadata.build_tags(params)
+          rescue
+            e ->
+              Logger.error(
+                "Metadata rendering for #{conn.request_path} failed.\n" <>
+                  Exception.format(:error, e, __STACKTRACE__)
+              )
+
+              ""
+          end
+
+        preloads = preload_data(conn, params)
+
+        response = String.replace(index_content, "<!--server-generated-meta-->", tags <> preloads)
+
+        html(conn, response)
+      end
+
+      def index_with_preload(conn, params) do
+        {:ok, path} = fe_file_path("index.html")
+        {:ok, index_content} = File.read(path)
+        preloads = preload_data(conn, params)
+
+        response = String.replace(index_content, "<!--server-generated-meta-->", preloads)
+
+        html(conn, response)
       end
 
       def api_not_implemented(conn, _params) do
@@ -35,7 +71,26 @@ defmodule Pleroma.Web.Frontend.DefaultController do
         |> text("Not found")
       end
 
-      defoverridable index: 2, api_not_implemented: 2, empty: 2, fallback: 2
+      defp preload_data(conn, params) do
+        try do
+          Pleroma.Web.Preload.build_tags(conn, params)
+        rescue
+          e ->
+            Logger.error(
+              "Preloading for #{conn.request_path} failed.\n" <>
+                Exception.format(:error, e, __STACKTRACE__)
+            )
+
+            ""
+        end
+      end
+
+      defoverridable index: 2,
+                     index_with_meta: 2,
+                     index_with_preload: 2,
+                     api_not_implemented: 2,
+                     empty: 2,
+                     fallback: 2
     end
   end
 end
