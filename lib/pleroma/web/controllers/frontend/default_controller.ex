@@ -5,11 +5,12 @@
 defmodule Pleroma.Web.Frontend.DefaultController do
   defmacro __using__(_opts) do
     quote do
-      import Pleroma.Web.FrontendController, only: [index_file_path: 0, index_file_path: 1]
+      import Pleroma.Frontend, only: [fe_file_path: 1, fe_file_path: 2]
 
       def index(conn, _params) do
         status = conn.status || 200
-        {:ok, index_file_path} = index_file_path(conn.private[:frontend][:config])
+
+        {:ok, index_file_path} = fe_file_path("index.html", conn.private[:frontend][:config])
 
         conn
         |> put_resp_content_type("text/html")

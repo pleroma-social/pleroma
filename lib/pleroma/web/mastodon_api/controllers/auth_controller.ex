@@ -52,7 +52,7 @@ defmodule Pleroma.Web.MastodonAPI.AuthController do
   def logout(conn, _) do
     conn
     |> clear_session()
-    |> redirect(to: frontend_path(conn, :index, []))
+    |> redirect(to: frontend_path(conn, :index_with_preload, []))
   end
 
   @doc "POST /auth/password"

@@ -10,7 +10,7 @@ defmodule Pleroma.Web.Frontend.KenomaControllerTest do
   test "renders index.html from kenoma fe", %{conn: conn} do
     Pleroma.Config.put([:frontends, :primary], %{"name" => "kenoma", "ref" => "develop"})
 
-    conn = get(conn, frontend_path(conn, :index, []))
+    conn = get(conn, frontend_path(conn, :index_with_preload, []))
     assert html_response(conn, 200) =~ "test Kenoma Develop FE"
   end
 end

@@ -24,7 +24,7 @@ defmodule Pleroma.Plugs.FrontendPlugTest do
     end
 
     test "for primary", %{conn: conn, conf: conf} do
-      conn = get(conn, frontend_path(conn, :index, []))
+      conn = get(conn, frontend_path(conn, :index_with_preload, []))
       assert get_in(conn.private, [:frontend, :config, "name"]) == conf[:primary]["name"]
     end
   end

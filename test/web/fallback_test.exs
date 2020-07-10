@@ -26,7 +26,7 @@ defmodule Pleroma.Web.FallbackTest do
       user_missing = get(conn, "/foo")
       user_present = get(conn, "/#{user.nickname}")
 
-      assert(html_response(user_missing, 200) =~ "<!--server-generated-meta-->")
+      assert html_response(user_missing, 200) =~ "<!--server-generated-meta-->"
       refute html_response(user_present, 200) =~ "<!--server-generated-meta-->"
       assert html_response(user_present, 200) =~ "initial-results"
     end

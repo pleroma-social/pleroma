@@ -8,7 +8,7 @@ defmodule Pleroma.Web.Frontend.PleromaControllerTest do
   import Pleroma.Factory
 
   test "renders index.html from pleroma fe", %{conn: conn} do
-    conn = get(conn, frontend_path(conn, :index, []))
+    conn = get(conn, frontend_path(conn, :index_with_preload, []))
     assert html_response(conn, 200) =~ "test Pleroma Develop FE"
   end
 

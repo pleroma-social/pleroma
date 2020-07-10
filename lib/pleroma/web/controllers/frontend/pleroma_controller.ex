@@ -24,7 +24,7 @@ defmodule Pleroma.Web.Frontend.PleromaController do
 
   # not intended to be matched from router, but can be called from the app internally
   def index_with_meta(conn, params) do
-    {:ok, path} = index_file_path()
+    {:ok, path} = fe_file_path("index.html")
     {:ok, index_content} = File.read(path)
 
     tags =
@@ -48,7 +48,7 @@ defmodule Pleroma.Web.Frontend.PleromaController do
   end
 
   def index_with_preload(conn, params) do
-    {:ok, path} = index_file_path()
+    {:ok, path} = fe_file_path("index.html")
     {:ok, index_content} = File.read(path)
     preloads = preload_data(conn, params)
 

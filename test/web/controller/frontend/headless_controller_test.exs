@@ -10,7 +10,7 @@ defmodule Pleroma.Web.Frontend.HeadlessControllerTest do
   test "Returns 404", %{conn: conn} do
     Pleroma.Config.put([:frontends, :primary], %{"name" => "none", "ref" => ""})
 
-    conn = get(conn, frontend_path(conn, :index, []))
+    conn = get(conn, frontend_path(conn, :index_with_preload, []))
     assert text_response(conn, 404) == ""
   end
 end
