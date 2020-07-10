@@ -152,7 +152,7 @@ defmodule Mix.Tasks.Pleroma.Instance do
           options,
           :uploads_dir,
           "What directory should media uploads go in (when using the local uploader)?",
-          Pleroma.Config.get([Pleroma.Uploaders.Local, :uploads])
+          Config.get([Pleroma.Uploaders.Local, :uploads])
         )
         |> Path.expand()
 
@@ -161,7 +161,7 @@ defmodule Mix.Tasks.Pleroma.Instance do
           options,
           :static_dir,
           "What directory should custom public files be read from (custom emojis, frontend bundle overrides, robots.txt, etc.)?",
-          Pleroma.Config.get([:instance, :static_dir])
+          Config.get([:instance, :static_dir])
         )
         |> Path.expand()
 

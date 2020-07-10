@@ -39,6 +39,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Added
 
+- Chats: Added `accepts_chat_messages` field to user, exposed in APIs and federation.
 - Chats: Added support for federated chats. For details, see the docs.
 - ActivityPub: Added support for existing AP ids for instances migrated from Mastodon.
 - Instance: Add `background_image` to configuration and `/api/v1/instance`
@@ -81,6 +82,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - `blob:` urls not being allowed by connect-src CSP
 - Mastodon API: fix `GET /api/v1/notifications` not returning the full result set
 - Rich Media Previews for Twitter links
+- Admin API: fix `GET /api/pleroma/admin/users/:nickname/credentials` returning 404 when getting the credentials of a remote user while `:instance, :limit_to_local_content` is set to `:unauthenticated`
+- Fix CSP policy generation to include remote Captcha services
+- Fix edge case where MediaProxy truncates media, usually caused when Caddy is serving content for the other Federated instance.
 
 ## [Unreleased (patch)]
 
