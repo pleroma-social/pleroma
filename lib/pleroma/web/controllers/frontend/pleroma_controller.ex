@@ -18,5 +18,5 @@ defmodule Pleroma.Web.Frontend.PleromaController do
     end
   end
 
-  defdelegate registration_page(conn, params), to: __MODULE__, as: :index_with_preload
+  defdelegate registration_page(conn, params), to: __MODULE__, as: :index
 end

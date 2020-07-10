@@ -64,20 +64,6 @@ defmodule Pleroma.Web.FallbackTest do
            |> json_response(404) == %{"error" => "Not implemented"}
   end
 
-  test "GET /*path", %{conn: conn} do
-    assert conn
-           |> get("/foo")
-           |> html_response(200) =~ "<!--server-generated-meta-->"
-
-    assert conn
-           |> get("/foo/bar")
-           |> html_response(200) =~ "<!--server-generated-meta-->"
-  end
-
-  test "GET /pleroma/admin -> /pleroma/admin/", %{conn: conn} do
-    assert redirected_to(get(conn, "/pleroma/admin")) =~ "/pleroma/admin/"
-  end
-
   test "OPTIONS /*path", %{conn: conn} do
     assert conn
            |> options("/foo")
