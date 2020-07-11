@@ -46,11 +46,22 @@ defmodule Mix.Tasks.Pleroma.Frontend do
       OptionParser.parse(
         args,
         strict: [
-          ref: :string
+          ref: :string,
+          develop: :boolean
         ]
       )
 
-    ref = suggest_ref(options, frontend)
+    ref =
+      cond do
+        options[:develop] ->
+          "develop"
+
+        options[:ref] ->
+          options[:ref]
+
+        true ->
+          "stable"
+      end
 
     %{"name" => bundle_name, "url" => bundle_url} =
       get_bundle_meta(ref, @pleroma_gitlab_host, @frontends[frontend]["project"])
@@ -82,56 +93,6 @@ defmodule Mix.Tasks.Pleroma.Frontend do
   end
 
   defp post_install_bundle(_fe_name, _path), do: :ok
-
-  defp suggest_ref(options, frontend) do
-    case Pleroma.Config.get([:frontends, String.to_atom(frontend)]) do
-      nil ->
-        primary_fe_config = Pleroma.Config.get([:frontends, :primary])
-
-        if primary_fe_config["name"] == frontend do
-          primary_fe_config["ref"]
-        else
-          nil
-        end
-
-      val ->
-        val
-    end
-    |> case do
-      nil ->
-        stable_pleroma? = Pleroma.Application.stable?()
-
-        current_stable_out =
-          if stable_pleroma? do
-            "stable"
-          else
-            "develop"
-          end
-
-        get_option(
-          options,
-          :ref,
-          "You are currently running #{current_stable_out} version of Pleroma backend. What version of \"#{
-            frontend
-          }\" frontend you want to install? (\"stable\", \"develop\" or specific ref)",
-          current_stable_out
-        )
-
-      config_value ->
-        current_ref =
-          case config_value do
-            %{"ref" => ref} -> ref
-            ref -> ref
-          end
-
-        get_option(
-          options,
-          :ref,
-          "You are currently running \"#{current_ref}\" version of \"#{frontend}\" frontend. What version do you want to install? (\"stable\", \"develop\" or specific ref)",
-          current_ref
-        )
-    end
-  end
 
   defp get_bundle_meta("develop", gitlab_base_url, project) do
     url = "#{gitlab_api_url(gitlab_base_url, project)}/repository/branches"
@@ -175,15 +136,16 @@ defmodule Mix.Tasks.Pleroma.Frontend do
     http_client = http_client()
 
     with {:ok, %{status: 200, body: zip_body}} <- Tesla.get(http_client, bundle_url),
-         {:ok, unzipped} <- :zip.unzip(zip_body, [:memory]) do
+         {:ok, unzipped} <- :zip.unzip(zip_body, [:memory]),
+         filtered =
+           Enum.filter(unzipped, fn
+             {[?d, ?i, ?s, ?t, ?/ | _rest], _data} -> true
+             _ -> false
+           end),
+         true <- length(filtered) > 0 do
       File.rm_rf!(dir)
 
-      Enum.each(unzipped, fn {path, data} ->
-        path =
-          path
-          |> to_string()
-          |> String.replace(~r/^dist\//, "")
-
+      Enum.each(unzipped, fn {[?d, ?i, ?s, ?t, ?/ | path], data} ->
         file_path = Path.join(dir, path)
 
         file_path
@@ -195,6 +157,9 @@ defmodule Mix.Tasks.Pleroma.Frontend do
     else
       {:ok, %{status: 404}} ->
         {:error, "Bundle not found"}
+
+      false ->
+        {:error, "Zip archive must contain \"dist\" folder"}
 
       error ->
         {:error, error}
