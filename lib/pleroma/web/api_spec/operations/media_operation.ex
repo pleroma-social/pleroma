@@ -46,6 +46,10 @@ defmodule Pleroma.Web.ApiSpec.MediaOperation do
           type: :string,
           description: "A plain-text description of the media, for accessibility purposes."
         },
+        filename: %Schema{
+          type: :string,
+          description: "Filename of the media."
+        },
         focus: %Schema{
           type: :string,
           description: "Two floating points (x,y), comma-delimited, ranging from -1.0 to 1.0."

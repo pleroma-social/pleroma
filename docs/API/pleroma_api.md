@@ -272,7 +272,8 @@ See [Admin-API](admin_api.md)
     "url": "https://pleroma.example.org/media/abcdefg.png",
     "type": "image",
     "pleroma": {
-        "mime_type": "image/png"
+        "mime_type": "image/png",
+        "filename": "abcdefg.png"
     }
 }
 ```
@@ -291,7 +292,8 @@ See [Admin-API](admin_api.md)
     "url": "https://pleroma.example.org/media/abcdefg.png",
     "type": "image",
     "pleroma": {
-        "mime_type": "image/png"
+        "mime_type": "image/png",
+        "filename": "abcdefg.png"
     }
 }
 ```

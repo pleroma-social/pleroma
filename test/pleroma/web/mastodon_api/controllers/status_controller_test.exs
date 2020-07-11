@@ -413,7 +413,12 @@ defmodule Pleroma.Web.MastodonAPI.StatusControllerTest do
         filename: "an_image.jpg"
       }
 
-      {:ok, upload} = ActivityPub.upload(file, actor: user.ap_id)
+      {:ok, upload} =
+        ActivityPub.upload(file,
+          actor: user.ap_id,
+          description: "sample image",
+          filename: "look at this.jpg"
+        )
 
       conn =
         conn
@@ -427,7 +432,8 @@ defmodule Pleroma.Web.MastodonAPI.StatusControllerTest do
       assert %{"media_attachments" => [media_attachment]} =
                json_response_and_validate_schema(conn, 200)
 
-      assert %{"type" => "image"} = media_attachment
+      assert %{"description" => "sample image", "type" => "image"} = media_attachment
+      assert media_attachment["pleroma"]["filename"] == "look at this.jpg"
     end
 
     test "skips the scheduling and creates the activity if scheduled_at is earlier than 5 minutes from now",

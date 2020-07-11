@@ -465,7 +465,8 @@ defmodule Pleroma.Web.MastodonAPI.StatusViewTest do
         }
       ],
       "blurhash" => "UJJ8X[xYW,%Jtq%NNFbXB5j]IVM|9GV=WHRn",
-      "uuid" => 6
+      "uuid" => 6,
+      "filename" => "an_image.png"
     }
 
     expected = %{
@@ -476,7 +477,7 @@ defmodule Pleroma.Web.MastodonAPI.StatusViewTest do
       preview_url: "someurl",
       text_url: "someurl",
       description: nil,
-      pleroma: %{mime_type: "image/png"},
+      pleroma: %{mime_type: "image/png", filename: "an_image.png"},
       blurhash: "UJJ8X[xYW,%Jtq%NNFbXB5j]IVM|9GV=WHRn"
     }
 

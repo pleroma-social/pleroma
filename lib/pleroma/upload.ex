@@ -89,7 +89,8 @@ defmodule Pleroma.Upload do
              "href" => url_from_spec(upload, opts.base_url, url_spec)
            }
          ],
-         "name" => description
+         "name" => description,
+         "filename" => Map.get(opts, :filename) || upload.name
        }}
     else
       {:description_limit, _} ->
@@ -130,6 +131,7 @@ defmodule Pleroma.Upload do
       uploader: Keyword.get(opts, :uploader, Pleroma.Config.get([__MODULE__, :uploader])),
       filters: Keyword.get(opts, :filters, Pleroma.Config.get([__MODULE__, :filters])),
       description: Keyword.get(opts, :description),
+      filename: Keyword.get(opts, :filename),
       base_url:
         Keyword.get(
           opts,

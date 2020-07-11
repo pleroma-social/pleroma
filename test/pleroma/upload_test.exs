@@ -61,7 +61,8 @@ defmodule Pleroma.UploadTest do
                       "mediaType" => "image/jpeg",
                       "type" => "Link"
                     }
-                  ]
+                  ],
+                  "filename" => "image.jpg"
                 }}
 
       Task.await(Agent.get(TestUploaderSuccess, fn task_pid -> task_pid end))
@@ -118,6 +119,42 @@ defmodule Pleroma.UploadTest do
       }
 
       {:error, :description_too_long} = Upload.store(file, description: "123")
+    end
+
+    test "saves filename from opts" do
+      File.cp!("test/fixtures/image.jpg", "test/fixtures/image_tmp.jpg")
+
+      desc = "sample file"
+      filename = "test image.jpg"
+
+      file = %Plug.Upload{
+        content_type: "image/jpg",
+        path: Path.absname("test/fixtures/image_tmp.jpg"),
+        filename: "image.jpg"
+      }
+
+      {:ok, data} = Upload.store(file, description: desc, filename: filename)
+
+      assert data["name"] == desc
+      assert data["filename"] == filename
+    end
+
+    test "saves default filename if opts don't have one" do
+      File.cp!("test/fixtures/image.jpg", "test/fixtures/image_tmp.jpg")
+
+      desc = "sample file"
+      filename = "image_tmp.jpg"
+
+      file = %Plug.Upload{
+        content_type: "image/jpg",
+        path: Path.absname("test/fixtures/image_tmp.jpg"),
+        filename: filename
+      }
+
+      {:ok, data} = Upload.store(file, description: desc)
+
+      assert data["name"] == desc
+      assert data["filename"] == filename
     end
 
     test "returns a media url" do

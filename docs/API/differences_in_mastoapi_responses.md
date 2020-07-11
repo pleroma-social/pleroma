@@ -37,7 +37,8 @@ Has these additional fields under the `pleroma` object:
 
 Has these additional fields under the `pleroma` object:
 
-- `mime_type`: mime type of the attachment.
+- `mime_type`: mime type of the attachment
+- `filename`: filename of the attachment
 
 ### Attachment cap
 

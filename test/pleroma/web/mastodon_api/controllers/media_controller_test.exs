@@ -27,15 +27,17 @@ defmodule Pleroma.Web.MastodonAPI.MediaControllerTest do
 
     test "/api/v1/media", %{conn: conn, image: image} do
       desc = "Description of the image"
+      filename = "look at this.jpg"
 
       media =
         conn
         |> put_req_header("content-type", "multipart/form-data")
-        |> post("/api/v1/media", %{"file" => image, "description" => desc})
+        |> post("/api/v1/media", %{"file" => image, "description" => desc, "filename" => filename})
         |> json_response_and_validate_schema(:ok)
 
       assert media["type"] == "image"
       assert media["description"] == desc
+      assert media["pleroma"]["filename"] == filename
       assert media["id"]
 
       object = Object.get_by_id(media["id"])
@@ -44,11 +46,12 @@ defmodule Pleroma.Web.MastodonAPI.MediaControllerTest do
 
     test "/api/v2/media", %{conn: conn, user: user, image: image} do
       desc = "Description of the image"
+      filename = "look at this.jpg"
 
       response =
         conn
         |> put_req_header("content-type", "multipart/form-data")
-        |> post("/api/v2/media", %{"file" => image, "description" => desc})
+        |> post("/api/v2/media", %{"file" => image, "description" => desc, "filename" => filename})
         |> json_response_and_validate_schema(202)
 
       assert media_id = response["id"]
@@ -62,6 +65,7 @@ defmodule Pleroma.Web.MastodonAPI.MediaControllerTest do
 
       assert media["type"] == "image"
       assert media["description"] == desc
+      assert media["pleroma"]["filename"] == filename
       assert media["id"]
 
       object = Object.get_by_id(media["id"])
