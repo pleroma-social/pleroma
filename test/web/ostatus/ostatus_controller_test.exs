@@ -172,7 +172,7 @@ defmodule Pleroma.Web.OStatus.OStatusControllerTest do
         |> response(200)
 
       assert resp =~
-               "<meta content=\"#{Pleroma.Web.base_url()}/notice/#{note_activity.id}\" property=\"og:url\">"
+               "<meta content=\"#{o_status_url(Endpoint, :notice, note_activity.id)}\" property=\"og:url\">"
 
       user = insert(:user)
 

@@ -97,7 +97,7 @@ defmodule Pleroma.Web.OStatus.OStatusController do
 
           conn
           |> Map.put(:params, params)
-          |> Pleroma.Web.FrontendController.call(:index_with_meta_and_user)
+          |> Pleroma.Web.FrontendController.call(:index_with_meta)
 
         true ->
           Pleroma.Web.FrontendController.call(conn, :index)
