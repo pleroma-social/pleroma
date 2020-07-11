@@ -191,13 +191,13 @@ defmodule Pleroma.Web.Feed.UserControllerTest do
 
       response =
         conn
-        |> get("/users/#{user.nickname}")
+        |> get(user_feed_path(conn, :feed_redirect, user.nickname))
         |> response(200)
 
       expected =
         conn
         |> Map.put(:params, %{user: user})
-        |> Pleroma.Web.FrontendController.call(:index_with_meta_and_user)
+        |> Pleroma.Web.FrontendController.call(:index_with_meta)
         |> Map.get(:resp_body)
 
       assert response == expected

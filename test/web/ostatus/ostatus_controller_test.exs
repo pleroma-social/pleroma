@@ -28,14 +28,13 @@ defmodule Pleroma.Web.OStatus.OStatusControllerTest do
       conn = put_req_header(conn, "accept", "text/html")
 
       {:ok, object} =
-        %{
+        Object.create(%{
           "type" => "Note",
           "content" => "hey",
-          "id" => Endpoint.url() <> "/users/raymoo/statuses/999999999",
-          "actor" => Endpoint.url() <> "/users/raymoo",
+          "id" => o_status_url(Endpoint, :object, "raymoo", 999_999_999),
+          "actor" => user_feed_url(Endpoint, :feed_redirect, "raymoo"),
           "to" => [Pleroma.Constants.as_public()]
-        }
-        |> Object.create()
+        })
 
       {:ok, activity, _} =
         %{
@@ -51,16 +50,16 @@ defmodule Pleroma.Web.OStatus.OStatusControllerTest do
     end
 
     test "redirects to /notice/:id for html format", %{conn: conn, activity: activity} do
-      conn = get(conn, "/users/raymoo/statuses/999999999")
-      assert redirected_to(conn) == "/notice/#{activity.id}"
+      conn = get(conn, o_status_path(conn, :object, "raymoo", 999_999_999))
+      assert redirected_to(conn) == o_status_path(conn, :notice, activity.id)
     end
 
     test "redirects to /notice/:id for html format for activity", %{
       conn: conn,
       activity: activity
     } do
-      conn = get(conn, "/users/raymoo/statuses/999999999/activity")
-      assert redirected_to(conn) == "/notice/#{activity.id}"
+      conn = get(conn, o_status_path(conn, :activity, "raymoo", 999_999_999))
+      assert redirected_to(conn) == o_status_path(conn, :notice, activity.id)
     end
   end
 
@@ -75,10 +74,8 @@ defmodule Pleroma.Web.OStatus.OStatusControllerTest do
       note_activity = insert(:note_activity)
       object = Object.normalize(note_activity)
       [_, uuid] = hd(Regex.scan(~r/.+\/([\w-]+)$/, object.data["id"]))
-      url = "/objects/#{uuid}"
-
-      conn = get(conn, url)
-      assert redirected_to(conn) == "/notice/#{note_activity.id}"
+      conn = get(conn, o_status_path(conn, :object, uuid))
+      assert redirected_to(conn) == o_status_path(conn, :notice, note_activity.id)
     end
 
     test "404s on private objects", %{conn: conn} do
@@ -87,13 +84,13 @@ defmodule Pleroma.Web.OStatus.OStatusControllerTest do
       [_, uuid] = hd(Regex.scan(~r/.+\/([\w-]+)$/, object.data["id"]))
 
       conn
-      |> get("/objects/#{uuid}")
+      |> get(o_status_path(conn, :object, uuid))
       |> response(404)
     end
 
     test "404s on non-existing objects", %{conn: conn} do
       conn
-      |> get("/objects/123")
+      |> get(o_status_path(conn, :object, 123))
       |> response(404)
     end
   end
@@ -109,8 +106,8 @@ defmodule Pleroma.Web.OStatus.OStatusControllerTest do
       note_activity = insert(:note_activity)
       [_, uuid] = hd(Regex.scan(~r/.+\/([\w-]+)$/, note_activity.data["id"]))
 
-      conn = get(conn, "/activities/#{uuid}")
-      assert redirected_to(conn) == "/notice/#{note_activity.id}"
+      conn = get(conn, o_status_path(conn, :activity, uuid))
+      assert redirected_to(conn) == o_status_path(conn, :notice, note_activity.id)
     end
 
     test "404s on private activities", %{conn: conn} do
@@ -118,13 +115,13 @@ defmodule Pleroma.Web.OStatus.OStatusControllerTest do
       [_, uuid] = hd(Regex.scan(~r/.+\/([\w-]+)$/, note_activity.data["id"]))
 
       conn
-      |> get("/activities/#{uuid}")
+      |> get(o_status_path(conn, :activity, uuid))
       |> response(404)
     end
 
     test "404s on nonexistent activities", %{conn: conn} do
       conn
-      |> get("/activities/123")
+      |> get(o_status_path(conn, :activity, 123))
       |> response(404)
     end
   end
@@ -150,7 +147,7 @@ defmodule Pleroma.Web.OStatus.OStatusControllerTest do
 
       conn
       |> put_req_header("accept", "application/activity+json")
-      |> get("/notice/#{note_activity.id}")
+      |> get(o_status_path(conn, :notice, note_activity.id))
       |> response(404)
     end
 
@@ -160,9 +157,7 @@ defmodule Pleroma.Web.OStatus.OStatusControllerTest do
       User.invalidate_cache(user)
       Pleroma.Repo.delete(user)
 
-      conn =
-        conn
-        |> get("/notice/#{note_activity.id}")
+      conn = get(conn, o_status_path(conn, :notice, note_activity.id))
 
       assert response(conn, 500) == ~S({"error":"Something went wrong"})
     end
@@ -173,7 +168,7 @@ defmodule Pleroma.Web.OStatus.OStatusControllerTest do
       resp =
         conn
         |> put_req_header("accept", "text/html")
-        |> get("/notice/#{note_activity.id}")
+        |> get(o_status_path(conn, :notice, note_activity.id))
         |> response(200)
 
       assert resp =~
@@ -188,7 +183,7 @@ defmodule Pleroma.Web.OStatus.OStatusControllerTest do
       resp =
         conn
         |> put_req_header("accept", "text/html")
-        |> get("/notice/#{like_activity.id}")
+        |> get(o_status_path(conn, :notice, like_activity.id))
         |> response(200)
 
       assert resp =~ "<!--server-generated-meta-->"
@@ -196,21 +191,14 @@ defmodule Pleroma.Web.OStatus.OStatusControllerTest do
 
     test "404s a private notice", %{conn: conn} do
       note_activity = insert(:direct_note_activity)
-      url = "/notice/#{note_activity.id}"
 
-      conn =
-        conn
-        |> get(url)
+      conn = get(conn, o_status_path(conn, :notice, note_activity.id))
 
       assert response(conn, 404)
     end
 
     test "404s a non-existing notice", %{conn: conn} do
-      url = "/notice/123"
-
-      conn =
-        conn
-        |> get(url)
+      conn = get(conn, o_status_path(conn, :notice, 123))
 
       assert response(conn, 404)
     end
@@ -223,7 +211,11 @@ defmodule Pleroma.Web.OStatus.OStatusControllerTest do
 
       conn = put_req_header(conn, "accept", "text/html")
 
-      ensure_federating_or_authenticated(conn, "/notice/#{note_activity.id}", user)
+      ensure_federating_or_authenticated(
+        conn,
+        o_status_path(conn, :notice, note_activity.id),
+        user
+      )
     end
   end
 
@@ -254,7 +246,7 @@ defmodule Pleroma.Web.OStatus.OStatusControllerTest do
     end
 
     test "renders embed player", %{conn: conn, note_activity: note_activity} do
-      conn = get(conn, "/notice/#{note_activity.id}/embed_player")
+      conn = get(conn, o_status_path(conn, :notice_player, note_activity.id))
 
       assert Plug.Conn.get_resp_header(conn, "x-frame-options") == ["ALLOW"]
 
@@ -273,7 +265,7 @@ defmodule Pleroma.Web.OStatus.OStatusControllerTest do
       note_activity = insert(:note_activity, data_attrs: %{"type" => "Like"})
 
       assert conn
-             |> get("/notice/#{note_activity.id}/embed_player")
+             |> get(o_status_path(conn, :notice_player, note_activity.id))
              |> response(404)
     end
 
@@ -281,7 +273,7 @@ defmodule Pleroma.Web.OStatus.OStatusControllerTest do
       note_activity = insert(:note_activity, data_attrs: %{"directMessage" => true})
 
       assert conn
-             |> get("/notice/#{note_activity.id}/embed_player")
+             |> get(o_status_path(conn, :notice_player, note_activity.id))
              |> response(404)
     end
 
@@ -295,7 +287,7 @@ defmodule Pleroma.Web.OStatus.OStatusControllerTest do
       |> Pleroma.Repo.update()
 
       assert conn
-             |> get("/notice/#{note_activity.id}/embed_player")
+             |> get(o_status_path(conn, :notice_player, note_activity.id))
              |> response(404)
     end
 
@@ -321,7 +313,7 @@ defmodule Pleroma.Web.OStatus.OStatusControllerTest do
       |> Pleroma.Repo.update()
 
       conn
-      |> get("/notice/#{note_activity.id}/embed_player")
+      |> get(o_status_path(conn, :notice_player, note_activity.id))
       |> response(404)
     end
 
@@ -332,7 +324,11 @@ defmodule Pleroma.Web.OStatus.OStatusControllerTest do
       user = insert(:user)
       conn = put_req_header(conn, "accept", "text/html")
 
-      ensure_federating_or_authenticated(conn, "/notice/#{note_activity.id}/embed_player", user)
+      ensure_federating_or_authenticated(
+        conn,
+        o_status_path(conn, :notice_player, note_activity.id),
+        user
+      )
     end
   end
 end

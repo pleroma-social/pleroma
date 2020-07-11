@@ -20,7 +20,7 @@ defmodule Pleroma.Web.Feed.UserController do
     with {_, %User{} = user} <- {:fetch_user, User.get_cached_by_nickname_or_id(nickname)} do
       conn
       |> Map.put(:params, %{user: user})
-      |> Pleroma.Web.FrontendController.call(:index_with_meta_and_user)
+      |> Pleroma.Web.FrontendController.call(:index_with_meta)
     end
   end
 
