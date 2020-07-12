@@ -35,7 +35,8 @@ defmodule Pleroma.Web.MastodonAPI.AccountViewTest do
           "<script src=\"invalid-html\"></script><span>valid html</span>. a<br>b<br/>c<br >d<br />f '&<>\"",
         inserted_at: ~N[2017-08-15 15:47:06.597036],
         emoji: %{"karjalanpiirakka" => "/file.png"},
-        raw_bio: "valid html. a\nb\nc\nd\nf '&<>\""
+        raw_bio: "valid html. a\nb\nc\nd\nf '&<>\"",
+        show_attachment_filenames: true
       })
 
     expected = %{
@@ -87,6 +88,7 @@ defmodule Pleroma.Web.MastodonAPI.AccountViewTest do
         hide_followers_count: false,
         hide_follows_count: false,
         relationship: %{},
+        show_attachment_filenames: true,
         skip_thread_containment: false,
         accepts_chat_messages: nil
       }
@@ -185,6 +187,7 @@ defmodule Pleroma.Web.MastodonAPI.AccountViewTest do
         hide_followers_count: false,
         hide_follows_count: false,
         relationship: %{},
+        show_attachment_filenames: false,
         skip_thread_containment: false,
         accepts_chat_messages: nil
       }

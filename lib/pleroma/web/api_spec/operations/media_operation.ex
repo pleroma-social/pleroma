@@ -48,6 +48,7 @@ defmodule Pleroma.Web.ApiSpec.MediaOperation do
         },
         filename: %Schema{
           type: :string,
+          nullable: true,
           description: "Filename of the media."
         },
         focus: %Schema{

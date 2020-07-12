@@ -31,6 +31,7 @@ defmodule Pleroma.Web.ApiSpec.Schemas.Chat do
           "hide_follows_count" => false,
           "hide_follows" => false,
           "background_image" => nil,
+          "show_attachment_filenames" => false,
           "skip_thread_containment" => false,
           "hide_followers" => false,
           "relationship" => %{},

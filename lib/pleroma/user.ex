@@ -138,6 +138,7 @@ defmodule Pleroma.User do
     field(:is_discoverable, :boolean, default: false)
     field(:invisible, :boolean, default: false)
     field(:allow_following_move, :boolean, default: true)
+    field(:show_attachment_filenames, :boolean, default: false)
     field(:skip_thread_containment, :boolean, default: false)
     field(:actor_type, :string, default: "Person")
     field(:also_known_as, {:array, :string}, default: [])
@@ -503,6 +504,7 @@ defmodule Pleroma.User do
         :allow_following_move,
         :background,
         :show_role,
+        :show_attachment_filenames,
         :skip_thread_containment,
         :fields,
         :raw_fields,

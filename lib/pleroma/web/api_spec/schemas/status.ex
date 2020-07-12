@@ -278,6 +278,7 @@ defmodule Pleroma.Web.ApiSpec.Schemas.Status do
             "showing_reblogs" => true,
             "subscribing" => false
           },
+          "show_attachment_filenames" => false,
           "skip_thread_containment" => false,
           "tags" => []
         },

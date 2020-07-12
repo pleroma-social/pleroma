@@ -277,6 +277,7 @@ defmodule Pleroma.Web.MastodonAPI.AccountView do
         hide_follows: user.hide_follows,
         hide_favorites: user.hide_favorites,
         relationship: relationship,
+        show_attachment_filenames: user.show_attachment_filenames,
         skip_thread_containment: user.skip_thread_containment,
         background_image: image_url(user.background) |> MediaProxy.url(),
         accepts_chat_messages: user.accepts_chat_messages,

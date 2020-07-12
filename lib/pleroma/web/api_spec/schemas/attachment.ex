@@ -51,7 +51,11 @@ defmodule Pleroma.Web.ApiSpec.Schemas.Attachment do
         type: :object,
         properties: %{
           mime_type: %Schema{type: :string, description: "mime type of the attachment"},
-          filename: %Schema{type: :string, description: "filename of the attachment"}
+          filename: %Schema{
+            type: :string,
+            nullable: true,
+            description: "filename of the attachment"
+          }
         }
       }
     },

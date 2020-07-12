@@ -48,6 +48,7 @@ defmodule Pleroma.Web.AdminAPI.AccountView do
       :hide_followers,
       :hide_favorites,
       :allow_following_move,
+      :show_attachment_filenames,
       :show_role,
       :skip_thread_containment,
       :pleroma_settings_store,

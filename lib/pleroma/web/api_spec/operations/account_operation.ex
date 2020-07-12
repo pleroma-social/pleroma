@@ -604,6 +604,11 @@ defmodule Pleroma.Web.ApiSpec.AccountOperation do
           nullable: true,
           description: "Opaque user settings to be saved on the backend."
         },
+        show_attachment_filenames: %Schema{
+          allOf: [BooleanLike],
+          nullable: true,
+          description: "Show the attachment filenames"
+        },
         skip_thread_containment: %Schema{
           allOf: [BooleanLike],
           nullable: true,
@@ -642,6 +647,7 @@ defmodule Pleroma.Web.ApiSpec.AccountOperation do
         show_role: false,
         default_scope: "private",
         pleroma_settings_store: %{"pleroma-fe" => %{"key" => "val"}},
+        show_attachment_filenames: false,
         skip_thread_containment: false,
         allow_following_move: false,
         discoverable: false,

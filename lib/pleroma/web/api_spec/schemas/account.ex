@@ -76,6 +76,7 @@ defmodule Pleroma.Web.ApiSpec.Schemas.Account do
             type: :boolean,
             description: "whether the user is a moderator of the local instance"
           },
+          show_attachment_filenames: %Schema{type: :boolean},
           skip_thread_containment: %Schema{type: :boolean},
           tags: %Schema{
             type: :array,
@@ -172,6 +173,7 @@ defmodule Pleroma.Web.ApiSpec.Schemas.Account do
         "hide_follows_count" => false,
         "is_admin" => false,
         "is_moderator" => false,
+        "show_attachment_filenames" => false,
         "skip_thread_containment" => false,
         "accepts_chat_messages" => true,
         "chat_token" =>
