@@ -113,6 +113,11 @@ config :pleroma, Pleroma.Web.ApiSpec.CastAndValidate, strict: true
 
 config :pleroma, :instances_favicons, enabled: true
 
+config :pleroma, Pleroma.Uploaders.S3,
+  bucket: nil,
+  streaming_enabled: true,
+  public_endpoint: nil
+
 config :pleroma, :frontends,
   primary: %{"name" => "pleroma", "ref" => "develop"},
   mastodon: %{"name" => "mastodon", "ref" => "develop"},
