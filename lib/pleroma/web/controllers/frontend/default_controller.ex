@@ -20,35 +20,23 @@ defmodule Pleroma.Web.Frontend.DefaultController do
       end
 
       def index_with_meta(conn, params) do
-        {:ok, path} = fe_file_path("index.html")
-        {:ok, index_content} = File.read(path)
-
-        tags =
-          try do
-            Pleroma.Web.Metadata.build_tags(params)
-          rescue
-            e ->
-              Logger.error(
-                "Metadata rendering for #{conn.request_path} failed.\n" <>
-                  Exception.format(:error, e, __STACKTRACE__)
-              )
-
-              ""
-          end
-
-        preloads = preload_data(conn, params)
-
-        response = String.replace(index_content, "<!--server-generated-meta-->", tags <> preloads)
-
-        html(conn, response)
+        index_with_generated_data(conn, params, [:metadata, :preload])
       end
 
       def index_with_preload(conn, params) do
+        index_with_generated_data(conn, params, [:preload])
+      end
+
+      defp index_with_generated_data(conn, params, generators) do
         {:ok, path} = fe_file_path("index.html")
         {:ok, index_content} = File.read(path)
-        preloads = preload_data(conn, params)
 
-        response = String.replace(index_content, "<!--server-generated-meta-->", preloads)
+        generated =
+          Enum.reduce(generators, "", fn generator, acc ->
+            acc <> generate_data(conn, params, generator)
+          end)
+
+        response = String.replace(index_content, "<!--server-generated-meta-->", generated)
 
         html(conn, response)
       end
@@ -71,13 +59,27 @@ defmodule Pleroma.Web.Frontend.DefaultController do
         |> text("Not found")
       end
 
-      defp preload_data(conn, params) do
+      defp generate_data(conn, params, :preload) do
         try do
           Pleroma.Web.Preload.build_tags(conn, params)
         rescue
           e ->
             Logger.error(
               "Preloading for #{conn.request_path} failed.\n" <>
+                Exception.format(:error, e, __STACKTRACE__)
+            )
+
+            ""
+        end
+      end
+
+      defp generate_data(conn, params, :metadata) do
+        try do
+          Pleroma.Web.Metadata.build_tags(params)
+        rescue
+          e ->
+            Logger.error(
+              "Metadata rendering for #{conn.request_path} failed.\n" <>
                 Exception.format(:error, e, __STACKTRACE__)
             )
 
@@ -94,3 +96,4 @@ defmodule Pleroma.Web.Frontend.DefaultController do
     end
   end
 end
+
