@@ -5,10 +5,12 @@
 defmodule Pleroma.Web.FrontendController do
   use Pleroma.Web, :controller
   import Pleroma.Frontend, only: [get_primary_fe_opts: 0]
+  alias Pleroma.Web.Frontend.StaticController
 
   def action(conn, _opts) do
-    # `conn.private[:frontend]` can be unset if the function is called outside
-    # of the standard controller pipeline
+    # `conn.private[:frontend]` can be missing if the function is called outside
+    # of the standard controller pipeline. In this case we set frontend as a
+    # :primary one
     fe_config = conn.private[:frontend] || get_primary_fe_opts()
 
     # can only be true for :primary frontend
@@ -18,9 +20,8 @@ defmodule Pleroma.Web.FrontendController do
 
     {controller, action} =
       cond do
-        static_enabled? and
-            function_exported?(Pleroma.Web.Frontend.StaticController, action_name, 2) ->
-          {Pleroma.Web.Frontend.StaticController, action_name}
+        static_enabled? and function_exported?(StaticController, action_name, 2) ->
+          {StaticController, action_name}
 
         function_exported?(fe_config[:controller], action_name, 2) ->
           {fe_config[:controller], action_name}
@@ -30,7 +31,7 @@ defmodule Pleroma.Web.FrontendController do
       end
 
     conn
-    # in case we are serving internal call
+    # in case we are serving an internal call
     |> put_private(:frontend, fe_config)
     |> put_view(Phoenix.Controller.__view__(controller))
     |> controller.call(controller.init(action))
