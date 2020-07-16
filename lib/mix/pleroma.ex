@@ -39,11 +39,7 @@ defmodule Mix.Pleroma do
     children =
       [
         Pleroma.Repo,
-        %{
-          id: :env_updater,
-          start: {Task, :start_link, [&Pleroma.Config.Environment.load_and_update/0]},
-          restart: :temporary
-        },
+        {Task, &Pleroma.Config.Environment.load_and_update/0},
         Pleroma.Web.Endpoint,
         {Oban, Pleroma.Config.get(Oban)}
       ] ++
