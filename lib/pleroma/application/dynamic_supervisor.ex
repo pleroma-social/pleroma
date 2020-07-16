@@ -52,9 +52,7 @@ defmodule Pleroma.Application.DynamicSupervisor do
   end
 
   defp add_http_children(children, :test) do
-    hackney_options = Pleroma.Config.get([:hackney_pools, :federation])
-    hackney_pool = :hackney_pool.child_spec(:federation, hackney_options)
-    [hackney_pool, Pleroma.Pool.Supervisor | children]
+    [Pleroma.Application.HackneySupervisor, Pleroma.Application.GunSupervisor | children]
   end
 
   defp add_http_children(children, _) do
@@ -62,7 +60,7 @@ defmodule Pleroma.Application.DynamicSupervisor do
 
     child =
       if adapter == Tesla.Adapter.Gun do
-        Pleroma.Pool.Supervisor
+        Pleroma.Application.GunSupervisor
       else
         Pleroma.Application.HackneyPoolSupervisor
       end
@@ -99,7 +97,7 @@ defmodule Pleroma.Application.DynamicSupervisor do
   defp config_path_mappings do
     adapter_module =
       if Application.get_env(:tesla, :adapter) == Tesla.Adapter.Gun do
-        Pleroma.Pool.Supervisor
+        Pleroma.Application.GunSupervisor
       else
         Pleroma.Application.HackneyPoolSupervisor
       end
@@ -109,8 +107,8 @@ defmodule Pleroma.Application.DynamicSupervisor do
       {{:pleroma, Oban}, Oban},
       {{:pleroma, :rate_limit}, Pleroma.Plugs.RateLimiter.Supervisor},
       {{:pleroma, :streamer}, Pleroma.Web.Streamer.registry()},
-      {{:pleroma, :pools}, Pleroma.Pool.Supervisor},
-      {{:pleroma, :connections_pool}, Pleroma.Pool.Supervisor},
+      {{:pleroma, :pools}, Pleroma.Application.GunSupervisor},
+      {{:pleroma, :connections_pool}, Pleroma.Application.GunSupervisor},
       {{:pleroma, :hackney_pools}, Pleroma.Application.HackneyPoolSupervisor},
       {{:pleroma, Pleroma.Captcha, [:seconds_valid]}, Pleroma.Web.Endpoint},
       {{:pleroma, Pleroma.Upload, [:proxy_remote]}, adapter_module},
