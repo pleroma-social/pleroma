@@ -31,12 +31,12 @@ defmodule Pleroma.Frontend do
   end
 
   @doc """
-  Returns path to index.html file for the frontend from the given config.
+  Returns path to the requested file for the frontend from the given config.
   If config is not provided, config for the `:primary` frontend is fetched and used.
-  If index.html file is not found for the requested frontend, the function fallback
+  If the requested file is not found for the frontend, the function fallback
   to looking the file at instance static directory and then, in case of failure,
   in priv/static directory.
-  Path returned in case of success is guaranteed to be existing file.
+  Path returned in case of success is guaranteed to be of existing file.
   """
   @spec fe_file_path(String.t(), map()) :: {:ok, String.t()} | {:error, String.t()}
   def fe_file_path(filename, config \\ nil) do

@@ -24,4 +24,18 @@ defmodule Pleroma.Utils do
   def command_available?(command) do
     match?({_output, 0}, System.cmd("sh", ["-c", "command -v #{command}"]))
   end
+
+  @doc """
+  Throws an exception in case required command is not available
+  """
+  @spec command_required!(String.t()) :: :ok | no_return()
+  def command_required!(command) do
+    case command_available?(command) do
+      true ->
+        :ok
+
+      false ->
+        raise "Command #{command} is required, but not available in $PATH"
+    end
+  end
 end

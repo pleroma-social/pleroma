@@ -14,16 +14,16 @@ defmodule Mix.Tasks.Pleroma.Frontend do
 
   @pleroma_gitlab_host "git.pleroma.social"
   @frontends %{
-    # TODO stable
     "admin" => %{"project" => "pleroma/admin-fe"},
-    # TODO
     "kenoma" => %{"project" => "lambadalambda/kenoma"},
-    # TODO
     "mastodon" => %{"project" => "pleroma/mastofe"},
-    # OK
     "pleroma" => %{"project" => "pleroma/pleroma-fe"}
   }
   @known_frontends Map.keys(@frontends)
+
+  @ref_stable "__stable__"
+  @ref_develop "__develop__"
+  @ref_local "__local__"
 
   def run(["install", "none" | _args]) do
     shell_info("Skipping frontend installation because none was requested")
@@ -47,31 +47,53 @@ defmodule Mix.Tasks.Pleroma.Frontend do
         args,
         strict: [
           ref: :string,
+          path: :string,
           develop: :boolean
         ]
       )
 
     ref =
       cond do
-        options[:develop] ->
-          "develop"
-
         options[:ref] ->
           options[:ref]
 
+        options[:develop] ->
+          @ref_develop
+
+        options[:path] ->
+          @ref_local
+
         true ->
-          "stable"
+          @ref_stable
       end
 
     %{"name" => bundle_name, "url" => bundle_url} =
-      get_bundle_meta(ref, @pleroma_gitlab_host, @frontends[frontend]["project"])
+      case options[:path] do
+        nil ->
+          get_bundle_meta(ref, @frontends[frontend]["project"])
+
+        path ->
+          version =
+            path
+            |> File.read!()
+            |> Jason.decode!()
+            |> Map.get("version")
+
+          %{"name" => version, "url" => {:local, path}}
+      end
 
     shell_info("Installing frontend #{frontend}, version: #{bundle_name}")
 
-    dest = Path.join([Pleroma.Config.get!([:instance, :static_dir]), "frontends", frontend, ref])
+    dest =
+      Path.join([
+        Pleroma.Config.get!([:instance, :static_dir]),
+        "frontends",
+        frontend,
+        bundle_name
+      ])
 
-    with :ok <- install_bundle(bundle_url, dest),
-         :ok <- post_install_bundle(frontend, dest) do
+    with :ok <- download_bundle(bundle_url, dest),
+         :ok <- install_bundle(frontend, dest) do
       shell_info("Installed!")
     else
       {:error, error} ->
@@ -81,21 +103,8 @@ defmodule Mix.Tasks.Pleroma.Frontend do
     Logger.configure(level: log_level)
   end
 
-  defp post_install_bundle("mastodon", path) do
-    with :ok <- File.rename("#{path}/public/assets/sw.js", "#{path}/sw.js"),
-         :ok <- File.rename("#{path}/public/packs", "#{path}/packs"),
-         {:ok, _deleted_files} <- File.rm_rf("#{path}/public") do
-      :ok
-    else
-      error ->
-        {:error, error}
-    end
-  end
-
-  defp post_install_bundle(_fe_name, _path), do: :ok
-
-  defp get_bundle_meta("develop", gitlab_base_url, project) do
-    url = "#{gitlab_api_url(gitlab_base_url, project)}/repository/branches"
+  defp get_bundle_meta(@ref_develop, project) do
+    url = "#{gitlab_api_url(project)}/repository/branches"
 
     %{status: 200, body: json} = Tesla.get!(http_client(), url)
 
@@ -104,12 +113,12 @@ defmodule Mix.Tasks.Pleroma.Frontend do
 
     %{
       "name" => name,
-      "url" => build_url(gitlab_base_url, project, last_commit_ref)
+      "url" => build_url(project, last_commit_ref)
     }
   end
 
-  defp get_bundle_meta("stable", gitlab_base_url, project) do
-    url = "#{gitlab_api_url(gitlab_base_url, project)}/releases"
+  defp get_bundle_meta(@ref_stable, project) do
+    url = "#{gitlab_api_url(project)}/releases"
     %{status: 200, body: json} = Tesla.get!(http_client(), url)
 
     [%{"commit" => %{"short_id" => commit_id}, "name" => name} | _] =
@@ -121,18 +130,20 @@ defmodule Mix.Tasks.Pleroma.Frontend do
 
     %{
       "name" => name,
-      "url" => build_url(gitlab_base_url, project, commit_id)
+      "url" => build_url(project, commit_id)
     }
   end
 
-  defp get_bundle_meta(ref, gitlab_base_url, project) do
+  defp get_bundle_meta(ref, project) do
     %{
       "name" => ref,
-      "url" => build_url(gitlab_base_url, project, ref)
+      "url" => build_url(project, ref)
     }
   end
 
-  defp install_bundle(bundle_url, dir) do
+  defp download_bundle({:local, _path}, _dir), do: :ok
+
+  defp download_bundle(bundle_url, dir) do
     http_client = http_client()
 
     with {:ok, %{status: 200, body: zip_body}} <- Tesla.get(http_client, bundle_url),
@@ -166,11 +177,43 @@ defmodule Mix.Tasks.Pleroma.Frontend do
     end
   end
 
-  defp gitlab_api_url(gitlab_base_url, project),
-    do: "https://#{gitlab_base_url}/api/v4/projects/#{URI.encode_www_form(project)}"
+  defp install_bundle("mastodon", base_path) do
+    File.ls!(base_path) |> IO.inspect()
+    required_paths = ["public/assets/sw.js", "public/packs"]
 
-  defp build_url(gitlab_base_url, project, ref),
-    do: "https://#{gitlab_base_url}/#{project}/-/jobs/artifacts/#{ref}/download?job=build"
+    with false <- Enum.all?(required_paths, &([base_path, &1] |> Path.join() |> File.exists?())) do
+      build_bundle!("mastodon", base_path)
+    end
+
+    with :ok <- File.rename("#{base_path}/public/assets/sw.js", "#{base_path}/sw.js"),
+         :ok <- File.rename("#{base_path}/public/packs", "#{base_path}/packs"),
+         {:ok, _deleted_files} <- File.rm_rf("#{base_path}/public") do
+      :ok
+    else
+      error ->
+        {:error, error}
+    end
+  end
+
+  defp install_bundle(_fe_name, _base_path), do: :ok
+
+  defp build_bundle!("mastodon", base_path) do
+    Pleroma.Utils.command_required!("yarn")
+    {_out, 0} = System.cmd("yarn", ["install"], cd: base_path)
+    {_out, 0} = System.cmd("yarn", ["run", "build"], cd: base_path)
+  end
+
+  defp build_bundle!(_frontend, base_path) do
+    Pleroma.Utils.command_required!("yarn")
+    {_out, 0} = System.cmd("yarn", [], cd: base_path)
+    {_out, 0} = System.cmd("npm", ["run", "build"], cd: base_path)
+  end
+
+  defp gitlab_api_url(project),
+    do: "https://#{@pleroma_gitlab_host}/api/v4/projects/#{URI.encode_www_form(project)}"
+
+  defp build_url(project, ref),
+    do: "https://#{@pleroma_gitlab_host}/#{project}/-/jobs/artifacts/#{ref}/download?job=build"
 
   defp http_client do
     middleware = [
