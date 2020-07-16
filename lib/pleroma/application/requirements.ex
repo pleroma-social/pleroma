@@ -2,7 +2,7 @@
 # Copyright © 2017-2020 Pleroma Authors <https://pleroma.social/>
 # SPDX-License-Identifier: AGPL-3.0-only
 
-defmodule Pleroma.ApplicationRequirements do
+defmodule Pleroma.Application.Requirements do
   @moduledoc """
   The module represents the collection of validations to runs before start server.
   """

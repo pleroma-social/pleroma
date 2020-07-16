@@ -187,7 +187,6 @@ defmodule Pleroma.Web.AdminAPI.ConfigControllerTest do
         Application.delete_env(:pleroma, Pleroma.Captcha.NotReal)
         Application.put_env(:pleroma, :http, http)
         Application.put_env(:tesla, :adapter, Tesla.Mock)
-        Restarter.Pleroma.refresh()
       end)
     end
 
@@ -408,8 +407,7 @@ defmodule Pleroma.Web.AdminAPI.ConfigControllerTest do
     end
 
     test "saving config which need pleroma reboot", %{conn: conn} do
-      chat = Config.get(:chat)
-      on_exit(fn -> Config.put(:chat, chat) end)
+      clear_config(:chat)
 
       assert conn
              |> put_req_header("content-type", "application/json")
@@ -454,8 +452,7 @@ defmodule Pleroma.Web.AdminAPI.ConfigControllerTest do
     end
 
     test "update setting which need reboot, don't change reboot flag until reboot", %{conn: conn} do
-      chat = Config.get(:chat)
-      on_exit(fn -> Config.put(:chat, chat) end)
+      clear_config(:chat)
 
       assert conn
              |> put_req_header("content-type", "application/json")
@@ -500,10 +497,8 @@ defmodule Pleroma.Web.AdminAPI.ConfigControllerTest do
                "need_reboot" => true
              }
 
-      capture_log(fn ->
-        assert conn |> get("/api/pleroma/admin/restart") |> json_response(200) ==
-                 %{}
-      end) =~ "pleroma restarted"
+      assert conn |> get("/api/pleroma/admin/restart") |> json_response(200) ==
+               %{}
 
       configs =
         conn
@@ -621,7 +616,7 @@ defmodule Pleroma.Web.AdminAPI.ConfigControllerTest do
         value: []
       )
 
-      Pleroma.Config.TransferTask.load_and_update_env([], false)
+      Pleroma.Config.Environment.load_and_update()
 
       assert Application.get_env(:logger, :backends) == []
 

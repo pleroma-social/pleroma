@@ -34,7 +34,7 @@ defmodule Pleroma.Web.AdminAPI.ConfigController do
 
       render(conn, "index.json", %{
         configs: configs,
-        need_reboot: Restarter.Pleroma.need_reboot?()
+        need_reboot: Pleroma.Application.DynamicSupervisor.need_reboot?()
       })
     end
   end
@@ -75,7 +75,7 @@ defmodule Pleroma.Web.AdminAPI.ConfigController do
 
       render(conn, "index.json", %{
         configs: merged,
-        need_reboot: Restarter.Pleroma.need_reboot?()
+        need_reboot: Pleroma.Application.DynamicSupervisor.need_reboot?()
       })
     end
   end
@@ -101,19 +101,13 @@ defmodule Pleroma.Web.AdminAPI.ConfigController do
         end)
         |> Enum.split_with(&(Ecto.get_meta(&1, :state) == :deleted))
 
-      Config.TransferTask.load_and_update_env(deleted, false)
+      Config.Environment.load_and_update(deleted)
 
-      if not Restarter.Pleroma.need_reboot?() do
-        changed_reboot_settings? =
-          (updated ++ deleted)
-          |> Enum.any?(&Config.TransferTask.pleroma_need_restart?(&1.group, &1.key, &1.value))
-
-        if changed_reboot_settings?, do: Restarter.Pleroma.need_reboot()
-      end
+      Pleroma.Application.DynamicSupervisor.save_need_reboot_paths(updated ++ deleted)
 
       render(conn, "index.json", %{
         configs: updated,
-        need_reboot: Restarter.Pleroma.need_reboot?()
+        need_reboot: Pleroma.Application.DynamicSupervisor.need_reboot?()
       })
     end
   end

@@ -1,14 +1,13 @@
-# Pleroma: A lightweight social networking server
-# Copyright © 2017-2020 Pleroma Authors <https://pleroma.social/>
-# SPDX-License-Identifier: AGPL-3.0-only
+# # Pleroma: A lightweight social networking server
+# # Copyright © 2017-2020 Pleroma Authors <https://pleroma.social/>
+# # SPDX-License-Identifier: AGPL-3.0-only
 
-defmodule Pleroma.Config.TransferTaskTest do
+defmodule Pleroma.Config.EnvironmentTest do
   use Pleroma.DataCase
 
-  import ExUnit.CaptureLog
   import Pleroma.Factory
 
-  alias Pleroma.Config.TransferTask
+  alias Pleroma.Config.Environment
 
   setup do: clear_config(:configurable_from_database, true)
 
@@ -25,7 +24,7 @@ defmodule Pleroma.Config.TransferTaskTest do
     insert(:config, group: :postgrex, key: :test_key, value: :value)
     insert(:config, group: :logger, key: :level, value: :debug)
 
-    TransferTask.start_link([])
+    Environment.load_and_update()
 
     assert Application.get_env(:pleroma, :test_key) == [live: 2, com: 3]
     assert Application.get_env(:idna, :test_key) == [live: 15, com: 35]
@@ -49,7 +48,7 @@ defmodule Pleroma.Config.TransferTaskTest do
     insert(:config, group: :quack, key: :level, value: :info)
     insert(:config, group: :quack, key: :meta, value: [:none])
 
-    TransferTask.start_link([])
+    Environment.load_and_update()
 
     assert Application.get_env(:quack, :level) == :info
     assert Application.get_env(:quack, :meta) == [:none]
@@ -69,52 +68,11 @@ defmodule Pleroma.Config.TransferTaskTest do
     insert(:config, key: :emoji, value: [groups: [a: 1, b: 2]])
     insert(:config, key: :assets, value: [mascots: [a: 1, b: 2]])
 
-    TransferTask.start_link([])
+    Environment.load_and_update()
 
     emoji_env = Application.get_env(:pleroma, :emoji)
     assert emoji_env[:groups] == [a: 1, b: 2]
     assets_env = Application.get_env(:pleroma, :assets)
     assert assets_env[:mascots] == [a: 1, b: 2]
-  end
-
-  describe "pleroma restart" do
-    setup do
-      on_exit(fn -> Restarter.Pleroma.refresh() end)
-    end
-
-    test "don't restart if no reboot time settings were changed" do
-      clear_config(:emoji)
-      insert(:config, key: :emoji, value: [groups: [a: 1, b: 2]])
-
-      refute String.contains?(
-               capture_log(fn -> TransferTask.start_link([]) end),
-               "pleroma restarted"
-             )
-    end
-
-    test "on reboot time key" do
-      clear_config(:chat)
-      insert(:config, key: :chat, value: [enabled: false])
-      assert capture_log(fn -> TransferTask.start_link([]) end) =~ "pleroma restarted"
-    end
-
-    test "on reboot time subkey" do
-      clear_config(Pleroma.Captcha)
-      insert(:config, key: Pleroma.Captcha, value: [seconds_valid: 60])
-      assert capture_log(fn -> TransferTask.start_link([]) end) =~ "pleroma restarted"
-    end
-
-    test "don't restart pleroma on reboot time key and subkey if there is false flag" do
-      clear_config(:chat)
-      clear_config(Pleroma.Captcha)
-
-      insert(:config, key: :chat, value: [enabled: false])
-      insert(:config, key: Pleroma.Captcha, value: [seconds_valid: 60])
-
-      refute String.contains?(
-               capture_log(fn -> TransferTask.load_and_update_env([], false) end),
-               "pleroma restarted"
-             )
-    end
   end
 end

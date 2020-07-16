@@ -5,8 +5,6 @@
 defmodule Pleroma.Application do
   use Application
 
-  import Cachex.Spec
-
   alias Pleroma.Config
 
   require Logger
@@ -15,6 +13,8 @@ defmodule Pleroma.Application do
   @version Mix.Project.config()[:version]
   @repository Mix.Project.config()[:source_url]
   @env Mix.env()
+
+  @type env() :: :test | :benchmark | :dev | :prod
 
   def name, do: @name
   def version, do: @version
@@ -53,15 +53,13 @@ defmodule Pleroma.Application do
     Pleroma.Config.Oban.warn()
     Config.DeprecationWarnings.warn()
     Pleroma.Plugs.HTTPSecurityPlug.warn_if_disabled()
-    Pleroma.ApplicationRequirements.verify!()
+    Pleroma.Application.Requirements.verify!()
     setup_instrumenters()
     load_custom_modules()
     check_system_commands()
     Pleroma.Docs.JSON.compile()
 
-    adapter = Application.get_env(:tesla, :adapter)
-
-    if adapter == Tesla.Adapter.Gun do
+    if Application.get_env(:tesla, :adapter) == Tesla.Adapter.Gun do
       if version = Pleroma.OTPVersion.version() do
         [major, minor] =
           version
@@ -84,32 +82,32 @@ defmodule Pleroma.Application do
     end
 
     # Define workers and child supervisors to be supervised
-    children =
-      [
-        Pleroma.Repo,
-        Config.TransferTask,
-        Pleroma.Emoji,
-        Pleroma.Plugs.RateLimiter.Supervisor
-      ] ++
-        cachex_children() ++
-        http_children(adapter, @env) ++
-        [
-          Pleroma.Stats,
-          Pleroma.JobQueueMonitor,
-          {Oban, Config.get(Oban)}
-        ] ++
-        task_children(@env) ++
-        dont_run_in_test(@env) ++
-        chat_child(@env, chat_enabled?()) ++
-        [
-          Pleroma.Web.Endpoint,
-          Pleroma.Gopher.Server
-        ]
+    children = [
+      Pleroma.Repo,
+      Pleroma.Application.DynamicSupervisor,
+      {Registry, keys: :duplicate, name: Pleroma.Application.DynamicSupervisor.registry()}
+    ]
 
     # See http://elixir-lang.org/docs/stable/elixir/Supervisor.html
     # for other strategies and supported options
-    opts = [strategy: :one_for_one, name: Pleroma.Supervisor]
-    Supervisor.start_link(children, opts)
+    Supervisor.start_link(children, strategy: :one_for_one, name: Pleroma.Supervisor)
+  end
+
+  def start_phase(:update_env, :normal, _args) do
+    # Load and update the environment from the config settings in the database
+    Pleroma.Config.Environment.load_and_update()
+  end
+
+  def start_phase(:static_children, :normal, _args) do
+    # Start static children,
+    # which don't require any configuration or can be configured in runtime
+    Pleroma.Application.Static.start_children(@env)
+  end
+
+  def start_phase(:dynamic_children, :normal, _args) do
+    # Start dynamic children,
+    # which require restart after some config changes
+    Pleroma.Application.DynamicSupervisor.start_children(@env)
   end
 
   def load_custom_modules do
@@ -153,113 +151,6 @@ defmodule Pleroma.Application do
     Pleroma.Web.Endpoint.PipelineInstrumenter.setup()
     Pleroma.Web.Endpoint.Instrumenter.setup()
   end
-
-  defp cachex_children do
-    [
-      build_cachex("used_captcha", ttl_interval: seconds_valid_interval()),
-      build_cachex("user", default_ttl: 25_000, ttl_interval: 1000, limit: 2500),
-      build_cachex("object", default_ttl: 25_000, ttl_interval: 1000, limit: 2500),
-      build_cachex("rich_media", default_ttl: :timer.minutes(120), limit: 5000),
-      build_cachex("scrubber", limit: 2500),
-      build_cachex("idempotency", expiration: idempotency_expiration(), limit: 2500),
-      build_cachex("web_resp", limit: 2500),
-      build_cachex("emoji_packs", expiration: emoji_packs_expiration(), limit: 10),
-      build_cachex("failed_proxy_url", limit: 2500),
-      build_cachex("banned_urls", default_ttl: :timer.hours(24 * 30), limit: 5_000)
-    ]
-  end
-
-  defp emoji_packs_expiration,
-    do: expiration(default: :timer.seconds(5 * 60), interval: :timer.seconds(60))
-
-  defp idempotency_expiration,
-    do: expiration(default: :timer.seconds(6 * 60 * 60), interval: :timer.seconds(60))
-
-  defp seconds_valid_interval,
-    do: :timer.seconds(Config.get!([Pleroma.Captcha, :seconds_valid]))
-
-  @spec build_cachex(String.t(), keyword()) :: map()
-  def build_cachex(type, opts),
-    do: %{
-      id: String.to_atom("cachex_" <> type),
-      start: {Cachex, :start_link, [String.to_atom(type <> "_cache"), opts]},
-      type: :worker
-    }
-
-  defp chat_enabled?, do: Config.get([:chat, :enabled])
-
-  defp dont_run_in_test(env) when env in [:test, :benchmark], do: []
-
-  defp dont_run_in_test(_) do
-    [
-      {Registry,
-       [
-         name: Pleroma.Web.Streamer.registry(),
-         keys: :duplicate,
-         partitions: System.schedulers_online()
-       ]},
-      Pleroma.Web.FedSockets.Supervisor
-    ]
-  end
-
-  defp chat_child(_env, true) do
-    [Pleroma.Web.ChatChannel.ChatChannelState]
-  end
-
-  defp chat_child(_, _), do: []
-
-  defp task_children(:test) do
-    [
-      %{
-        id: :web_push_init,
-        start: {Task, :start_link, [&Pleroma.Web.Push.init/0]},
-        restart: :temporary
-      }
-    ]
-  end
-
-  defp task_children(_) do
-    [
-      %{
-        id: :web_push_init,
-        start: {Task, :start_link, [&Pleroma.Web.Push.init/0]},
-        restart: :temporary
-      },
-      %{
-        id: :internal_fetch_init,
-        start: {Task, :start_link, [&Pleroma.Web.ActivityPub.InternalFetchActor.init/0]},
-        restart: :temporary
-      }
-    ]
-  end
-
-  # start hackney and gun pools in tests
-  defp http_children(_, :test) do
-    http_children(Tesla.Adapter.Hackney, nil) ++ http_children(Tesla.Adapter.Gun, nil)
-  end
-
-  defp http_children(Tesla.Adapter.Hackney, _) do
-    pools = [:federation, :media]
-
-    pools =
-      if Config.get([Pleroma.Upload, :proxy_remote]) do
-        [:upload | pools]
-      else
-        pools
-      end
-
-    for pool <- pools do
-      options = Config.get([:hackney_pools, pool])
-      :hackney_pool.child_spec(pool, options)
-    end
-  end
-
-  defp http_children(Tesla.Adapter.Gun, _) do
-    Pleroma.Gun.ConnectionPool.children() ++
-      [{Task, &Pleroma.HTTP.AdapterHelper.Gun.limiter_setup/0}]
-  end
-
-  defp http_children(_, _), do: []
 
   defp check_system_commands do
     filters = Config.get([Pleroma.Upload, :filters])

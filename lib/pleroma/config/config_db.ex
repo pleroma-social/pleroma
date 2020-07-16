@@ -379,4 +379,29 @@ defmodule Pleroma.ConfigDB do
     Regex.match?(~r/^(Pleroma|Phoenix|Tesla|Quack|Ueberauth|Swoosh)\./, string) or
       string in ["Oban", "Ueberauth", "ExSyslogger"]
   end
+
+  @spec load_and_merge_with_defaults([t()]) :: [{atom(), atom(), term(), term()}]
+  def load_and_merge_with_defaults(deleted \\ []) do
+    (Repo.all(ConfigDB) ++ deleted)
+    |> Enum.map(&merge_with_defaults/1)
+  end
+
+  defp merge_with_defaults(%{group: group, key: key, value: value} = setting) do
+    default = Pleroma.Config.Holder.default_config(group, key)
+
+    merged =
+      cond do
+        Ecto.get_meta(setting, :state) == :deleted -> default
+        can_be_merged?(default, value) -> merge_group(group, key, default, value)
+        true -> value
+      end
+
+    {group, key, value, merged}
+  end
+
+  defp can_be_merged?(val1, val2) when is_list(val1) and is_list(val2) do
+    Keyword.keyword?(val1) and Keyword.keyword?(val2)
+  end
+
+  defp can_be_merged?(_, _), do: false
 end

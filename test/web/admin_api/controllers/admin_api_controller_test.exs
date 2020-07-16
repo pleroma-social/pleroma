@@ -6,7 +6,6 @@ defmodule Pleroma.Web.AdminAPI.AdminAPIControllerTest do
   use Pleroma.Web.ConnCase
   use Oban.Testing, repo: Pleroma.Repo
 
-  import ExUnit.CaptureLog
   import Mock
   import Pleroma.Factory
   import Swoosh.TestAssertions
@@ -1426,26 +1425,10 @@ defmodule Pleroma.Web.AdminAPI.AdminAPIControllerTest do
     setup do: clear_config(:configurable_from_database, true)
 
     test "pleroma restarts", %{conn: conn} do
-      capture_log(fn ->
-        assert conn |> get("/api/pleroma/admin/restart") |> json_response(200) == %{}
-      end) =~ "pleroma restarted"
+      assert conn |> get("/api/pleroma/admin/restart") |> json_response(200) == %{}
 
-      refute Restarter.Pleroma.need_reboot?()
+      refute Pleroma.Application.DynamicSupervisor.need_reboot?()
     end
-  end
-
-  test "need_reboot flag", %{conn: conn} do
-    assert conn
-           |> get("/api/pleroma/admin/need_reboot")
-           |> json_response(200) == %{"need_reboot" => false}
-
-    Restarter.Pleroma.need_reboot()
-
-    assert conn
-           |> get("/api/pleroma/admin/need_reboot")
-           |> json_response(200) == %{"need_reboot" => true}
-
-    on_exit(fn -> Restarter.Pleroma.refresh() end)
   end
 
   describe "GET /api/pleroma/admin/users/:nickname/statuses" do

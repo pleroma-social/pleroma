@@ -75,12 +75,10 @@ defmodule Pleroma.Mixfile do
       extra_applications: [
         :logger,
         :runtime_tools,
-        :comeonin,
-        :quack,
-        :fast_sanitize,
-        :ssl
+        :fast_sanitize
       ],
-      included_applications: [:ex_syslogger]
+      included_applications: [:ex_syslogger],
+      start_phases: [update_env: [], static_children: [], dynamic_children: []]
     ]
   end
 
@@ -187,7 +185,6 @@ defmodule Pleroma.Mixfile do
       {:captcha,
        git: "https://git.pleroma.social/pleroma/elixir-libraries/elixir-captcha.git",
        ref: "e0f16822d578866e186a0974d65ad58cddc1e2ab"},
-      {:restarter, path: "./restarter"},
       {:open_api_spex,
        git: "https://git.pleroma.social/pleroma/elixir-libraries/open_api_spex.git",
        ref: "f296ac0924ba3cf79c7a588c4c252889df4c2edd"},

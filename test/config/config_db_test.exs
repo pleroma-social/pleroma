@@ -543,4 +543,23 @@ defmodule Pleroma.ConfigDBTest do
              ]
     end
   end
+
+  test "load_and_merge_with_defaults/1" do
+    assert Pleroma.Config.Holder.default_config(:logger, :console)[:level] == :warn
+
+    {:ok, config} =
+      ConfigDB.update_or_create(%{group: :logger, key: :console, value: [level: :debug]})
+
+    assert [{:logger, :console, [level: :debug], merged}] =
+             ConfigDB.load_and_merge_with_defaults()
+
+    assert merged[:level] == :debug
+
+    {:ok, deleted} = ConfigDB.delete(config)
+
+    assert [{:logger, :console, [level: :debug], merged}] =
+             ConfigDB.load_and_merge_with_defaults([deleted])
+
+    assert merged[:level] == :warn
+  end
 end

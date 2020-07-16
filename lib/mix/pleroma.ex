@@ -39,31 +39,23 @@ defmodule Mix.Pleroma do
     children =
       [
         Pleroma.Repo,
-        {Pleroma.Config.TransferTask, false},
+        %{
+          id: :env_updater,
+          start: {Task, :start_link, [&Pleroma.Config.Environment.load_and_update/0]},
+          restart: :temporary
+        },
         Pleroma.Web.Endpoint,
         {Oban, Pleroma.Config.get(Oban)}
       ] ++
         http_children(adapter)
 
-    cachex_children = Enum.map(@cachex_children, &Pleroma.Application.build_cachex(&1, []))
+    cachex_children =
+      Enum.map(@cachex_children, &Pleroma.Application.Static.build_cachex({&1, []}))
 
     Supervisor.start_link(children ++ cachex_children,
       strategy: :one_for_one,
       name: Pleroma.Supervisor
     )
-
-    if Pleroma.Config.get(:env) not in [:test, :benchmark] do
-      pleroma_rebooted?()
-    end
-  end
-
-  defp pleroma_rebooted? do
-    if Restarter.Pleroma.rebooted?() do
-      :ok
-    else
-      Process.sleep(10)
-      pleroma_rebooted?()
-    end
   end
 
   def load_pleroma do
