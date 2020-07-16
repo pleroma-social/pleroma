@@ -1,0 +1,9 @@
+config :pleroma, Pleroma.Web.Endpoint,
+  url: [host: "<%= endpoint_url_host %>", scheme: "<%= endpoint_url_scheme %>", port: <%= endpoint_url_port %>],
+  http: [ip: {<%= String.replace(endpoint_http_ip, ".", ", ") %>}, port: <%= endpoint_http_port %>],
+  secret_key_base: "<%= endpoint_secret_key_base %>",
+  signing_salt: "<%= endpoint_signing_salt %>"
+
+config :pleroma, configurable_from_database: <%= configurable_from_database %>
+
+config :joken, default_signer: "<%= joken_default_signer %>"

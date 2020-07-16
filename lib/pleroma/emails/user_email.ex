@@ -8,11 +8,10 @@ defmodule Pleroma.Emails.UserEmail do
   use Phoenix.Swoosh, view: Pleroma.Web.EmailView, layout: {Pleroma.Web.LayoutView, :email}
 
   alias Pleroma.Config
+  alias Pleroma.Helpers.ConfigHelper
   alias Pleroma.User
   alias Pleroma.Web.Endpoint
   alias Pleroma.Web.Router
-
-  import Pleroma.Config.Helpers, only: [instance_name: 0, sender: 0]
 
   defp recipient(email, nil), do: email
   defp recipient(email, name), do: {name, email}
@@ -22,25 +21,25 @@ defmodule Pleroma.Emails.UserEmail do
   def welcome(user, opts \\ %{}) do
     new()
     |> to(recipient(user))
-    |> from(Map.get(opts, :sender, sender()))
-    |> subject(Map.get(opts, :subject, "Welcome to #{instance_name()}!"))
-    |> html_body(Map.get(opts, :html, "Welcome to #{instance_name()}!"))
-    |> text_body(Map.get(opts, :text, "Welcome to #{instance_name()}!"))
+    |> from(Map.get(opts, :sender, ConfigHelper.sender()))
+    |> subject(Map.get(opts, :subject, "Welcome to #{ConfigHelper.instance_name()}!"))
+    |> html_body(Map.get(opts, :html, "Welcome to #{ConfigHelper.instance_name()}!"))
+    |> text_body(Map.get(opts, :text, "Welcome to #{ConfigHelper.instance_name()}!"))
   end
 
   def password_reset_email(user, token) when is_binary(token) do
     password_reset_url = Router.Helpers.reset_password_url(Endpoint, :reset, token)
 
     html_body = """
-    <h3>Reset your password at #{instance_name()}</h3>
-    <p>Someone has requested password change for your account at #{instance_name()}.</p>
+    <h3>Reset your password at #{ConfigHelper.instance_name()}</h3>
+    <p>Someone has requested password change for your account at #{ConfigHelper.instance_name()}.</p>
     <p>If it was you, visit the following link to proceed: <a href="#{password_reset_url}">reset password</a>.</p>
     <p>If it was someone else, nothing to worry about: your data is secure and your password has not been changed.</p>
     """
 
     new()
     |> to(recipient(user))
-    |> from(sender())
+    |> from(ConfigHelper.sender())
     |> subject("Password reset")
     |> html_body(html_body)
   end
@@ -59,15 +58,15 @@ defmodule Pleroma.Emails.UserEmail do
       )
 
     html_body = """
-    <h3>You are invited to #{instance_name()}</h3>
-    <p>#{user.name} invites you to join #{instance_name()}, an instance of Pleroma federated social networking platform.</p>
+    <h3>You are invited to #{ConfigHelper.instance_name()}</h3>
+    <p>#{user.name} invites you to join #{ConfigHelper.instance_name()}, an instance of Pleroma federated social networking platform.</p>
     <p>Click the following link to register: <a href="#{registration_url}">accept invitation</a>.</p>
     """
 
     new()
     |> to(recipient(to_email, to_name))
-    |> from(sender())
-    |> subject("Invitation to #{instance_name()}")
+    |> from(ConfigHelper.sender())
+    |> subject("Invitation to #{ConfigHelper.instance_name()}")
     |> html_body(html_body)
   end
 
@@ -81,15 +80,15 @@ defmodule Pleroma.Emails.UserEmail do
       )
 
     html_body = """
-    <h3>Welcome to #{instance_name()}!</h3>
+    <h3>Welcome to #{ConfigHelper.instance_name()}!</h3>
     <p>Email confirmation is required to activate the account.</p>
     <p>Click the following link to proceed: <a href="#{confirmation_url}">activate your account</a>.</p>
     """
 
     new()
     |> to(recipient(user))
-    |> from(sender())
-    |> subject("#{instance_name()} account confirmation")
+    |> from(ConfigHelper.sender())
+    |> subject("#{ConfigHelper.instance_name()} account confirmation")
     |> html_body(html_body)
   end
 
@@ -154,7 +153,7 @@ defmodule Pleroma.Emails.UserEmail do
       logo = Config.get([__MODULE__, :logo])
 
       html_data = %{
-        instance: instance_name(),
+        instance: ConfigHelper.instance_name(),
         user: user,
         mentions: mentions,
         followers: followers,
@@ -171,8 +170,8 @@ defmodule Pleroma.Emails.UserEmail do
 
       new()
       |> to(recipient(user))
-      |> from(sender())
-      |> subject("Your digest from #{instance_name()}")
+      |> from(ConfigHelper.sender())
+      |> subject("Your digest from #{ConfigHelper.instance_name()}")
       |> put_layout(false)
       |> render_body("digest.html", html_data)
       |> attachment(Swoosh.Attachment.new(logo_path, filename: "logo.svg", type: :inline))
@@ -224,7 +223,7 @@ defmodule Pleroma.Emails.UserEmail do
 
     new()
     |> to(recipient(user))
-    |> from(sender())
+    |> from(ConfigHelper.sender())
     |> subject("Your account archive is ready")
     |> html_body(html_body)
   end

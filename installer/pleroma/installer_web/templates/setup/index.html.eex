@@ -1,0 +1,15 @@
+<div class="container">
+  <div class="row">
+    <div class="column">
+      <p>For Pleroma to work correctly, you need to configure the PostgreSQL user and install additional extensions. List of extensions, which must be installed:</p>
+      <ul>
+        <li>citext</li>
+        <li>pg_trgm</li>
+        <li>uuid-ossp</li>
+        <li>rum (if you are going to use rum indexes)</li>
+      </ul>
+      <a class="button" href="<%= Routes.setup_path(@conn, :credentials, token: @token) %>">I have configured PotgreSQL</a>
+      <a class="button button-outline" href="<%= Routes.setup_path(@conn, :credentials_setup, token: @token) %>">I haven't configured PostgreSQL</a>
+    </div>
+  </div>
+</div>

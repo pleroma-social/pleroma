@@ -15,6 +15,10 @@ defmodule Pleroma.EctoType.Config.BinaryValue do
     end
   end
 
+  def cast(value) when is_map(value) or is_list(value) do
+    {:ok, Pleroma.Config.Converter.to_elixir_types(value)}
+  end
+
   def cast(value), do: {:ok, value}
 
   def load(value) when is_binary(value) do

@@ -5,7 +5,7 @@
 defmodule Pleroma.Docs.JSON do
   @behaviour Pleroma.Docs.Generator
   @external_resource "config/description.exs"
-  @raw_config Pleroma.Config.Loader.read("config/description.exs")
+  @raw_config Pleroma.Config.Loader.read!("config/description.exs")
   @raw_descriptions @raw_config[:pleroma][:config_description]
   @term __MODULE__.Compiled
 

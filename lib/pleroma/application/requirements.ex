@@ -2,7 +2,7 @@
 # Copyright © 2017-2020 Pleroma Authors <https://pleroma.social/>
 # SPDX-License-Identifier: AGPL-3.0-only
 
-defmodule Pleroma.ApplicationRequirements do
+defmodule Pleroma.Application.Requirements do
   @moduledoc """
   The module represents the collection of validations to runs before start server.
   """
@@ -18,20 +18,23 @@ defmodule Pleroma.ApplicationRequirements do
 
   @spec verify!() :: :ok | VerifyError.t()
   def verify! do
+    adapter = Application.get_env(:tesla, :adapter)
+
     :ok
-    |> check_system_commands!()
-    |> check_confirmation_accounts!()
-    |> check_migrations_applied!()
-    |> check_welcome_message_config!()
-    |> check_rum!()
-    |> check_repo_pool_size!()
-    |> handle_result()
+    |> check_system_commands()
+    |> check_confirmation_accounts()
+    |> check_migrations_applied()
+    |> check_welcome_message_config()
+    |> check_rum()
+    |> check_repo_pool_size()
+    |> check_otp_version(adapter)
+    |> handle_result!()
   end
 
-  defp handle_result(:ok), do: :ok
-  defp handle_result({:error, message}), do: raise(VerifyError, message: message)
+  defp handle_result!(:ok), do: :ok
+  defp handle_result!({:error, message}), do: raise(VerifyError, message: message)
 
-  defp check_welcome_message_config!(:ok) do
+  defp check_welcome_message_config(:ok) do
     if Pleroma.Config.get([:welcome, :email, :enabled], false) and
          not Pleroma.Emails.Mailer.enabled?() do
       Logger.error("""
@@ -45,11 +48,11 @@ defmodule Pleroma.ApplicationRequirements do
     end
   end
 
-  defp check_welcome_message_config!(result), do: result
+  defp check_welcome_message_config(result), do: result
 
   # Checks account confirmation email
   #
-  def check_confirmation_accounts!(:ok) do
+  def check_confirmation_accounts(:ok) do
     if Pleroma.Config.get([:instance, :account_activation_required]) &&
          not Pleroma.Config.get([Pleroma.Emails.Mailer, :enabled]) do
       Logger.error(
@@ -65,11 +68,11 @@ defmodule Pleroma.ApplicationRequirements do
     end
   end
 
-  def check_confirmation_accounts!(result), do: result
+  def check_confirmation_accounts(result), do: result
 
   # Checks for pending migrations.
   #
-  def check_migrations_applied!(:ok) do
+  def check_migrations_applied(:ok) do
     unless Pleroma.Config.get(
              [:i_am_aware_this_may_cause_data_loss, :disable_migration_check],
              false
@@ -105,11 +108,11 @@ defmodule Pleroma.ApplicationRequirements do
     end
   end
 
-  def check_migrations_applied!(result), do: result
+  def check_migrations_applied(result), do: result
 
   # Checks for settings of RUM indexes.
   #
-  defp check_rum!(:ok) do
+  defp check_rum(:ok) do
     {_, res, _} =
       Ecto.Migrator.with_repo(Pleroma.Repo, fn repo ->
         migrate =
@@ -121,15 +124,15 @@ defmodule Pleroma.ApplicationRequirements do
 
         setting = Pleroma.Config.get([:database, :rum_enabled], false)
 
-        do_check_rum!(setting, migrate)
+        do_check_rum(setting, migrate)
       end)
 
     res
   end
 
-  defp check_rum!(result), do: result
+  defp check_rum(result), do: result
 
-  defp do_check_rum!(setting, migrate) do
+  defp do_check_rum(setting, migrate) do
     case {setting, migrate} do
       {true, false} ->
         Logger.error(
@@ -158,7 +161,7 @@ defmodule Pleroma.ApplicationRequirements do
     end
   end
 
-  defp check_system_commands!(:ok) do
+  defp check_system_commands(:ok) do
     filter_commands_statuses = [
       check_filter(Pleroma.Upload.Filters.Exiftool, "exiftool"),
       check_filter(Pleroma.Upload.Filters.Mogrify, "mogrify"),
@@ -187,9 +190,9 @@ defmodule Pleroma.ApplicationRequirements do
     end
   end
 
-  defp check_system_commands!(result), do: result
+  defp check_system_commands(result), do: result
 
-  defp check_repo_pool_size!(:ok) do
+  defp check_repo_pool_size(:ok) do
     if Pleroma.Config.get([Pleroma.Repo, :pool_size], 10) != 10 and
          not Pleroma.Config.get([:dangerzone, :override_repo_pool_size], false) do
       Logger.error("""
@@ -211,7 +214,7 @@ defmodule Pleroma.ApplicationRequirements do
     end
   end
 
-  defp check_repo_pool_size!(result), do: result
+  defp check_repo_pool_size(result), do: result
 
   defp check_filter(filter, command_required) do
     filters = Config.get([Pleroma.Upload, :filters])
@@ -227,4 +230,32 @@ defmodule Pleroma.ApplicationRequirements do
       true
     end
   end
+
+  defp check_otp_version(:ok, Tesla.Adapter.Gun) do
+    if version = Pleroma.OTPVersion.version() do
+      [major, minor] =
+        version
+        |> String.split(".")
+        |> Enum.map(&String.to_integer/1)
+        |> Enum.take(2)
+
+      if (major == 22 and minor < 2) or major < 22 do
+        Logger.error("
+            !!!OTP VERSION ERROR!!!
+            You are using gun adapter with OTP version #{version}, which doesn't support correct handling of unordered certificates chains. Please update your Erlang/OTP to at least 22.2.
+            ")
+        {:error, "OTP version error"}
+      else
+        :ok
+      end
+    else
+      Logger.error("
+          !!!OTP VERSION ERROR!!!
+          To support correct handling of unordered certificates chains - OTP version must be > 22.2.
+          ")
+      {:error, "OTP version error"}
+    end
+  end
+
+  defp check_otp_version(result, _), do: result
 end

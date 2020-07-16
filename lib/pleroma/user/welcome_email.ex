@@ -9,9 +9,8 @@ defmodule Pleroma.User.WelcomeEmail do
 
   alias Pleroma.Config
   alias Pleroma.Emails
+  alias Pleroma.Helpers.ConfigHelper
   alias Pleroma.User
-
-  import Pleroma.Config.Helpers, only: [instance_name: 0]
 
   @spec enabled?() :: boolean()
   def enabled?, do: Config.get([:welcome, :email, :enabled], false)
@@ -24,7 +23,7 @@ defmodule Pleroma.User.WelcomeEmail do
   end
 
   defp email_options(user) do
-    bindings = [user: user, instance_name: instance_name()]
+    bindings = [user: user, instance_name: ConfigHelper.instance_name()]
 
     %{}
     |> add_sender(Config.get([:welcome, :email, :sender], nil))
@@ -45,7 +44,7 @@ defmodule Pleroma.User.WelcomeEmail do
   end
 
   defp add_sender(opts, sender) when is_binary(sender) do
-    add_sender(opts, {instance_name(), sender})
+    add_sender(opts, {ConfigHelper.instance_name(), sender})
   end
 
   defp add_sender(opts, _), do: opts

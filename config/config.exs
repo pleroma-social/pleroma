@@ -823,6 +823,24 @@ config :pleroma, Pleroma.User.Backup,
   limit_days: 7,
   dir: nil
 
+# TODO: split between environments
+config :pleroma, Pleroma.InstallerWeb.Endpoint,
+  http: [port: 4001],
+  url: [host: "localhost"],
+  secret_key_base: "izidwIWRlyFL/YjJBH672OWpSFXkMTk3KOgFL/Gj5vO5parwfHnoAQ8ZL+2Mn1SH",
+  render_errors: [view: Pleroma.InstallerWeb.ErrorView, accepts: ~w(html)],
+  protocol: "http",
+  debug_errors: true,
+  code_reloader: true,
+  check_origin: false,
+  node: [
+    "node_modules/webpack/bin/webpack.js",
+    "--mode",
+    "development",
+    "--watch-stdin",
+    cd: Path.expand("../assets", __DIR__)
+  ]
+
 # Import environment specific config. This must remain at the bottom
 # of this file so it overrides the configuration defined above.
 import_config "#{Mix.env()}.exs"

@@ -1,0 +1,53 @@
+config :pleroma, Pleroma.Web.Endpoint,
+   url: [host: "<%= endpoint_url_host %>", scheme: "<%= endpoint_url_scheme %>", port: <%= endpoint_url_port %>],
+   http: [ip: {<%= String.replace(endpoint_http_ip, ".", ", ") %>}, port: <%= endpoint_http_port %>],
+   secret_key_base: "<%= endpoint_secret_key_base %>",
+   signing_salt: "<%= endpoint_signing_salt %>"
+
+config :pleroma, :instance,
+  name: "<%= instance_name %>",
+  email: "<%= instance_email %>",
+  notify_email: "<%= instance_notify_email %>",
+  limit: 5000,
+  registrations_open: true,
+  static_dir: "<%= instance_static_dir %>"
+
+config :pleroma, :media_proxy,
+  enabled: false,
+  redirect_on_failure: true
+  #base_url: "https://cache.pleroma.social"
+
+# Configure web push notifications
+config :web_push_encryption, :vapid_details,
+  subject: "mailto:<%= instance_email %>",
+  public_key: "<%= web_push_encryption_public_key %>",
+  private_key: "<%= web_push_encryption_private_key %>"
+
+config :pleroma, Pleroma.Uploaders.Local, uploads: "<%= local_uploads_dir %>"
+
+# Enable Strict-Transport-Security once SSL is working:
+# config :pleroma, :http_security,
+#   sts: true
+
+# Configure S3 support if desired.
+# The public S3 endpoint is different depending on region and provider,
+# consult your S3 provider's documentation for details on what to use.
+#
+# config :pleroma, Pleroma.Uploaders.S3,
+#   bucket: "some-bucket",
+#   public_endpoint: "https://s3.amazonaws.com"
+#
+# Configure S3 credentials:
+# config :ex_aws, :s3,
+#   access_key_id: "xxxxxxxxxxxxx",
+#   secret_access_key: "yyyyyyyyyyyy",
+#   region: "us-east-1",
+#   scheme: "https://"
+#
+# For using third-party S3 clones like wasabi, also do:
+# config :ex_aws, :s3,
+#   host: "s3.wasabisys.com"
+
+config :joken, default_signer: "<%= joken_default_signer %>"
+
+config :pleroma, configurable_from_database: <%= configurable_from_database %>

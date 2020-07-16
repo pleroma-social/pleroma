@@ -1,0 +1,12 @@
+<div class="container">
+  <div class="row">
+    <div class="column">
+      <p>Run following command to setup PostgreSQL:</p>
+      <pre><code>
+      sudo -Hu postgres psql -f <%= @psql_path %>
+      </code></pre>
+
+      <a class="button" href="<%= Routes.setup_path(@conn, :save_generated_credentials, token: @token) %>">Next</a>
+    </div>
+  </div>
+</div>

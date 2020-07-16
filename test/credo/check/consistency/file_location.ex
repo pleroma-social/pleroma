@@ -63,6 +63,7 @@ defmodule Credo.Check.Consistency.FileLocation do
       ["test", "support" | _] -> false
       ["test", "test_helper.exs"] -> false
       ["test" | _] -> not exclude?(relative_path, params)
+      ["installer", "pleroma" | _] -> not exclude?(relative_path, params)
       _ -> false
     end
   end

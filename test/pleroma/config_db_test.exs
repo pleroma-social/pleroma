@@ -14,7 +14,7 @@ defmodule Pleroma.ConfigDBTest do
     assert config == ConfigDB.get_by_params(%{group: config.group, key: config.key})
   end
 
-  test "get_all_as_keyword/0" do
+  test "all_as_keyword/0" do
     saved = insert(:config)
     insert(:config, group: ":quack", key: ":level", value: :info)
     insert(:config, group: ":quack", key: ":meta", value: [:none])
@@ -25,7 +25,7 @@ defmodule Pleroma.ConfigDBTest do
       value: "https://hooks.slack.com/services/KEY/some_val"
     )
 
-    config = ConfigDB.get_all_as_keyword()
+    config = ConfigDB.all_as_keyword()
 
     assert config[:pleroma] == [
              {saved.key, saved.value}
@@ -38,12 +38,12 @@ defmodule Pleroma.ConfigDBTest do
 
   describe "update_or_create/1" do
     test "common" do
-      config = insert(:config)
+      config1 = insert(:config, value: [])
       key2 = :another_key
 
       params = [
-        %{group: :pleroma, key: key2, value: "another_value"},
-        %{group: :pleroma, key: config.key, value: [a: 1, b: 2, c: "new_value"]}
+        %{group: :pleroma, key: config1.key, value: [a: 1, b: 2, c: "new_value"]},
+        %{group: :pleroma, key: key2, value: [new_val: "another_value"]}
       ]
 
       assert Repo.all(ConfigDB) |> length() == 1
@@ -52,11 +52,11 @@ defmodule Pleroma.ConfigDBTest do
 
       assert Repo.all(ConfigDB) |> length() == 2
 
-      config1 = ConfigDB.get_by_params(%{group: config.group, key: config.key})
+      config1 = ConfigDB.get_by_params(%{group: config1.group, key: config1.key})
       config2 = ConfigDB.get_by_params(%{group: :pleroma, key: key2})
 
       assert config1.value == [a: 1, b: 2, c: "new_value"]
-      assert config2.value == "another_value"
+      assert config2.value == [new_val: "another_value"]
     end
 
     test "partial update" do
@@ -95,50 +95,18 @@ defmodule Pleroma.ConfigDBTest do
       assert updated.value[:key3] == :val3
     end
 
-    test "only full update for some keys" do
-      config1 = insert(:config, key: :ecto_repos, value: [repo: Pleroma.Repo])
-
-      config2 = insert(:config, group: :cors_plug, key: :max_age, value: 18)
-
-      {:ok, _config} =
-        ConfigDB.update_or_create(%{
-          group: config1.group,
-          key: config1.key,
-          value: [another_repo: [Pleroma.Repo]]
-        })
-
-      {:ok, _config} =
-        ConfigDB.update_or_create(%{
-          group: config2.group,
-          key: config2.key,
-          value: 777
-        })
-
-      updated1 = ConfigDB.get_by_params(%{group: config1.group, key: config1.key})
-      updated2 = ConfigDB.get_by_params(%{group: config2.group, key: config2.key})
-
-      assert updated1.value == [another_repo: [Pleroma.Repo]]
-      assert updated2.value == 777
-    end
-
-    test "full update if value is not keyword" do
-      config =
-        insert(:config,
-          group: ":tesla",
-          key: ":adapter",
-          value: Tesla.Adapter.Hackney
-        )
+    test "only full update for groups without keys" do
+      config = insert(:config, group: :cors_plug, key: nil, value: [max_age: 18])
 
       {:ok, _config} =
         ConfigDB.update_or_create(%{
           group: config.group,
-          key: config.key,
-          value: Tesla.Adapter.Httpc
+          key: nil,
+          value: [max_age: 25, credentials: true]
         })
 
       updated = ConfigDB.get_by_params(%{group: config.group, key: config.key})
-
-      assert updated.value == Tesla.Adapter.Httpc
+      assert updated.value == [max_age: 25, credentials: true]
     end
 
     test "only full update for some subkeys" do
@@ -176,15 +144,14 @@ defmodule Pleroma.ConfigDBTest do
     end
   end
 
-  describe "delete/1" do
+  describe "delete_or_update/1" do
     test "error on deleting non existing setting" do
-      {:error, error} = ConfigDB.delete(%{group: ":pleroma", key: ":key"})
-      assert error =~ "Config with params %{group: \":pleroma\", key: \":key\"} not found"
+      assert {:ok, nil} == ConfigDB.delete_or_update(%{group: :pleroma, key: :key})
     end
 
     test "full delete" do
       config = insert(:config)
-      {:ok, deleted} = ConfigDB.delete(%{group: config.group, key: config.key})
+      {:ok, deleted} = ConfigDB.delete_or_update(%{group: config.group, key: config.key})
       assert Ecto.get_meta(deleted, :state) == :deleted
       refute ConfigDB.get_by_params(%{group: config.group, key: config.key})
     end
@@ -193,7 +160,7 @@ defmodule Pleroma.ConfigDBTest do
       config = insert(:config, value: [groups: [a: 1, b: 2], key: [a: 1]])
 
       {:ok, deleted} =
-        ConfigDB.delete(%{group: config.group, key: config.key, subkeys: [":groups"]})
+        ConfigDB.delete_or_update(%{group: config.group, key: config.key, subkeys: [:groups]})
 
       assert Ecto.get_meta(deleted, :state) == :loaded
 
@@ -208,339 +175,246 @@ defmodule Pleroma.ConfigDBTest do
       config = insert(:config, value: [groups: [a: 1, b: 2]])
 
       {:ok, deleted} =
-        ConfigDB.delete(%{group: config.group, key: config.key, subkeys: [":groups"]})
+        ConfigDB.delete_or_update(%{group: config.group, key: config.key, subkeys: [:groups]})
 
       assert Ecto.get_meta(deleted, :state) == :deleted
 
       refute ConfigDB.get_by_params(%{group: config.group, key: config.key})
     end
+
+    test "delete struct" do
+      config = insert(:config)
+      {:ok, config} = ConfigDB.delete(config)
+      assert Ecto.get_meta(config, :state) == :deleted
+      assert Pleroma.Repo.aggregate(ConfigDB, :count) == 0
+    end
   end
 
-  describe "to_elixir_types/1" do
-    test "string" do
-      assert ConfigDB.to_elixir_types("value as string") == "value as string"
+  test "all/0" do
+    config = insert(:config)
+
+    assert [^config] = ConfigDB.all()
+  end
+
+  describe "reduce_defaults_and_merge_with_changes/2" do
+    test "common changes" do
+      defaults = [
+        pleroma: [
+          key1: [k1: 1, k2: 1, k3: 1],
+          key2: [k1: 2, k2: 2, k3: 2]
+        ],
+        logger: [k1: 3, k2: 3]
+      ]
+
+      config1 = insert(:config, key: :key1, value: [k1: 4, k2: 4])
+      config2 = insert(:config, key: :key2, value: [k1: 5, k2: 5])
+
+      {changes, [logger: [k1: 3, k2: 3]]} =
+        ConfigDB.reduce_defaults_and_merge_with_changes([config1, config2], defaults)
+
+      Enum.each(changes, fn
+        %{key: :key1, value: value} ->
+          assert value == [k3: 1, k1: 4, k2: 4]
+
+        %{key: :key2, value: value} ->
+          assert value == [k3: 2, k1: 5, k2: 5]
+      end)
     end
 
-    test "boolean" do
-      assert ConfigDB.to_elixir_types(false) == false
-    end
+    test "changes for group without key" do
+      defaults = [
+        cors_plug: [
+          max_age: 86_400,
+          methods: ["POST", "PUT", "DELETE", "GET", "PATCH", "OPTIONS"]
+        ],
+        pleroma: [key1: [k1: 1, k2: 1, k3: 1]]
+      ]
 
-    test "nil" do
-      assert ConfigDB.to_elixir_types(nil) == nil
-    end
+      config = insert(:config, group: :cors_plug, key: nil, value: [max_age: 60_000])
 
-    test "integer" do
-      assert ConfigDB.to_elixir_types(150) == 150
-    end
+      {[change], [pleroma: [key1: [k1: 1, k2: 1, k3: 1]]]} =
+        ConfigDB.reduce_defaults_and_merge_with_changes([config], defaults)
 
-    test "atom" do
-      assert ConfigDB.to_elixir_types(":atom") == :atom
-    end
-
-    test "ssl options" do
-      assert ConfigDB.to_elixir_types([":tlsv1", ":tlsv1.1", ":tlsv1.2"]) == [
-               :tlsv1,
-               :"tlsv1.1",
-               :"tlsv1.2"
+      assert change.value == [
+               methods: ["POST", "PUT", "DELETE", "GET", "PATCH", "OPTIONS"],
+               max_age: 60_000
              ]
     end
 
-    test "pleroma module" do
-      assert ConfigDB.to_elixir_types("Pleroma.Bookmark") == Pleroma.Bookmark
+    test "for logger backend setting and others" do
+      defaults = [
+        logger: [
+          ex_syslogger: [k1: 1, k2: 1],
+          console: [k1: 2, k2: 2],
+          backends: [:ex_syslogger, :console],
+          key: 1
+        ],
+        pleroma: [key1: 1, key2: 2]
+      ]
+
+      logger =
+        insert(:config,
+          group: :logger,
+          key: nil,
+          value: [ex_syslogger: [k1: 3, k2: 4], backends: [:console]]
+        )
+
+      {[change], [pleroma: [key1: 1, key2: 2]]} =
+        ConfigDB.reduce_defaults_and_merge_with_changes([logger], defaults)
+
+      assert change.value == [
+               console: [k1: 2, k2: 2],
+               key: 1,
+               ex_syslogger: [k1: 3, k2: 4],
+               backends: [:console]
+             ]
     end
 
-    test "pleroma string" do
-      assert ConfigDB.to_elixir_types("Pleroma") == "Pleroma"
-    end
+    test "with ex_syslogger, console and backends changes" do
+      defaults = [
+        logger: [
+          ex_syslogger: [k1: 1, k2: 1],
+          console: [k1: 2, k2: 2],
+          backends: [:ex_syslogger, :console],
+          key: 1
+        ],
+        pleroma: [key1: 1, key2: 2]
+      ]
 
-    test "phoenix module" do
-      assert ConfigDB.to_elixir_types("Phoenix.Socket.V1.JSONSerializer") ==
-               Phoenix.Socket.V1.JSONSerializer
-    end
+      logger =
+        insert(:config,
+          group: :logger,
+          key: nil,
+          value: [console: [k1: 4, k2: 4], k1: 3, k2: 4, backends: [:console]]
+        )
 
-    test "tesla module" do
-      assert ConfigDB.to_elixir_types("Tesla.Adapter.Hackney") == Tesla.Adapter.Hackney
-    end
+      {[change], [pleroma: [key1: 1, key2: 2]]} =
+        ConfigDB.reduce_defaults_and_merge_with_changes([logger], defaults)
 
-    test "ExSyslogger module" do
-      assert ConfigDB.to_elixir_types("ExSyslogger") == ExSyslogger
+      assert change.value == [
+               ex_syslogger: [k1: 1, k2: 1],
+               key: 1,
+               console: [k1: 4, k2: 4],
+               k1: 3,
+               k2: 4,
+               backends: [:console]
+             ]
     end
+  end
 
-    test "Quack.Logger module" do
-      assert ConfigDB.to_elixir_types("Quack.Logger") == Quack.Logger
-    end
+  test "all_with_db/0" do
+    config = insert(:config)
+    [change] = ConfigDB.all_with_db()
+    assert change.db == Keyword.keys(config.value)
+  end
 
-    test "Swoosh.Adapters modules" do
-      assert ConfigDB.to_elixir_types("Swoosh.Adapters.SMTP") == Swoosh.Adapters.SMTP
-      assert ConfigDB.to_elixir_types("Swoosh.Adapters.AmazonSES") == Swoosh.Adapters.AmazonSES
-    end
+  test "from_keyword_to_structs/2" do
+    keyword = [
+      pleroma: [
+        key1: [k1: 1, k2: 1, k3: 1],
+        key2: [k1: 2, k2: 2, k3: 2]
+      ],
+      logger: [k1: 3, k2: 3, ex_syslogger: [k1: 4, k2: 4], console: [k1: 5, k2: 5]]
+    ]
 
-    test "sigil" do
-      assert ConfigDB.to_elixir_types("~r[comp[lL][aA][iI][nN]er]") == ~r/comp[lL][aA][iI][nN]er/
-    end
+    changes = ConfigDB.from_keyword_to_structs(keyword)
 
-    test "link sigil" do
-      assert ConfigDB.to_elixir_types("~r/https:\/\/example.com/") == ~r/https:\/\/example.com/
-    end
+    Enum.each(changes, fn
+      %{key: :key1} = change ->
+        assert change.group == :pleroma
+        assert change.value == [k1: 1, k2: 1, k3: 1]
 
-    test "link sigil with um modifiers" do
-      assert ConfigDB.to_elixir_types("~r/https:\/\/example.com/um") ==
-               ~r/https:\/\/example.com/um
-    end
+      %{key: :key2} = change ->
+        assert change.group == :pleroma
+        assert change.value == [k1: 2, k2: 2, k3: 2]
 
-    test "link sigil with i modifier" do
-      assert ConfigDB.to_elixir_types("~r/https:\/\/example.com/i") == ~r/https:\/\/example.com/i
-    end
+      %{key: nil} = change ->
+        assert change.group == :logger
 
-    test "link sigil with s modifier" do
-      assert ConfigDB.to_elixir_types("~r/https:\/\/example.com/s") == ~r/https:\/\/example.com/s
-    end
-
-    test "raise if valid delimiter not found" do
-      assert_raise ArgumentError, "valid delimiter for Regex expression not found", fn ->
-        ConfigDB.to_elixir_types("~r/https://[]{}<>\"'()|example.com/s")
-      end
-    end
-
-    test "2 child tuple" do
-      assert ConfigDB.to_elixir_types(%{"tuple" => ["v1", ":v2"]}) == {"v1", :v2}
-    end
-
-    test "proxy tuple with localhost" do
-      assert ConfigDB.to_elixir_types(%{
-               "tuple" => [":proxy_url", %{"tuple" => [":socks5", "localhost", 1234]}]
-             }) == {:proxy_url, {:socks5, :localhost, 1234}}
-    end
-
-    test "proxy tuple with domain" do
-      assert ConfigDB.to_elixir_types(%{
-               "tuple" => [":proxy_url", %{"tuple" => [":socks5", "domain.com", 1234]}]
-             }) == {:proxy_url, {:socks5, 'domain.com', 1234}}
-    end
-
-    test "proxy tuple with ip" do
-      assert ConfigDB.to_elixir_types(%{
-               "tuple" => [":proxy_url", %{"tuple" => [":socks5", "127.0.0.1", 1234]}]
-             }) == {:proxy_url, {:socks5, {127, 0, 0, 1}, 1234}}
-    end
-
-    test "tuple with n childs" do
-      assert ConfigDB.to_elixir_types(%{
-               "tuple" => [
-                 "v1",
-                 ":v2",
-                 "Pleroma.Bookmark",
-                 150,
-                 false,
-                 "Phoenix.Socket.V1.JSONSerializer"
+        assert change.value == [
+                 k1: 3,
+                 k2: 3,
+                 ex_syslogger: [k1: 4, k2: 4],
+                 console: [k1: 5, k2: 5]
                ]
-             }) == {"v1", :v2, Pleroma.Bookmark, 150, false, Phoenix.Socket.V1.JSONSerializer}
+    end)
+  end
+
+  describe "merge_changes_with_defaults/2" do
+    test "with existance changes" do
+      defaults = [
+        pleroma: [
+          key1: [k1: 1, k2: 1, k3: 1],
+          key2: [k1: 2, k2: 2, k3: 2]
+        ],
+        logger: [k1: 3, k2: 3]
+      ]
+
+      config1 = insert(:config, key: :key1, value: [k1: 4, k2: 4])
+      config2 = insert(:config, key: :key2, value: [k1: 5, k2: 5])
+
+      changes = ConfigDB.merge_changes_with_defaults([config1, config2], defaults)
+
+      Enum.each(changes, fn
+        %{key: :key1} = change -> assert change.value == [k3: 1, k1: 4, k2: 4]
+        %{key: :key2} = change -> assert change.value == [k3: 2, k1: 5, k2: 5]
+      end)
     end
 
-    test "map with string key" do
-      assert ConfigDB.to_elixir_types(%{"key" => "value"}) == %{"key" => "value"}
-    end
+    test "full subkey update and deep merge" do
+      defaults = [
+        pleroma: [
+          assets: [
+            mascots: [3, 4],
+            subkey: [key1: [key: :val2, key2: :val2], key2: :val2],
+            key: 5
+          ]
+        ]
+      ]
 
-    test "map with atom key" do
-      assert ConfigDB.to_elixir_types(%{":key" => "value"}) == %{key: "value"}
-    end
+      config =
+        insert(:config,
+          group: :pleroma,
+          key: :assets,
+          value: [mascots: [1, 2], subkey: [key1: [key: :val1, key2: :val1], key2: :val1]]
+        )
 
-    test "list of strings" do
-      assert ConfigDB.to_elixir_types(["v1", "v2", "v3"]) == ["v1", "v2", "v3"]
-    end
+      [merged] = ConfigDB.merge_changes_with_defaults([config], defaults)
 
-    test "list of modules" do
-      assert ConfigDB.to_elixir_types(["Pleroma.Repo", "Pleroma.Activity"]) == [
-               Pleroma.Repo,
-               Pleroma.Activity
+      assert merged.value == [
+               mascots: [1, 2],
+               key: 5,
+               subkey: [key1: [key: :val1, key2: :val1], key2: :val1]
              ]
     end
 
-    test "list of atoms" do
-      assert ConfigDB.to_elixir_types([":v1", ":v2", ":v3"]) == [:v1, :v2, :v3]
+    test "merge for other subkeys" do
+      defaults = [pleroma: [assets: [key: 5]]]
+
+      config =
+        insert(:config,
+          group: :pleroma,
+          key: :assets,
+          value: [subkey: 3, default_mascot: :test_mascot]
+        )
+
+      [merged] = ConfigDB.merge_changes_with_defaults([config], defaults)
+      assert merged.value == [key: 5, subkey: 3, default_mascot: :test_mascot]
     end
 
-    test "list of mixed values" do
-      assert ConfigDB.to_elixir_types([
-               "v1",
-               ":v2",
-               "Pleroma.Repo",
-               "Phoenix.Socket.V1.JSONSerializer",
-               15,
-               false
-             ]) == [
-               "v1",
-               :v2,
-               Pleroma.Repo,
-               Phoenix.Socket.V1.JSONSerializer,
-               15,
-               false
-             ]
-    end
+    test "with change deletion" do
+      defaults = [pleroma: [assets: [key: 5]]]
 
-    test "simple keyword" do
-      assert ConfigDB.to_elixir_types([%{"tuple" => [":key", "value"]}]) == [key: "value"]
-    end
+      config =
+        insert(:config,
+          group: :pleroma,
+          key: :assets,
+          value: [subkey: 3, default_mascot: :test_mascot]
+        )
 
-    test "keyword" do
-      assert ConfigDB.to_elixir_types([
-               %{"tuple" => [":types", "Pleroma.PostgresTypes"]},
-               %{"tuple" => [":telemetry_event", ["Pleroma.Repo.Instrumenter"]]},
-               %{"tuple" => [":migration_lock", nil]},
-               %{"tuple" => [":key1", 150]},
-               %{"tuple" => [":key2", "string"]}
-             ]) == [
-               types: Pleroma.PostgresTypes,
-               telemetry_event: [Pleroma.Repo.Instrumenter],
-               migration_lock: nil,
-               key1: 150,
-               key2: "string"
-             ]
-    end
-
-    test "trandformed keyword" do
-      assert ConfigDB.to_elixir_types(a: 1, b: 2, c: "string") == [a: 1, b: 2, c: "string"]
-    end
-
-    test "complex keyword with nested mixed childs" do
-      assert ConfigDB.to_elixir_types([
-               %{"tuple" => [":uploader", "Pleroma.Uploaders.Local"]},
-               %{"tuple" => [":filters", ["Pleroma.Upload.Filter.Dedupe"]]},
-               %{"tuple" => [":link_name", true]},
-               %{"tuple" => [":proxy_remote", false]},
-               %{"tuple" => [":common_map", %{":key" => "value"}]},
-               %{
-                 "tuple" => [
-                   ":proxy_opts",
-                   [
-                     %{"tuple" => [":redirect_on_failure", false]},
-                     %{"tuple" => [":max_body_length", 1_048_576]},
-                     %{
-                       "tuple" => [
-                         ":http",
-                         [
-                           %{"tuple" => [":follow_redirect", true]},
-                           %{"tuple" => [":pool", ":upload"]}
-                         ]
-                       ]
-                     }
-                   ]
-                 ]
-               }
-             ]) == [
-               uploader: Pleroma.Uploaders.Local,
-               filters: [Pleroma.Upload.Filter.Dedupe],
-               link_name: true,
-               proxy_remote: false,
-               common_map: %{key: "value"},
-               proxy_opts: [
-                 redirect_on_failure: false,
-                 max_body_length: 1_048_576,
-                 http: [
-                   follow_redirect: true,
-                   pool: :upload
-                 ]
-               ]
-             ]
-    end
-
-    test "common keyword" do
-      assert ConfigDB.to_elixir_types([
-               %{"tuple" => [":level", ":warn"]},
-               %{"tuple" => [":meta", [":all"]]},
-               %{"tuple" => [":path", ""]},
-               %{"tuple" => [":val", nil]},
-               %{"tuple" => [":webhook_url", "https://hooks.slack.com/services/YOUR-KEY-HERE"]}
-             ]) == [
-               level: :warn,
-               meta: [:all],
-               path: "",
-               val: nil,
-               webhook_url: "https://hooks.slack.com/services/YOUR-KEY-HERE"
-             ]
-    end
-
-    test "complex keyword with sigil" do
-      assert ConfigDB.to_elixir_types([
-               %{"tuple" => [":federated_timeline_removal", []]},
-               %{"tuple" => [":reject", ["~r/comp[lL][aA][iI][nN]er/"]]},
-               %{"tuple" => [":replace", []]}
-             ]) == [
-               federated_timeline_removal: [],
-               reject: [~r/comp[lL][aA][iI][nN]er/],
-               replace: []
-             ]
-    end
-
-    test "complex keyword with tuples with more than 2 values" do
-      assert ConfigDB.to_elixir_types([
-               %{
-                 "tuple" => [
-                   ":http",
-                   [
-                     %{
-                       "tuple" => [
-                         ":key1",
-                         [
-                           %{
-                             "tuple" => [
-                               ":_",
-                               [
-                                 %{
-                                   "tuple" => [
-                                     "/api/v1/streaming",
-                                     "Pleroma.Web.MastodonAPI.WebsocketHandler",
-                                     []
-                                   ]
-                                 },
-                                 %{
-                                   "tuple" => [
-                                     "/websocket",
-                                     "Phoenix.Endpoint.CowboyWebSocket",
-                                     %{
-                                       "tuple" => [
-                                         "Phoenix.Transports.WebSocket",
-                                         %{
-                                           "tuple" => [
-                                             "Pleroma.Web.Endpoint",
-                                             "Pleroma.Web.UserSocket",
-                                             []
-                                           ]
-                                         }
-                                       ]
-                                     }
-                                   ]
-                                 },
-                                 %{
-                                   "tuple" => [
-                                     ":_",
-                                     "Phoenix.Endpoint.Cowboy2Handler",
-                                     %{"tuple" => ["Pleroma.Web.Endpoint", []]}
-                                   ]
-                                 }
-                               ]
-                             ]
-                           }
-                         ]
-                       ]
-                     }
-                   ]
-                 ]
-               }
-             ]) == [
-               http: [
-                 key1: [
-                   {:_,
-                    [
-                      {"/api/v1/streaming", Pleroma.Web.MastodonAPI.WebsocketHandler, []},
-                      {"/websocket", Phoenix.Endpoint.CowboyWebSocket,
-                       {Phoenix.Transports.WebSocket,
-                        {Pleroma.Web.Endpoint, Pleroma.Web.UserSocket, []}}},
-                      {:_, Phoenix.Endpoint.Cowboy2Handler, {Pleroma.Web.Endpoint, []}}
-                    ]}
-                 ]
-               ]
-             ]
+      {:ok, config} = ConfigDB.delete(config)
+      [merged] = ConfigDB.merge_changes_with_defaults([config], defaults)
+      assert merged.value == [key: 5]
     end
   end
 end

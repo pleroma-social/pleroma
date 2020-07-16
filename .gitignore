@@ -13,6 +13,7 @@
 /doc
 /instance
 /priv/ssh_keys
+/installer/assets/node_modules/*
 
 # Prevent committing custom emojis
 /priv/static/emoji/custom/*
@@ -53,3 +54,6 @@ pleroma.iml
 
 # asdf
 .tool-versions
+
+# local iex
+.iex.exs

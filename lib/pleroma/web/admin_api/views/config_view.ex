@@ -5,8 +5,6 @@
 defmodule Pleroma.Web.AdminAPI.ConfigView do
   use Pleroma.Web, :view
 
-  alias Pleroma.ConfigDB
-
   def render("index.json", %{configs: configs} = params) do
     %{
       configs: render_many(configs, __MODULE__, "show.json", as: :config),
@@ -14,17 +12,23 @@ defmodule Pleroma.Web.AdminAPI.ConfigView do
     }
   end
 
-  def render("show.json", %{config: config}) do
-    map = %{
-      key: ConfigDB.to_json_types(config.key),
-      group: ConfigDB.to_json_types(config.group),
-      value: ConfigDB.to_json_types(config.value)
+  def render("index.json", %{versions: versions}) do
+    %{
+      versions: render_many(versions, __MODULE__, "show.json", as: :version)
     }
+  end
 
-    if config.db != [] do
-      Map.put(map, :db, config.db)
-    else
-      map
-    end
+  def render("show.json", %{config: config}) do
+    config
+    |> Map.take([:group, :key, :value, :db])
+    |> Map.new(fn
+      {k, v} -> {k, Pleroma.Config.Converter.to_json_types(v)}
+    end)
+  end
+
+  def render("show.json", %{version: version}) do
+    version
+    |> Map.take([:id, :current])
+    |> Map.put(:inserted_at, Pleroma.Web.CommonAPI.Utils.to_masto_date(version.inserted_at))
   end
 end

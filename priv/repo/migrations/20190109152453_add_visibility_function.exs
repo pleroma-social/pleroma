@@ -1,6 +1,7 @@
 defmodule Pleroma.Repo.Migrations.AddVisibilityFunction do
   use Ecto.Migration
   @disable_ddl_transaction true
+  @disable_migration_lock true
 
   def up do
     definition = """

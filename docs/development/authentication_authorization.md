@@ -16,6 +16,6 @@
 
 * With non-OAuth authentication ([HTTP Basic Authentication](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Authorization) or HTTP header- or params-provided auth), OAuth scopes check is _not_ performed for any action (since password is provided during the auth, requester is able to obtain a token with full permissions anyways); auth plugs invoke `Pleroma.Helpers.AuthHelper.skip_oauth(conn)` in this case.
 
-## Auth-related configuration, OAuth consumer mode etc.
+### Auth-related configuration, OAuth consumer mode etc.
 
 See `Authentication` section of [the configuration cheatsheet](../configuration/cheatsheet.md#authentication).

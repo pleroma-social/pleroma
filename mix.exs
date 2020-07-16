@@ -77,9 +77,8 @@ defmodule Pleroma.Mixfile do
         :logger,
         :runtime_tools,
         :comeonin,
-        :quack,
-        :fast_sanitize,
-        :ssl
+        :ssl,
+        :fast_sanitize
       ],
       included_applications: [:ex_syslogger]
     ]
@@ -87,8 +86,8 @@ defmodule Pleroma.Mixfile do
 
   # Specifies which paths to compile per environment.
   defp elixirc_paths(:benchmark), do: ["lib", "benchmarks"]
-  defp elixirc_paths(:test), do: ["lib", "test/support"]
-  defp elixirc_paths(_), do: ["lib"]
+  defp elixirc_paths(:test), do: ["lib", "test/support", "installer/pleroma"]
+  defp elixirc_paths(_), do: ["lib", "installer/pleroma"]
 
   defp warnings_as_errors(:prod), do: false
   defp warnings_as_errors(_), do: true
@@ -192,7 +191,6 @@ defmodule Pleroma.Mixfile do
       {:captcha,
        git: "https://git.pleroma.social/pleroma/elixir-libraries/elixir-captcha.git",
        ref: "e0f16822d578866e186a0974d65ad58cddc1e2ab"},
-      {:restarter, path: "./restarter"},
       {:majic,
        git: "https://git.pleroma.social/pleroma/elixir-libraries/majic.git",
        ref: "4c692e544b28d1f5e543fb8a44be090f8cd96f80"},

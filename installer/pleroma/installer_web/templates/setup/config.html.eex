@@ -1,0 +1,89 @@
+
+<section class="row">
+  <article class="column">
+  <%= form_for @config, Routes.setup_path(@conn, :save_config, token: @token), fn f -> %>
+    <div>
+      <h4>What is the name of your instance?</h4>
+      <%= text_input f, :instance_name, placeholder: "Pleroma/Soykaf"%>
+      <%= error_tag f, :instance_name %>
+    </div>
+    <div>
+      <h4>What directory should custom public files be read from (custom emojis, frontend bundle overrides, robots.txt, etc.)?</h4>
+      <%= text_input f, :instance_static_dir, placeholder: "instance/static" %>
+      <%= error_tag f, :instance_static_dir %>
+    </div>
+    <div>
+      <h4>What directory should media uploads go in (when using the local uploader)?</h4>
+      <%= text_input f, :local_uploads_dir, placeholder: "uploads" %>
+      <%= error_tag f, :local_uploads_dir %>
+    </div>
+<hr>
+
+    <div>
+      <h4>URL</h4>
+      <div class="row">
+        <div class="column">
+          <label>Domain</label>
+          <%= text_input f, :endpoint_url_host, placeholder: "pleroma.com" %>
+          <%= error_tag f, :endpoint_url_host %>
+        </div>
+      </div>
+    </div>
+    <hr>
+
+    <div>
+      <h4>Network Settings</h4>
+      <div class="row">
+        <div class="column">
+          <label>IP</label>
+          <%= text_input f, :endpoint_http_ip, placeholder: "127.0.0.1" %>
+          <%= error_tag f, :endpoint_http_ip %>
+        </div>
+        <div class="column">
+          <label>Port</label>
+          <%= text_input f, :endpoint_http_port, placeholder: 4000 %>
+          <%= error_tag f, :endpoint_http_port %>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <h4>Email</h4>
+      <div class="row">
+        <div class="column">
+          <label>Admin Email</label>
+          <%= email_input f, :instance_email, placeholder: "user@example.com" %>
+          <%= error_tag f, :instance_email %>
+        </div>
+        <div class="column">
+          <label>Email For Sending Notifications</label>
+          <%= email_input f, :instance_notify_email, placeholder: "user@example.com" %>
+          <%= error_tag f, :instance_notify_email %>
+        </div>
+      </div>
+    </div>
+    <hr>
+
+    <div>
+      <h4>Do you want to deny Search Engine bots from crawling the site?</h4>
+      <%= radio_button f, :indexable, true %>
+      <%= label f, :indexable, "No", class: "label-inline" %>
+      <%= radio_button f, :indexable, false, style: "margin-left: 1.5rem;" %>
+      <%= label f, :indexable, "Yes", class: "label-inline" %>
+    </div>
+    <hr>
+    <div>
+      <h4>Do you want to store the configuration in the database (allows controlling it from admin-fe)?</h4>
+      <%= radio_button f, :configurable_from_database, true %>
+      <%= label f, :configurable_from_database, "Yes", class: "label-inline" %>
+      <%= radio_button f, :configurable_from_database, false, style: "margin-left: 1.5rem;" %>
+      <%= label f, :configurable_from_database, "No", class: "label-inline" %>
+    </div>
+    <hr>
+
+    <%= submit "Save Config" %>
+  <% end %>
+
+
+  </article>
+</section>

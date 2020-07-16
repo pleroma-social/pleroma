@@ -53,7 +53,7 @@ defmodule Pleroma.Web.ApiSpec.Admin.ConfigOperation do
                 type: :object,
                 properties: %{
                   group: %Schema{type: :string},
-                  key: %Schema{type: :string},
+                  key: %Schema{type: :string, nullable: true},
                   value: any(),
                   delete: %Schema{type: :boolean},
                   subkeys: %Schema{type: :array, items: %Schema{type: :string}}
@@ -107,6 +107,56 @@ defmodule Pleroma.Web.ApiSpec.Admin.ConfigOperation do
     }
   end
 
+  def rollback_operation do
+    %Operation{
+      tags: ["Admin", "Config"],
+      summary: "Rollback config changes.",
+      operationId: "AdminAPI.ConfigController.rollback",
+      security: [%{"oAuth" => ["write"]}],
+      parameters: [
+        Operation.parameter(:id, :path, %Schema{type: :integer}, "Version id to rollback",
+          required: true
+        )
+        | admin_api_params()
+      ],
+      responses: %{
+        204 => no_content_response(),
+        400 => Operation.response("Bad Request", "application/json", ApiError),
+        404 => Operation.response("Not Found", "application/json", ApiError)
+      }
+    }
+  end
+
+  def versions_operation do
+    %Operation{
+      tags: ["Admin", "Config"],
+      summary: "Get list with config versions.",
+      operationId: "AdminAPI.ConfigController.versions",
+      security: [%{"oAuth" => ["read"]}],
+      parameters: admin_api_params(),
+      responses: %{
+        200 =>
+          Operation.response("Config Version", "application/json", %Schema{
+            type: :object,
+            properties: %{
+              versions: %Schema{
+                type: :array,
+                items: %Schema{
+                  type: :object,
+                  properties: %{
+                    id: %Schema{type: :integer},
+                    current: %Schema{type: :boolean},
+                    inserted_at: %Schema{type: :string, format: :"date-time"}
+                  }
+                }
+              }
+            }
+          }),
+        400 => Operation.response("Bad Request", "application/json", ApiError)
+      }
+    }
+  end
+
   defp any do
     %Schema{
       oneOf: [
@@ -129,7 +179,7 @@ defmodule Pleroma.Web.ApiSpec.Admin.ConfigOperation do
             type: :object,
             properties: %{
               group: %Schema{type: :string},
-              key: %Schema{type: :string},
+              key: %Schema{type: :string, nullable: true},
               value: any()
             }
           }

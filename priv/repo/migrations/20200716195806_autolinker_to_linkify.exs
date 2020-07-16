@@ -15,7 +15,7 @@ defmodule Pleroma.Repo.Migrations.AutolinkerToLinkify do
 
   defp move_config(%{} = old, %{} = new) do
     {:ok, _} = ConfigDB.update_or_create(new)
-    {:ok, _} = ConfigDB.delete(old)
+    {:ok, _} = ConfigDB.delete_or_update(old)
     :ok
   end
 

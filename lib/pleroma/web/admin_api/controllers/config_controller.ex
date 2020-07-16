@@ -5,18 +5,23 @@
 defmodule Pleroma.Web.AdminAPI.ConfigController do
   use Pleroma.Web, :controller
 
+  import Pleroma.Web.ControllerHelper, only: [json_response: 3]
+
+  alias Pleroma.Application
   alias Pleroma.Config
   alias Pleroma.ConfigDB
   alias Pleroma.Web.Plugs.OAuthScopesPlug
 
   plug(Pleroma.Web.ApiSpec.CastAndValidate)
-  plug(OAuthScopesPlug, %{scopes: ["write"], admin: true} when action == :update)
+  plug(OAuthScopesPlug, %{scopes: ["write"], admin: true} when action in [:update, :rollback])
 
   plug(
     OAuthScopesPlug,
     %{scopes: ["read"], admin: true}
-    when action in [:show, :descriptions]
+    when action in [:show, :descriptions, :versions]
   )
+
+  plug(:check_possibility_configuration_from_database when action != :descriptions)
 
   action_fallback(Pleroma.Web.AdminAPI.FallbackController)
 
@@ -29,100 +34,111 @@ defmodule Pleroma.Web.AdminAPI.ConfigController do
   end
 
   def show(conn, %{only_db: true}) do
-    with :ok <- configurable_from_database() do
-      configs = Pleroma.Repo.all(ConfigDB)
+    configs = ConfigDB.all_with_db()
 
-      render(conn, "index.json", %{
-        configs: configs,
-        need_reboot: Restarter.Pleroma.need_reboot?()
-      })
-    end
+    render(conn, "index.json", %{
+      configs: configs,
+      need_reboot: Application.ConfigDependentDeps.need_reboot?()
+    })
   end
 
   def show(conn, _params) do
-    with :ok <- configurable_from_database() do
-      configs = ConfigDB.get_all_as_keyword()
+    defaults = Config.Holder.default_config()
+    changes = ConfigDB.all_with_db()
 
-      merged =
-        Config.Holder.default_config()
-        |> ConfigDB.merge(configs)
-        |> Enum.map(fn {group, values} ->
-          Enum.map(values, fn {key, value} ->
-            db =
-              if configs[group][key] do
-                ConfigDB.get_db_keys(configs[group][key], key)
-              end
+    {changes_values_merged_with_defaults, remaining_defaults} =
+      ConfigDB.reduce_defaults_and_merge_with_changes(changes, defaults)
 
-            db_value = configs[group][key]
+    changes_merged_with_defaults =
+      ConfigDB.from_keyword_to_structs(remaining_defaults, changes_values_merged_with_defaults)
 
-            merged_value =
-              if not is_nil(db_value) and Keyword.keyword?(db_value) and
-                   ConfigDB.sub_key_full_update?(group, key, Keyword.keys(db_value)) do
-                ConfigDB.merge_group(group, key, value, db_value)
-              else
-                value
-              end
-
-            %ConfigDB{
-              group: group,
-              key: key,
-              value: merged_value
-            }
-            |> Pleroma.Maps.put_if_present(:db, db)
-          end)
-        end)
-        |> List.flatten()
-
-      render(conn, "index.json", %{
-        configs: merged,
-        need_reboot: Restarter.Pleroma.need_reboot?()
-      })
-    end
+    render(conn, "index.json", %{
+      configs: changes_merged_with_defaults,
+      need_reboot: Application.ConfigDependentDeps.need_reboot?()
+    })
   end
 
   def update(%{body_params: %{configs: configs}} = conn, _) do
-    with :ok <- configurable_from_database() do
-      results =
-        configs
-        |> Enum.filter(&whitelisted_config?/1)
-        |> Enum.map(fn
-          %{group: group, key: key, delete: true} = params ->
-            ConfigDB.delete(%{group: group, key: key, subkeys: params[:subkeys]})
+    result =
+      configs
+      |> Enum.filter(&whitelisted_config?/1)
+      |> Enum.map(&Config.Converter.to_elixir_types/1)
+      |> Config.Versioning.new_version()
 
-          %{group: group, key: key, value: value} ->
-            ConfigDB.update_or_create(%{group: group, key: key, value: value})
-        end)
-        |> Enum.reject(fn {result, _} -> result == :error end)
+    case result do
+      {:ok, changes} ->
+        inserts_and_deletions =
+          changes
+          |> Enum.reduce([], fn
+            {{operation, _, _}, %ConfigDB{} = change}, acc
+            when operation in [:insert_or_update, :delete_or_update] ->
+              if Ecto.get_meta(change, :state) == :deleted do
+                [change | acc]
+              else
+                if change.group == :pleroma and
+                     change.key in ConfigDB.pleroma_not_keyword_values() do
+                  [%{change | db: [change.key]} | acc]
+                else
+                  [%{change | db: Keyword.keys(change.value)} | acc]
+                end
+              end
 
-      {deleted, updated} =
-        results
-        |> Enum.map(fn {:ok, %{key: key, value: value} = config} ->
-          Map.put(config, :db, ConfigDB.get_db_keys(value, key))
-        end)
-        |> Enum.split_with(&(Ecto.get_meta(&1, :state) == :deleted))
+            _, acc ->
+              acc
+          end)
 
-      Config.TransferTask.load_and_update_env(deleted, false)
+        Application.Environment.update(inserts_and_deletions)
 
-      if not Restarter.Pleroma.need_reboot?() do
-        changed_reboot_settings? =
-          (updated ++ deleted)
-          |> Enum.any?(&Config.TransferTask.pleroma_need_restart?(&1.group, &1.key, &1.value))
+        render(conn, "index.json", %{
+          configs: Enum.reject(inserts_and_deletions, &(Ecto.get_meta(&1, :state) == :deleted)),
+          need_reboot: Application.ConfigDependentDeps.need_reboot?()
+        })
 
-        if changed_reboot_settings?, do: Restarter.Pleroma.need_reboot()
-      end
+      {:error, error} ->
+        {:error, "Updating config failed: #{inspect(error)}"}
 
-      render(conn, "index.json", %{
-        configs: updated,
-        need_reboot: Restarter.Pleroma.need_reboot?()
-      })
+      {:error, _, {error, operation}, _} ->
+        {:error,
+         "Updating config failed: #{inspect(error)}, group: #{operation[:group]}, key: #{
+           operation[:key]
+         }, value: #{inspect(operation[:value])}"}
     end
   end
 
-  defp configurable_from_database do
+  def rollback(conn, %{id: id}) do
+    case Config.Versioning.rollback_by_id(id) do
+      {:ok, _} ->
+        json_response(conn, :no_content, "")
+
+      {:error, :not_found} ->
+        {:error, :not_found}
+
+      {:error, error} ->
+        {:error, "Rollback is not possible: #{inspect(error)}"}
+
+      {:error, _, {error, operation}, _} ->
+        {:error,
+         "Rollback is not possible, backup restore error: #{inspect(error)}, operation error: #{
+           inspect(operation)
+         }"}
+    end
+  end
+
+  def versions(conn, _) do
+    versions = Pleroma.Config.Version.all()
+
+    render(conn, "index.json", %{versions: versions})
+  end
+
+  defp check_possibility_configuration_from_database(conn, _) do
     if Config.get(:configurable_from_database) do
-      :ok
+      conn
     else
-      {:error, "To use this endpoint you need to enable configuration from database."}
+      Pleroma.Web.AdminAPI.FallbackController.call(
+        conn,
+        {:error, "To use this endpoint you need to enable configuration from database."}
+      )
+      |> halt()
     end
   end
 

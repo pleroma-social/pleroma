@@ -2,6 +2,7 @@ defmodule Pleroma.Repo.Migrations.AddSecondObjectIndexToActivty do
   use Ecto.Migration
 
   @disable_ddl_transaction true
+  @disable_migration_lock true
 
   def change do
     drop_if_exists(

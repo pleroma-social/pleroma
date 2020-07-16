@@ -5,8 +5,6 @@
 defmodule Pleroma.Application do
   use Application
 
-  import Cachex.Spec
-
   alias Pleroma.Config
 
   require Logger
@@ -15,12 +13,17 @@ defmodule Pleroma.Application do
   @version Mix.Project.config()[:version]
   @repository Mix.Project.config()[:source_url]
   @env Mix.env()
+  @dynamic_supervisor Pleroma.Application.Supervisor
+
+  @type env() :: :test | :benchmark | :dev | :prod
 
   def name, do: @name
   def version, do: @version
   def named_version, do: @name <> " " <> @version
   def repository, do: @repository
+  def dynamic_supervisor, do: @dynamic_supervisor
 
+  @spec user_agent() :: String.t()
   def user_agent do
     if Process.whereis(Pleroma.Web.Endpoint) do
       case Config.get([:http, :user_agent], :default) do
@@ -37,9 +40,97 @@ defmodule Pleroma.Application do
     end
   end
 
-  # See http://elixir-lang.org/docs/stable/elixir/Application.html
-  # for more information on OTP Applications
+  @spec config_path() :: Path.t()
+  def config_path do
+    if Config.get(:release) do
+      Config.get(:config_path)
+    else
+      Config.get(:config_path_in_test) || "config/#{@env}.secret.exs"
+    end
+  end
+
+  @doc """
+  Checks that config file exists and starts application, otherwise starts web UI for configuration.
+  Under main supervisor is started DynamicSupervisor, which later starts pleroma startup dependencies.
+  Pleroma start is splitted into three `phases`:
+    - running prestart requirements (runtime compilation, warnings, deprecations, monitoring, etc.)
+    - loading and updating environment (if database config is used and enabled)
+    - starting dependencies
+  """
+  @impl true
   def start(_type, _args) do
+    children = [
+      {DynamicSupervisor, strategy: :one_for_one, name: @dynamic_supervisor},
+      {Pleroma.Application.ConfigDependentDeps, [dynamic_supervisor: @dynamic_supervisor]}
+    ]
+
+    {:ok, main_supervisor} =
+      Supervisor.start_link(children, strategy: :one_for_one, name: Pleroma.Supervisor)
+
+    if @env == :test or File.exists?(Pleroma.Application.config_path()) do
+      {:ok, _} = start_repo()
+      :ok = start_pleroma()
+    else
+      DynamicSupervisor.start_child(
+        @dynamic_supervisor,
+        Pleroma.InstallerWeb.Endpoint
+      )
+
+      token = Ecto.UUID.generate()
+
+      Pleroma.Config.put(:installer_token, token)
+
+      installer_port =
+        Pleroma.InstallerWeb.Endpoint
+        |> Pleroma.Config.get()
+        |> get_in([:http, :port])
+
+      ip =
+        with {:ok, ip} <- Pleroma.Helpers.ServerIPHelper.real_ip() do
+          ip
+        else
+          _ -> "IP not found"
+        end
+
+      Logger.warn("Access installer at http://#{ip}:#{installer_port}/?token=#{token}")
+    end
+
+    {:ok, main_supervisor}
+  end
+
+  defp start_pleroma do
+    run_prestart_requirements()
+
+    Pleroma.Application.Environment.load_from_db_and_update()
+
+    Pleroma.Application.StartUpDependencies.start_all(@env)
+  end
+
+  @spec start_repo() :: DynamicSupervisor.on_start_child()
+  def start_repo do
+    DynamicSupervisor.start_child(@dynamic_supervisor, Pleroma.Repo)
+  end
+
+  @spec stop_installer_and_start_pleroma() :: {:ok, pid()}
+  def stop_installer_and_start_pleroma do
+    Pleroma.Application.config_path()
+    |> Pleroma.Application.Environment.update()
+
+    start_pleroma()
+
+    Task.start(fn ->
+      Process.sleep(100)
+
+      installer_endpoint = Process.whereis(Pleroma.InstallerWeb.Endpoint)
+
+      DynamicSupervisor.terminate_child(
+        @dynamic_supervisor,
+        installer_endpoint
+      )
+    end)
+  end
+
+  defp run_prestart_requirements do
     # Scrubbers are compiled at runtime and therefore will cause a conflict
     # every time the application is restarted, so we disable module
     # conflicts at runtime
@@ -47,74 +138,26 @@ defmodule Pleroma.Application do
     # Disable warnings_as_errors at runtime, it breaks Phoenix live reload
     # due to protocol consolidation warnings
     Code.compiler_options(warnings_as_errors: false)
-    Pleroma.Telemetry.Logger.attach()
-    Config.Holder.save_default()
+
+    # compilation in runtime
     Pleroma.HTML.compile_scrubbers()
-    Pleroma.Config.Oban.warn()
+    compile_custom_modules()
+    Pleroma.Docs.JSON.compile()
+
+    # telemetry and prometheus
+    Pleroma.Telemetry.Logger.attach()
+    setup_instrumenters()
+
+    Config.Holder.save_default()
+
     Config.DeprecationWarnings.warn()
     Pleroma.Web.Plugs.HTTPSecurityPlug.warn_if_disabled()
-    Pleroma.ApplicationRequirements.verify!()
-    setup_instrumenters()
-    load_custom_modules()
-    Pleroma.Docs.JSON.compile()
+
     limiters_setup()
-
-    adapter = Application.get_env(:tesla, :adapter)
-
-    if adapter == Tesla.Adapter.Gun do
-      if version = Pleroma.OTPVersion.version() do
-        [major, minor] =
-          version
-          |> String.split(".")
-          |> Enum.map(&String.to_integer/1)
-          |> Enum.take(2)
-
-        if (major == 22 and minor < 2) or major < 22 do
-          raise "
-            !!!OTP VERSION WARNING!!!
-            You are using gun adapter with OTP version #{version}, which doesn't support correct handling of unordered certificates chains. Please update your Erlang/OTP to at least 22.2.
-            "
-        end
-      else
-        raise "
-          !!!OTP VERSION WARNING!!!
-          To support correct handling of unordered certificates chains - OTP version must be > 22.2.
-          "
-      end
-    end
-
-    # Define workers and child supervisors to be supervised
-    children =
-      [
-        Pleroma.Repo,
-        Config.TransferTask,
-        Pleroma.Emoji,
-        Pleroma.Web.Plugs.RateLimiter.Supervisor
-      ] ++
-        cachex_children() ++
-        http_children(adapter, @env) ++
-        [
-          Pleroma.Stats,
-          Pleroma.JobQueueMonitor,
-          {Majic.Pool, [name: Pleroma.MajicPool, pool_size: Config.get([:majic_pool, :size], 2)]},
-          {Oban, Config.get(Oban)}
-        ] ++
-        task_children(@env) ++
-        dont_run_in_test(@env) ++
-        chat_child(chat_enabled?()) ++
-        [
-          Pleroma.Web.Endpoint,
-          Pleroma.Gopher.Server
-        ]
-
-    # See http://elixir-lang.org/docs/stable/elixir/Supervisor.html
-    # for other strategies and supported options
-    opts = [strategy: :one_for_one, name: Pleroma.Supervisor]
-    result = Supervisor.start_link(children, opts)
 
     set_postgres_server_version()
 
-    result
+    Pleroma.Application.Requirements.verify!()
   end
 
   defp set_postgres_server_version do
@@ -134,7 +177,7 @@ defmodule Pleroma.Application do
     :persistent_term.put({Pleroma.Repo, :postgres_version}, version)
   end
 
-  def load_custom_modules do
+  defp compile_custom_modules do
     dir = Config.get([:modules, :runtime_dir])
 
     if dir && File.exists?(dir) do
@@ -178,122 +221,6 @@ defmodule Pleroma.Application do
     # Pleroma.Web.Endpoint.Instrumenter.setup()
     PrometheusPhx.setup()
   end
-
-  defp cachex_children do
-    [
-      build_cachex("used_captcha", ttl_interval: seconds_valid_interval()),
-      build_cachex("user", default_ttl: 25_000, ttl_interval: 1000, limit: 2500),
-      build_cachex("object", default_ttl: 25_000, ttl_interval: 1000, limit: 2500),
-      build_cachex("rich_media", default_ttl: :timer.minutes(120), limit: 5000),
-      build_cachex("scrubber", limit: 2500),
-      build_cachex("idempotency", expiration: idempotency_expiration(), limit: 2500),
-      build_cachex("web_resp", limit: 2500),
-      build_cachex("emoji_packs", expiration: emoji_packs_expiration(), limit: 10),
-      build_cachex("failed_proxy_url", limit: 2500),
-      build_cachex("banned_urls", default_ttl: :timer.hours(24 * 30), limit: 5_000),
-      build_cachex("chat_message_id_idempotency_key",
-        expiration: chat_message_id_idempotency_key_expiration(),
-        limit: 500_000
-      )
-    ]
-  end
-
-  defp emoji_packs_expiration,
-    do: expiration(default: :timer.seconds(5 * 60), interval: :timer.seconds(60))
-
-  defp idempotency_expiration,
-    do: expiration(default: :timer.seconds(6 * 60 * 60), interval: :timer.seconds(60))
-
-  defp chat_message_id_idempotency_key_expiration,
-    do: expiration(default: :timer.minutes(2), interval: :timer.seconds(60))
-
-  defp seconds_valid_interval,
-    do: :timer.seconds(Config.get!([Pleroma.Captcha, :seconds_valid]))
-
-  @spec build_cachex(String.t(), keyword()) :: map()
-  def build_cachex(type, opts),
-    do: %{
-      id: String.to_atom("cachex_" <> type),
-      start: {Cachex, :start_link, [String.to_atom(type <> "_cache"), opts]},
-      type: :worker
-    }
-
-  defp chat_enabled?, do: Config.get([:chat, :enabled])
-
-  defp dont_run_in_test(env) when env in [:test, :benchmark], do: []
-
-  defp dont_run_in_test(_) do
-    [
-      {Registry,
-       [
-         name: Pleroma.Web.Streamer.registry(),
-         keys: :duplicate,
-         partitions: System.schedulers_online()
-       ]}
-    ]
-  end
-
-  defp chat_child(true) do
-    [
-      Pleroma.Web.ChatChannel.ChatChannelState,
-      {Phoenix.PubSub, [name: Pleroma.PubSub, adapter: Phoenix.PubSub.PG2]}
-    ]
-  end
-
-  defp chat_child(_), do: []
-
-  defp task_children(:test) do
-    [
-      %{
-        id: :web_push_init,
-        start: {Task, :start_link, [&Pleroma.Web.Push.init/0]},
-        restart: :temporary
-      }
-    ]
-  end
-
-  defp task_children(_) do
-    [
-      %{
-        id: :web_push_init,
-        start: {Task, :start_link, [&Pleroma.Web.Push.init/0]},
-        restart: :temporary
-      },
-      %{
-        id: :internal_fetch_init,
-        start: {Task, :start_link, [&Pleroma.Web.ActivityPub.InternalFetchActor.init/0]},
-        restart: :temporary
-      }
-    ]
-  end
-
-  # start hackney and gun pools in tests
-  defp http_children(_, :test) do
-    http_children(Tesla.Adapter.Hackney, nil) ++ http_children(Tesla.Adapter.Gun, nil)
-  end
-
-  defp http_children(Tesla.Adapter.Hackney, _) do
-    pools = [:federation, :media]
-
-    pools =
-      if Config.get([Pleroma.Upload, :proxy_remote]) do
-        [:upload | pools]
-      else
-        pools
-      end
-
-    for pool <- pools do
-      options = Config.get([:hackney_pools, pool])
-      :hackney_pool.child_spec(pool, options)
-    end
-  end
-
-  defp http_children(Tesla.Adapter.Gun, _) do
-    Pleroma.Gun.ConnectionPool.children() ++
-      [{Task, &Pleroma.HTTP.AdapterHelper.Gun.limiter_setup/0}]
-  end
-
-  defp http_children(_, _), do: []
 
   @spec limiters_setup() :: :ok
   def limiters_setup do

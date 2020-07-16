@@ -2,6 +2,8 @@ defmodule Pleroma.Repo.Migrations.AddIndexOnSubscribers do
   use Ecto.Migration
 
   @disable_ddl_transaction true
+  @disable_migration_lock true
+
   def change do
     create(
       index(:users, ["(info->'subscribers')"],

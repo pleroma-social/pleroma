@@ -1062,65 +1062,63 @@ config :pleroma, :config_description, [
         description:
           "Where logs will be sent, :console - send logs to stdout, { ExSyslogger, :ex_syslogger } - to syslog, Quack.Logger - to Slack.",
         suggestions: [:console, {ExSyslogger, :ex_syslogger}, Quack.Logger]
-      }
-    ]
-  },
-  %{
-    group: :logger,
-    type: :group,
-    key: :ex_syslogger,
-    label: "ExSyslogger",
-    description: "ExSyslogger-related settings",
-    children: [
-      %{
-        key: :level,
-        type: {:dropdown, :atom},
-        description: "Log level",
-        suggestions: [:debug, :info, :warn, :error]
       },
       %{
-        key: :ident,
-        type: :string,
-        description:
-          "A string that's prepended to every message, and is typically set to the app name",
-        suggestions: ["pleroma"]
+        key: :ex_syslogger,
+        type: :keyword,
+        label: "ExSyslogger",
+        description: "ExSyslogger-related settings",
+        children: [
+          %{
+            key: :level,
+            type: {:dropdown, :atom},
+            description: "Log level",
+            suggestions: [:debug, :info, :warn, :error]
+          },
+          %{
+            key: :ident,
+            type: :string,
+            description:
+              "A string that's prepended to every message, and is typically set to the app name",
+            suggestions: ["pleroma"]
+          },
+          %{
+            key: :format,
+            type: :string,
+            description: "Default: \"$date $time [$level] $levelpad$node $metadata $message\"",
+            suggestions: ["$metadata[$level] $message"]
+          },
+          %{
+            key: :metadata,
+            type: {:list, :atom},
+            suggestions: [:request_id]
+          }
+        ]
       },
       %{
-        key: :format,
-        type: :string,
-        description: "Default: \"$date $time [$level] $levelpad$node $metadata $message\"",
-        suggestions: ["$metadata[$level] $message"]
-      },
-      %{
-        key: :metadata,
-        type: {:list, :atom},
-        suggestions: [:request_id]
-      }
-    ]
-  },
-  %{
-    group: :logger,
-    type: :group,
-    key: :console,
-    label: "Console Logger",
-    description: "Console logger settings",
-    children: [
-      %{
-        key: :level,
-        type: {:dropdown, :atom},
-        description: "Log level",
-        suggestions: [:debug, :info, :warn, :error]
-      },
-      %{
-        key: :format,
-        type: :string,
-        description: "Default: \"$date $time [$level] $levelpad$node $metadata $message\"",
-        suggestions: ["$metadata[$level] $message"]
-      },
-      %{
-        key: :metadata,
-        type: {:list, :atom},
-        suggestions: [:request_id]
+        key: :console,
+        type: :keyword,
+        label: "Console Logger",
+        description: "Console logger settings",
+        children: [
+          %{
+            key: :level,
+            type: {:dropdown, :atom},
+            description: "Log level",
+            suggestions: [:debug, :info, :warn, :error]
+          },
+          %{
+            key: :format,
+            type: :string,
+            description: "Default: \"$date $time [$level] $levelpad$node $metadata $message\"",
+            suggestions: ["$metadata[$level] $message"]
+          },
+          %{
+            key: :metadata,
+            type: {:list, :atom},
+            suggestions: [:request_id]
+          }
+        ]
       }
     ]
   },
@@ -1831,19 +1829,13 @@ config :pleroma, :config_description, [
   },
   %{
     group: :pleroma,
+    key: :admin_token,
     label: "Pleroma Admin Token",
-    type: :group,
+    type: :string,
     description:
       "Allows setting a token that can be used to authenticate requests with admin privileges without a normal user account token. Append the `admin_token` parameter to requests to utilize it. (Please reconsider using HTTP Basic Auth or OAuth-based authentication if possible)",
-    children: [
-      %{
-        key: :admin_token,
-        type: :string,
-        description: "Admin token",
-        suggestions: [
-          "Please use a high entropy string or UUID"
-        ]
-      }
+    suggestions: [
+      "Please use a high entropy string or UUID"
     ]
   },
   %{
@@ -2144,16 +2136,11 @@ config :pleroma, :config_description, [
   },
   %{
     group: :pleroma,
+    key: Pleroma.Web.Auth.Authenticator,
     label: "Pleroma Authenticator",
-    type: :group,
+    type: :module,
     description: "Authenticator",
-    children: [
-      %{
-        key: Pleroma.Web.Auth.Authenticator,
-        type: :module,
-        suggestions: [Pleroma.Web.Auth.PleromaAuthenticator, Pleroma.Web.Auth.LDAPAuthenticator]
-      }
-    ]
+    suggestions: [Pleroma.Web.Auth.PleromaAuthenticator, Pleroma.Web.Auth.LDAPAuthenticator]
   },
   %{
     group: :pleroma,

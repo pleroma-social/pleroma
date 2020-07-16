@@ -14,10 +14,13 @@ defmodule Mix.Tasks.Pleroma.Config do
   @shortdoc "Manages the location of the config"
   @moduledoc File.read!("docs/administration/CLI_tasks/config.md")
 
-  def run(["migrate_to_db"]) do
+  def run(["migrate_to_db" | options]) do
     check_configdb(fn ->
       start_pleroma()
-      migrate_to_db()
+
+      {opts, _} = OptionParser.parse!(options, strict: [config: :string])
+
+      migrate_to_db(opts)
     end)
   end
 
@@ -39,15 +42,13 @@ defmodule Mix.Tasks.Pleroma.Config do
     check_configdb(fn ->
       start_pleroma()
 
-      header = config_header()
-
       settings =
         ConfigDB
         |> Repo.all()
         |> Enum.sort()
 
       unless settings == [] do
-        shell_info("#{header}")
+        shell_info("#{Pleroma.Config.Loader.config_header()}")
 
         Enum.each(settings, &dump(&1))
       else
@@ -205,21 +206,45 @@ defmodule Mix.Tasks.Pleroma.Config do
     end
   end
 
-  @spec migrate_to_db(Path.t() | nil) :: any()
-  def migrate_to_db(file_path \\ nil) do
-    with :ok <- Pleroma.Config.DeprecationWarnings.warn() do
-      config_file =
-        if file_path do
-          file_path
-        else
-          if Pleroma.Config.get(:release) do
-            Pleroma.Config.get(:config_path)
-          else
-            "config/#{Pleroma.Config.get(:env)}.secret.exs"
-          end
-        end
+  def run(["rollback" | options]) do
+    check_configdb(fn ->
+      start_pleroma()
+      {opts, _} = OptionParser.parse!(options, strict: [steps: :integer], aliases: [s: :steps])
 
-      do_migrate_to_db(config_file)
+      do_rollback(opts)
+    end)
+  end
+
+  defp do_rollback(opts) do
+    steps = opts[:steps] || 1
+
+    case Pleroma.Config.Versioning.rollback(steps) do
+      {:ok, _} ->
+        shell_info("Success rollback")
+
+      {:error, :no_current_version} ->
+        shell_error("No version to rollback")
+
+      {:error, :rollback_not_possible} ->
+        shell_error("Rollback not possible. Incorrect steps value.")
+
+      {:error, _, _, _} ->
+        shell_error("Problem with backup. Rollback not possible.")
+
+      error ->
+        shell_error("error occuried: #{inspect(error)}")
+    end
+  end
+
+  defp migrate_to_db(opts) do
+    with :ok <- Pleroma.Config.DeprecationWarnings.warn() do
+      config_file = opts[:config] || Pleroma.Application.config_path()
+
+      if File.exists?(config_file) do
+        do_migrate_to_db(config_file)
+      else
+        shell_info("To migrate settings, you must define custom settings in #{config_file}.")
+      end
     else
       _ ->
         shell_error("Migration is not allowed until all deprecation warnings have been resolved.")
@@ -227,33 +252,9 @@ defmodule Mix.Tasks.Pleroma.Config do
   end
 
   defp do_migrate_to_db(config_file) do
-    if File.exists?(config_file) do
-      shell_info("Migrating settings from file: #{Path.expand(config_file)}")
-      truncatedb()
-
-      custom_config =
-        config_file
-        |> read_file()
-        |> elem(0)
-
-      custom_config
-      |> Keyword.keys()
-      |> Enum.each(&create(&1, custom_config))
-    else
-      shell_info("To migrate settings, you must define custom settings in #{config_file}.")
-    end
-  end
-
-  defp create(group, settings) do
-    group
-    |> Pleroma.Config.Loader.filter_group(settings)
-    |> Enum.each(fn {key, value} ->
-      {:ok, _} = ConfigDB.update_or_create(%{group: group, key: key, value: value})
-
-      shell_info("Settings for key #{key} migrated.")
-    end)
-
-    shell_info("Settings for group #{inspect(group)} migrated.")
+    shell_info("Migrating settings from file: #{Path.expand(config_file)}")
+    {:ok, _} = Pleroma.Config.Versioning.migrate(config_file)
+    shell_info("Settings migrated.")
   end
 
   defp migrate_from_db(opts) do
@@ -270,8 +271,7 @@ defmodule Mix.Tasks.Pleroma.Config do
       |> Path.join("#{env}.exported_from_db.secret.exs")
 
     file = File.open!(config_path, [:write, :utf8])
-
-    IO.write(file, config_header())
+    IO.write(file, Pleroma.Config.Loader.config_header())
 
     ConfigDB
     |> Repo.all()
@@ -283,14 +283,6 @@ defmodule Mix.Tasks.Pleroma.Config do
     shell_info(
       "Database configuration settings have been exported to config/#{env}.exported_from_db.secret.exs"
     )
-  end
-
-  if Code.ensure_loaded?(Config.Reader) do
-    defp config_header, do: "import Config\r\n\r\n"
-    defp read_file(config_file), do: Config.Reader.read_imports!(config_file)
-  else
-    defp config_header, do: "use Mix.Config\r\n\r\n"
-    defp read_file(config_file), do: Mix.Config.eval!(config_file)
   end
 
   defp write_and_delete(config, file, delete?) do
@@ -349,7 +341,7 @@ defmodule Mix.Tasks.Pleroma.Config do
   defp maybe_atomize(":" <> arg), do: maybe_atomize(arg)
 
   defp maybe_atomize(arg) when is_binary(arg) do
-    if ConfigDB.module_name?(arg) do
+    if Pleroma.Config.Converter.module_name?(arg) do
       String.to_existing_atom("Elixir." <> arg)
     else
       String.to_atom(arg)
@@ -369,7 +361,9 @@ defmodule Mix.Tasks.Pleroma.Config do
 
   defp delete_key(group, key) do
     check_configdb(fn ->
-      ConfigDB.delete(%{group: group, key: key})
+      %{group: group, key: key}
+      |> ConfigDB.get_by_params()
+      |> ConfigDB.delete()
     end)
   end
 

@@ -7,6 +7,11 @@ config :pleroma, Pleroma.Web.Endpoint,
   url: [port: 4001],
   server: true
 
+config :pleroma, Pleroma.InstallerWeb.Endpoint,
+  http: [port: 4002],
+  url: [port: 4002],
+  server: true
+
 # Disable captha for tests
 config :pleroma, Pleroma.Captcha,
   # It should not be enabled for automatic tests
@@ -91,7 +96,9 @@ config :pleroma, Pleroma.ScheduledActivity,
   total_user_limit: 3,
   enabled: false
 
-config :pleroma, :rate_limit, %{}
+# Hack to drop default settings from `config.exs`, because keywords are deeply merged, so there is no other way to do it.
+config :pleroma, :rate_limit, nil
+config :pleroma, :rate_limit, []
 
 config :pleroma, :http_security, report_uri: "https://endpoint.com"
 

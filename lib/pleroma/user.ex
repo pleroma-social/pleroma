@@ -2457,4 +2457,7 @@ defmodule Pleroma.User do
   def get_host(%User{ap_id: ap_id} = _user) do
     URI.parse(ap_id).host
   end
+
+  @spec email_regex() :: Regex.t()
+  def email_regex, do: @email_regex
 end
