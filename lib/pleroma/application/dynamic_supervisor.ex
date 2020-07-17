@@ -106,10 +106,10 @@ defmodule Pleroma.Application.DynamicSupervisor do
       {{:pleroma, :pools}, Pleroma.Application.GunSupervisor},
       {{:pleroma, :connections_pool}, Pleroma.Application.GunSupervisor},
       {{:pleroma, :hackney_pools}, Pleroma.Application.HackneySupervisor},
+      {{:pleroma, :gopher}, Pleroma.Gopher.Server},
       {{:pleroma, Pleroma.Captcha, [:seconds_valid]}, Pleroma.Web.Endpoint},
       {{:pleroma, Pleroma.Upload, [:proxy_remote]}, adapter_module},
       {{:pleroma, :instance, [:upload_limit]}, Pleroma.Web.Endpoint},
-      {{:pleroma, :gopher, [:enabled]}, Pleroma.Gopher.Server},
       {{:pleroma, :fed_sockets, [:enabled]}, Pleroma.Web.Endpoint}
     ]
   end
@@ -152,8 +152,19 @@ defmodule Pleroma.Application.DynamicSupervisor do
   end
 
   defp restart_child(path) do
-    pid = Pleroma.Application.Agent.pid(path)
+    path
+    |> Pleroma.Application.Agent.pid()
+    |> restart_child(path)
+  end
 
+  defp restart_child(nil, path) do
+    # child wasn't started yet
+    with {_, module} <- find_mapping(path) do
+      start_dynamic_child(module)
+    end
+  end
+
+  defp restart_child(pid, path) when is_pid(pid) do
     # main module can have multiple keys
     # first we search for main module
     with {_, module} <- find_mapping(path),
