@@ -5,6 +5,8 @@
 defmodule Pleroma.Application.DynamicSupervisor do
   use DynamicSupervisor
 
+  require Logger
+
   @registry Pleroma.Application.DynamicSupervisor.Registry
 
   @type child() ::
@@ -46,8 +48,8 @@ defmodule Pleroma.Application.DynamicSupervisor do
     Registry.register(@registry, "agent", pid)
   end
 
-  defp find_agent do
-    [{_, pid}] = Registry.lookup(@registry, "agent")
+  defp find_in_registry(key) do
+    [{_, pid}] = Registry.lookup(@registry, key)
     pid
   end
 
@@ -62,7 +64,7 @@ defmodule Pleroma.Application.DynamicSupervisor do
       if adapter == Tesla.Adapter.Gun do
         Pleroma.Application.GunSupervisor
       else
-        Pleroma.Application.HackneyPoolSupervisor
+        Pleroma.Application.HackneySupervisor
       end
 
     [child | children]
@@ -72,12 +74,24 @@ defmodule Pleroma.Application.DynamicSupervisor do
   defp add_streamer(children, _), do: [Pleroma.Web.StreamerRegistry | children]
 
   defp start_dynamic_child(child) do
-    with {:ok, pid} <- DynamicSupervisor.start_child(__MODULE__, spec(child)) do
-      config_path_mappings()
-      |> Enum.filter(fn {_key, module} -> child == module end)
-      |> Enum.each(fn {key, _} ->
+    with {:ok, pid} <- dynamic_child(child),
+         mappings <- find_mappings(child) do
+      Enum.each(mappings, fn {key, _} ->
         Registry.register(@registry, key, pid)
       end)
+    else
+      :ignore ->
+        # consider this behavior is normal
+        Logger.warn("#{inspect(child)} is ignored.")
+
+      error ->
+        Logger.warn(inspect(error))
+    end
+  end
+
+  defp dynamic_child(child) do
+    with {:error, _} = error <- DynamicSupervisor.start_child(__MODULE__, spec(child)) do
+      error
     end
   end
 
@@ -99,7 +113,7 @@ defmodule Pleroma.Application.DynamicSupervisor do
       if Application.get_env(:tesla, :adapter) == Tesla.Adapter.Gun do
         Pleroma.Application.GunSupervisor
       else
-        Pleroma.Application.HackneyPoolSupervisor
+        Pleroma.Application.HackneySupervisor
       end
 
     [
@@ -109,7 +123,7 @@ defmodule Pleroma.Application.DynamicSupervisor do
       {{:pleroma, :streamer}, Pleroma.Web.Streamer.registry()},
       {{:pleroma, :pools}, Pleroma.Application.GunSupervisor},
       {{:pleroma, :connections_pool}, Pleroma.Application.GunSupervisor},
-      {{:pleroma, :hackney_pools}, Pleroma.Application.HackneyPoolSupervisor},
+      {{:pleroma, :hackney_pools}, Pleroma.Application.HackneySupervisor},
       {{:pleroma, Pleroma.Captcha, [:seconds_valid]}, Pleroma.Web.Endpoint},
       {{:pleroma, Pleroma.Upload, [:proxy_remote]}, adapter_module},
       {{:pleroma, :instance, [:upload_limit]}, Pleroma.Web.Endpoint},
@@ -144,33 +158,65 @@ defmodule Pleroma.Application.DynamicSupervisor do
 
   defp save_paths([]), do: :ok
 
-  defp save_paths(paths), do: Agent.update(find_agent(), &Enum.uniq(&1 ++ paths))
+  defp save_paths(paths) do
+    "agent"
+    |> find_in_registry()
+    |> Agent.update(&Enum.uniq(&1 ++ paths))
+  end
 
   @spec need_reboot?() :: boolean()
-  def need_reboot?, do: Agent.get(find_agent(), & &1) != []
+  def need_reboot? do
+    paths =
+      "agent"
+      |> find_in_registry()
+      |> Agent.get(& &1)
+
+    paths != []
+  end
 
   @spec restart_children() :: :ok
   def restart_children do
-    find_agent()
+    "agent"
+    |> find_in_registry()
     |> Agent.get_and_update(&{&1, []})
     |> Enum.each(&restart_child/1)
   end
 
   defp restart_child(path) do
-    [{_, pid}] = Registry.lookup(@registry, path)
+    pid = find_in_registry(path)
 
     # main module can have multiple keys
     # first we search for main module
-    with {_, main_module} <- Enum.find(config_path_mappings(), fn {key, _} -> key == path end) do
-      DynamicSupervisor.terminate_child(__MODULE__, pid)
-      # then we search for keys, which depends on this main module
-      config_path_mappings()
-      |> Enum.filter(fn {_, module} -> main_module == module end)
-      |> Enum.each(fn {key, _} ->
+    with {_, module} <- find_mapping(path),
+         :ok <- terminate(pid),
+         # then we search for mappings, which depends on this main module
+         mappings <- find_mappings(module) do
+      Enum.each(mappings, fn {key, _} ->
         Registry.unregister(@registry, key)
       end)
 
-      start_dynamic_child(main_module)
+      start_dynamic_child(module)
+    else
+      error ->
+        Logger.warn(inspect(error))
+    end
+  end
+
+  defp find_mapping(path) do
+    with nil <- Enum.find(config_path_mappings(), fn {key, _} -> key == path end) do
+      {:error, :mapping_not_found}
+    end
+  end
+
+  defp find_mappings(module) do
+    with [] <- Enum.filter(config_path_mappings(), fn {_, m} -> m == module end) do
+      {:error, :empty_mappings}
+    end
+  end
+
+  defp terminate(pid) do
+    with {:error, :not_found} = error <- DynamicSupervisor.terminate_child(__MODULE__, pid) do
+      error
     end
   end
 end
