@@ -7,8 +7,6 @@ defmodule Pleroma.Application.DynamicSupervisor do
 
   require Logger
 
-  @registry Pleroma.Application.DynamicSupervisor.Registry
-
   @type child() ::
           Supervisor.child_spec()
           | {module(), term()}
@@ -19,16 +17,11 @@ defmodule Pleroma.Application.DynamicSupervisor do
   @impl true
   def init(_), do: DynamicSupervisor.init(strategy: :one_for_one)
 
-  @spec registry() :: module()
-  def registry, do: @registry
-
   @spec start_child(child()) :: DynamicSupervisor.on_start_child()
   def start_child(child), do: DynamicSupervisor.start_child(__MODULE__, child)
 
   @spec start_children(Pleroma.Application.env()) :: :ok
   def start_children(env) do
-    start_agent()
-
     [
       Pleroma.Plugs.RateLimiter.Supervisor,
       Oban,
@@ -40,17 +33,6 @@ defmodule Pleroma.Application.DynamicSupervisor do
     |> add_http_children(env)
     |> add_streamer(env)
     |> Enum.each(&start_dynamic_child/1)
-  end
-
-  defp start_agent do
-    {:ok, pid} = DynamicSupervisor.start_child(__MODULE__, {Agent, fn -> [] end})
-
-    Registry.register(@registry, "agent", pid)
-  end
-
-  defp find_in_registry(key) do
-    [{_, pid}] = Registry.lookup(@registry, key)
-    pid
   end
 
   defp add_http_children(children, :test) do
@@ -77,12 +59,12 @@ defmodule Pleroma.Application.DynamicSupervisor do
     with {:ok, pid} <- dynamic_child(child),
          mappings <- find_mappings(child) do
       Enum.each(mappings, fn {key, _} ->
-        Registry.register(@registry, key, pid)
+        Pleroma.Application.Agent.put_pid(key, pid)
       end)
     else
       :ignore ->
         # consider this behavior is normal
-        Logger.warn("#{inspect(child)} is ignored.")
+        Logger.info("#{inspect(child)} is ignored.")
 
       error ->
         Logger.warn(inspect(error))
@@ -158,32 +140,19 @@ defmodule Pleroma.Application.DynamicSupervisor do
 
   defp save_paths([]), do: :ok
 
-  defp save_paths(paths) do
-    "agent"
-    |> find_in_registry()
-    |> Agent.update(&Enum.uniq(&1 ++ paths))
-  end
+  defp save_paths(paths), do: Pleroma.Application.Agent.put_paths(paths)
 
   @spec need_reboot?() :: boolean()
-  def need_reboot? do
-    paths =
-      "agent"
-      |> find_in_registry()
-      |> Agent.get(& &1)
-
-    paths != []
-  end
+  def need_reboot?, do: Pleroma.Application.Agent.paths() != []
 
   @spec restart_children() :: :ok
   def restart_children do
-    "agent"
-    |> find_in_registry()
-    |> Agent.get_and_update(&{&1, []})
+    Pleroma.Application.Agent.get_and_reset_paths()
     |> Enum.each(&restart_child/1)
   end
 
   defp restart_child(path) do
-    pid = find_in_registry(path)
+    pid = Pleroma.Application.Agent.pid(path)
 
     # main module can have multiple keys
     # first we search for main module
@@ -192,7 +161,7 @@ defmodule Pleroma.Application.DynamicSupervisor do
          # then we search for mappings, which depends on this main module
          mappings <- find_mappings(module) do
       Enum.each(mappings, fn {key, _} ->
-        Registry.unregister(@registry, key)
+        Pleroma.Application.Agent.delete_pid(key)
       end)
 
       start_dynamic_child(module)

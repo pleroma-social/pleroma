@@ -85,7 +85,7 @@ defmodule Pleroma.Application do
     children = [
       Pleroma.Repo,
       Pleroma.Application.DynamicSupervisor,
-      {Registry, keys: :duplicate, name: Pleroma.Application.DynamicSupervisor.registry()}
+      Pleroma.Application.Agent
     ]
 
     # See http://elixir-lang.org/docs/stable/elixir/Supervisor.html
