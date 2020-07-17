@@ -1,0 +1,1 @@
+# Fixture for Mastodon frontend

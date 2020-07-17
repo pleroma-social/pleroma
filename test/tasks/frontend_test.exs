@@ -10,7 +10,8 @@ defmodule Mix.Tasks.Pleroma.FrontendTest do
 
   @bundle_zip_path Path.absname("test/fixtures/tesla_mock/fe-bundle.zip")
 
-  @dir "test/tmp/instance_static"
+  @tmp "test/tmp"
+  @dir "#{@tmp}/instance_static"
 
   setup_all do
     Mix.shell(Mix.Shell.Process)
@@ -47,21 +48,26 @@ defmodule Mix.Tasks.Pleroma.FrontendTest do
     :ok
   end
 
-  test "installations" do
-    frontends = ~w(pleroma kenoma mastodon admin)
-    refs = ~w(develop stable 1.2.3)
+  describe "Installations from local path" do
+    test "Frontends with standard dist structure" do
+      ~w(pleroma kenoma admin)
+      |> Enum.each(fn frontend ->
+        path = "test/fixtures/frontends/#{frontend}"
+        Mix.Tasks.Pleroma.Frontend.run(~w(install #{frontend} --path #{path}))
 
-    Enum.each(frontends, fn frontend ->
-      Enum.each(refs, fn ref ->
-        Mix.Tasks.Pleroma.Frontend.run([
-          "install",
-          frontend,
-          "--ref",
-          ref
-        ])
-
-        assert File.exists?(Path.join([@dir, "frontends/#{frontend}/#{ref}/index.html"]))
+        assert File.exists?("#{@dir}/frontends/#{frontend}/42/index.html")
+        refute File.exists?("#{@dir}/frontends/#{frontend}/42/package.json")
       end)
-    end)
+    end
+
+    test "Mastodon" do
+      path = "test/fixtures/frontends/mastodon"
+      Mix.Tasks.Pleroma.Frontend.run(~w(install mastodon --path #{path}))
+
+      assert File.exists?("#{@dir}/frontends/mastodon/__local__/sw.js")
+      assert File.exists?("#{@dir}/frontends/mastodon/__local__/packs/locales.js")
+      refute File.exists?("#{@dir}/frontends/mastodon/__local__/unused_file")
+      refute File.exists?("#{@dir}/frontends/mastodon/__local__/unused_dir")
+    end
   end
 end

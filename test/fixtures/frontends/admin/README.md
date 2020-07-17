@@ -1,0 +1,1 @@
+# Fixture for Admin frontend
