@@ -78,6 +78,8 @@ Has these additional fields under the `pleroma` object:
 - `notification_settings`: object, can be absent. See `/api/pleroma/notification_settings` for the parameters/keys returned.
 - `accepts_chat_messages`: boolean, but can be null if we don't have that information about a user
 - `favicon`: nullable URL string, Favicon image of the user's instance
+- `show_attachment_filenames`: boolean, true when the user wants to display post attachment filenames
+- `skip_thread_containment`: boolean, true when the user has skipping filtering out broken threads enabled
 
 ### Source
 
@@ -205,6 +207,7 @@ Additional parameters can be added to the JSON body/Form data:
 - `show_role` - if true, user's role (e.g admin, moderator) will be exposed to anyone in the API
 - `default_scope` - the scope returned under `privacy` key in Source subentity
 - `pleroma_settings_store` - Opaque user settings to be saved on the backend.
+- `show_attachment_filenames` - if true, the post attachment filenames will be displayed
 - `skip_thread_containment` - if true, skip filtering out broken threads
 - `allow_following_move` - if true, allows automatically follow moved following accounts
 - `pleroma_background_image` - sets the background image of the user. Can be set to "" (an empty string) to reset.
