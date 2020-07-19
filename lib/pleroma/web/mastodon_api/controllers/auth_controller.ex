@@ -18,7 +18,7 @@ defmodule Pleroma.Web.MastodonAPI.AuthController do
   @local_mastodon_name "Mastodon-Local"
 
   @doc "GET /web/login"
-  def login(%{assigns: %{user: %User{}}} = conn, _params) do
+  def login(%{assigns: %{user: %User{}, token: _}} = conn, _params) do
     redirect(conn, to: local_mastodon_root_path(conn))
   end
 
