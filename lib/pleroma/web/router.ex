@@ -276,7 +276,7 @@ defmodule Pleroma.Web.Router do
 
   scope "/oauth", Pleroma.Web.OAuth do
     scope [] do
-      pipe_through(:oauth)
+      pipe_through([:oauth, :after_auth])
       get("/authorize", OAuthController, :authorize)
     end
 
