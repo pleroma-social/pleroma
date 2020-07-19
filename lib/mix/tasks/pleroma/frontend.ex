@@ -48,6 +48,10 @@ defmodule Mix.Tasks.Pleroma.Frontend do
   @known_frontends Map.keys(@frontends)
 
   @ref_local "__local__"
+  @ref_develop "__develop__"
+  @ref_stable "__stable__"
+
+  @pleroma_gitlab_host "git.pleroma.social"
 
   def run(["install", "none" | _args]) do
     shell_info("Skipping frontend installation because none was requested")
@@ -76,23 +80,107 @@ defmodule Mix.Tasks.Pleroma.Frontend do
         ]
       )
 
-    path = options[:path]
-    ref = local_path_frontend_ref(path)
+    case options[:path] do
+      nil ->
+        web_install(frontend, options)
 
-    dest =
-      Path.join([
-        Pleroma.Config.get!([:instance, :static_dir]),
-        "frontends",
-        frontend,
-        ref
-      ])
+      path ->
+        local_install(frontend, path)
+    end
+
+    Logger.configure(level: log_level)
+  end
+
+  defp web_install(frontend, options) do
+    ref0 =
+      cond do
+        options[:ref] -> options[:ref]
+        options[:develop] -> @ref_develop
+        true -> @ref_stable
+      end
+
+    %{"ref" => ref, "url" => url} = get_frontend_metadata(frontend, ref0)
+    dest = dest_path(frontend, ref)
 
     shell_info("Installing frontend #{frontend} (#{ref}) from local path")
 
-    install_bundle(frontend, path, dest)
-    shell_info("Frontend #{frontend} (#{ref}) installed to #{dest}")
+    :ok = download_frontend(url, dest)
+    :ok = post_install(frontend, dest)
 
-    Logger.configure(level: log_level)
+    shell_info("Frontend #{frontend} (#{ref}) installed to #{dest}")
+  end
+
+  defp download_frontend(url, dest) do
+    with {:ok, %{status: 200, body: zip_body}} <- Tesla.get(http_client(), url),
+         {:ok, unzipped} <- :zip.unzip(zip_body, [:memory]),
+         filtered =
+           Enum.filter(unzipped, fn
+             {[?d, ?i, ?s, ?t, ?/ | _rest], _data} -> true
+             _ -> false
+           end),
+         true <- length(filtered) > 0 do
+      File.rm_rf!(dest)
+
+      Enum.each(unzipped, fn {[?d, ?i, ?s, ?t, ?/ | path], data} ->
+        file_path = Path.join(dest, path)
+
+        file_path
+        |> Path.dirname()
+        |> File.mkdir_p!()
+
+        File.write!(file_path, data)
+      end)
+    else
+      {:ok, %{status: 404}} ->
+        {:error, "Bundle not found"}
+
+      false ->
+        {:error, "Zip archive must contain \"dist\" folder"}
+
+      error ->
+        {:error, error}
+    end
+  end
+
+  defp get_frontend_metadata(frontend, @ref_develop) do
+    url = project_url(frontend) <> "/repository/branches"
+
+    %{status: 200, body: json} = Tesla.get!(http_client(), url)
+
+    %{"name" => ref, "commit" => %{"short_id" => last_commit_ref}} =
+      Enum.find(json, & &1["default"])
+
+    %{"ref" => ref, "url" => build_url(frontend, last_commit_ref)}
+  end
+
+  defp project_url(frontend),
+    do:
+      "https://#{@pleroma_gitlab_host}/api/v4/projects/#{
+        URI.encode_www_form(@frontends[frontend]["project"])
+      }"
+
+  defp build_url(frontend, ref),
+    do:
+      "https://#{@pleroma_gitlab_host}/#{@frontends[frontend]["project"]}/-/jobs/artifacts/#{ref}/download?job=build"
+
+  defp local_install(frontend, path) do
+    ref = local_path_frontend_ref(path)
+
+    dest = dest_path(frontend, ref)
+
+    shell_info("Installing frontend #{frontend} (#{ref}) from local path")
+
+    :ok = install_frontend(frontend, path, dest)
+    shell_info("Frontend #{frontend} (#{ref}) installed to #{dest}")
+  end
+
+  defp dest_path(frontend, ref) do
+    Path.join([
+      Pleroma.Config.get!([:instance, :static_dir]),
+      "frontends",
+      frontend,
+      ref
+    ])
   end
 
   defp local_path_frontend_ref(path) do
@@ -128,7 +216,7 @@ defmodule Mix.Tasks.Pleroma.Frontend do
     :ok
   end
 
-  defp install_bundle(frontend, source, dest) do
+  defp install_frontend(frontend, source, dest) do
     from =
       case frontend do
         "mastodon" ->
@@ -145,5 +233,14 @@ defmodule Mix.Tasks.Pleroma.Frontend do
     File.cp_r!(Path.join([source, from]), dest)
     post_install(frontend, dest)
     :ok
+  end
+
+  defp http_client do
+    middleware = [
+      Tesla.Middleware.FollowRedirects,
+      Tesla.Middleware.JSON
+    ]
+
+    Tesla.client(middleware)
   end
 end

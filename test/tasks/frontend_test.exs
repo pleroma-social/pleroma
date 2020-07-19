@@ -70,4 +70,22 @@ defmodule Mix.Tasks.Pleroma.FrontendTest do
       refute File.exists?("#{@dir}/frontends/mastodon/__local__/unused_dir")
     end
   end
+
+  test "Installation from web, pre-built packages" do
+    frontends = ~w(pleroma kenoma mastodon admin)
+    refs = ~w(develop stable 1.2.3)
+
+    Enum.each(frontends, fn frontend ->
+      Enum.each(refs, fn ref ->
+        Mix.Tasks.Pleroma.Frontend.run([
+          "install",
+          frontend,
+          "--ref",
+          ref
+        ])
+
+        assert File.exists?(Path.join([@dir, "frontends/#{frontend}/#{ref}/index.html"]))
+      end)
+    end)
+  end
 end
