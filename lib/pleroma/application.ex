@@ -15,6 +15,7 @@ defmodule Pleroma.Application do
   @version Mix.Project.config()[:version]
   @stable? Mix.Project.config()[:stable?]
   @repository Mix.Project.config()[:source_url]
+  @frontends Mix.Project.config()[:frontends]
   @env Mix.env()
 
   def name, do: @name
@@ -22,6 +23,7 @@ defmodule Pleroma.Application do
   def stable?, do: @stable?
   def named_version, do: @name <> " " <> @version
   def repository, do: @repository
+  def frontends, do: @frontends
 
   def user_agent do
     case Config.get([:http, :user_agent], :default) do

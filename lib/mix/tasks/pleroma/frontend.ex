@@ -64,6 +64,8 @@ defmodule Mix.Tasks.Pleroma.Frontend do
   end
 
   defp web_install(frontend, options) do
+    Pleroma.Utils.command_required!("yarn")
+
     ref0 =
       cond do
         options[:ref] -> options[:ref]
@@ -74,33 +76,32 @@ defmodule Mix.Tasks.Pleroma.Frontend do
     %{"ref" => ref, "url" => url} = get_frontend_metadata(frontend, ref0)
     dest = dest_path(frontend, ref)
 
-    shell_info("Installing frontend #{frontend} (#{ref}) from local path")
+    shell_info("Installing frontend #{frontend} (#{ref})")
 
-    :ok = download_frontend(url, dest)
-    :ok = post_install(frontend, dest)
+    tmp_dir = Path.join(dest, "tmp/src")
+    :ok = download_frontend(url, tmp_dir)
+    :ok = build_frontend(frontend, tmp_dir)
+    :ok = install_frontend(frontend, tmp_dir, dest)
 
     shell_info("Frontend #{frontend} (#{ref}) installed to #{dest}")
   end
 
   defp download_frontend(url, dest) do
     with {:ok, %{status: 200, body: zip_body}} <- Tesla.get(http_client(), url),
-         {:ok, unzipped} <- :zip.unzip(zip_body, [:memory]),
-         filtered =
-           Enum.filter(unzipped, fn
-             {[?d, ?i, ?s, ?t, ?/ | _rest], _data} -> true
-             _ -> false
-           end),
-         true <- length(filtered) > 0 do
+         {:ok, unzipped} <- :zip.unzip(zip_body, [:memory]) do
       File.rm_rf!(dest)
+      File.mkdir_p!(dest)
 
-      Enum.each(unzipped, fn {[?d, ?i, ?s, ?t, ?/ | path], data} ->
-        file_path = Path.join(dest, path)
+      Enum.each(unzipped, fn {filename, data} ->
+        [_root | paths] = Path.split(filename)
+        path = Enum.join(paths, "/")
+        new_file_path = Path.join(dest, path)
 
-        file_path
+        new_file_path
         |> Path.dirname()
         |> File.mkdir_p!()
 
-        File.write!(file_path, data)
+        File.write!(new_file_path, data)
       end)
     else
       {:ok, %{status: 404}} ->
@@ -114,6 +115,12 @@ defmodule Mix.Tasks.Pleroma.Frontend do
     end
   end
 
+  defp build_frontend(_frontend, path) do
+    System.cmd("yarn", [], cd: path)
+    System.cmd("yarn", ["build"], cd: path)
+    :ok
+  end
+
   defp get_frontend_metadata(frontend, @ref_develop) do
     url = project_url(frontend) <> "/repository/branches"
 
@@ -121,7 +128,7 @@ defmodule Mix.Tasks.Pleroma.Frontend do
 
     %{"commit" => %{"short_id" => last_commit_ref}} = Enum.find(json, & &1["default"])
 
-    %{"ref" => last_commit_ref, "url" => build_url(frontend, last_commit_ref)}
+    %{"ref" => last_commit_ref, "url" => archive_url(frontend, last_commit_ref)}
   end
 
   # fallback to develop version if compatible stable ref is not defined in
@@ -134,11 +141,11 @@ defmodule Mix.Tasks.Pleroma.Frontend do
         get_frontend_metadata(frontend, @ref_develop)
       )
 
-    %{"ref" => ref, "url" => build_url(frontend, ref)}
+    %{"ref" => ref, "url" => archive_url(frontend, ref)}
   end
 
   defp get_frontend_metadata(frontend, ref) do
-    %{"ref" => ref, "url" => build_url(frontend, ref)}
+    %{"ref" => ref, "url" => archive_url(frontend, ref)}
   end
 
   defp project_url(frontend),
@@ -147,9 +154,8 @@ defmodule Mix.Tasks.Pleroma.Frontend do
         URI.encode_www_form(@frontends[frontend]["project"])
       }"
 
-  defp build_url(frontend, ref),
-    do:
-      "https://#{@pleroma_gitlab_host}/#{@frontends[frontend]["project"]}/-/jobs/artifacts/#{ref}/download?job=build"
+  defp archive_url(frontend, ref),
+    do: "https://#{@pleroma_gitlab_host}/#{@frontends[frontend]["project"]}/-/archive/#{ref}.zip"
 
   defp local_install(frontend, path) do
     ref = local_path_frontend_ref(path)
