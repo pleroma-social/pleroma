@@ -40,7 +40,11 @@ defmodule Pleroma.Mixfile do
           applications: [ex_syslogger: :load, syslog: :load, eldap: :transient],
           steps: [:assemble, &put_otp_version/1, &copy_files/1, &copy_nginx_config/1]
         ]
-      ]
+      ],
+      frontends: %{
+        "pleroma" => "5d49edc8",
+        "mastodon" => "b1e42686"
+      }
     ]
   end
 

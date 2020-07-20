@@ -147,10 +147,26 @@ defmodule Mix.Tasks.Pleroma.Frontend do
 
     %{status: 200, body: json} = Tesla.get!(http_client(), url)
 
-    %{"name" => ref, "commit" => %{"short_id" => last_commit_ref}} =
-      Enum.find(json, & &1["default"])
+    %{"commit" => %{"short_id" => last_commit_ref}} = Enum.find(json, & &1["default"])
 
-    %{"ref" => ref, "url" => build_url(frontend, last_commit_ref)}
+    %{"ref" => last_commit_ref, "url" => build_url(frontend, last_commit_ref)}
+  end
+
+  # fallback to develop version if compatible stable ref is not defined in
+  # mix.exs for the given frontend
+  defp get_frontend_metadata(frontend, @ref_stable) do
+    ref =
+      Map.get(
+        Pleroma.Application.frontends(),
+        frontend,
+        get_frontend_metadata(frontend, @ref_develop)
+      )
+
+    %{"ref" => ref, "url" => build_url(frontend, ref)}
+  end
+
+  defp get_frontend_metadata(frontend, ref) do
+    %{"ref" => ref, "url" => build_url(frontend, ref)}
   end
 
   defp project_url(frontend),

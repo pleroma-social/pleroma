@@ -71,21 +71,32 @@ defmodule Mix.Tasks.Pleroma.FrontendTest do
     end
   end
 
-  test "Installation from web, pre-built packages" do
-    frontends = ~w(pleroma kenoma mastodon admin)
-    refs = ~w(develop stable 1.2.3)
+  describe "Installation from web, pre-built packages" do
+    test "develop" do
+      Mix.Tasks.Pleroma.Frontend.run([
+        "install",
+        "pleroma",
+        "--develop"
+      ])
 
-    Enum.each(frontends, fn frontend ->
-      Enum.each(refs, fn ref ->
-        Mix.Tasks.Pleroma.Frontend.run([
-          "install",
-          frontend,
-          "--ref",
-          ref
-        ])
+      assert File.exists?(Path.join([@dir, "frontends/pleroma/d5457c32/index.html"]))
+    end
 
-        assert File.exists?(Path.join([@dir, "frontends/#{frontend}/#{ref}/index.html"]))
-      end)
-    end)
+    test "stable" do
+      Mix.Tasks.Pleroma.Frontend.run(["install", "pleroma"])
+
+      assert File.exists?(Path.join([@dir, "frontends/pleroma/5d49edc8/index.html"]))
+    end
+
+    test "ref" do
+      Mix.Tasks.Pleroma.Frontend.run([
+        "install",
+        "pleroma",
+        "--ref",
+        "1.2.3"
+      ])
+
+      assert File.exists?(Path.join([@dir, "frontends/pleroma/1.2.3/index.html"]))
+    end
   end
 end
