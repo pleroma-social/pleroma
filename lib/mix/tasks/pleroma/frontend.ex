@@ -52,15 +52,17 @@ defmodule Mix.Tasks.Pleroma.Frontend do
         ]
       )
 
-    case options[:path] do
-      nil ->
-        web_install(frontend, options)
+    {:ok, ref} =
+      case options[:path] do
+        nil ->
+          web_install(frontend, options)
 
-      path ->
-        local_install(frontend, path)
-    end
+        path ->
+          local_install(frontend, path)
+      end
 
     Logger.configure(level: log_level)
+    ref
   end
 
   defp web_install(frontend, options) do
@@ -84,6 +86,8 @@ defmodule Mix.Tasks.Pleroma.Frontend do
     :ok = install_frontend(frontend, tmp_dir, dest)
 
     shell_info("Frontend #{frontend} (#{ref}) installed to #{dest}")
+
+    {:ok, ref}
   end
 
   defp download_frontend(url, dest) do
@@ -172,6 +176,7 @@ defmodule Mix.Tasks.Pleroma.Frontend do
 
     :ok = install_frontend(frontend, path, dest)
     shell_info("Frontend #{frontend} (#{ref}) installed to #{dest}")
+    {:ok, ref}
   end
 
   defp dest_path(frontend, ref) do

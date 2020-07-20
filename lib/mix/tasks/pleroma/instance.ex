@@ -35,11 +35,8 @@ defmodule Mix.Tasks.Pleroma.Instance do
           listen_ip: :string,
           listen_port: :string,
           fe_primary: :string,
-          fe_primary_ref: :string,
           fe_mastodon: :string,
-          fe_mastodon_ref: :string,
           fe_admin: :string,
-          fe_admin_ref: :string,
           fe_static: :string
         ],
         aliases: [
@@ -169,8 +166,8 @@ defmodule Mix.Tasks.Pleroma.Instance do
 
       install_fe =
         case Mix.env() do
-          :test -> fn _, _ -> :ok end
-          _ -> &Mix.Tasks.Pleroma.Frontend.run(["install", &1, "--ref", &2])
+          :test -> fn _ -> "42" end
+          _ -> &Mix.Tasks.Pleroma.Frontend.run(["install", &1])
         end
 
       fe_primary =
@@ -181,10 +178,7 @@ defmodule Mix.Tasks.Pleroma.Instance do
           "pleroma"
         )
 
-      fe_primary_ref =
-        get_frontend_ref(fe_primary !== "none", fe_primary, :fe_primary_ref, options)
-
-      install_fe.(fe_primary, fe_primary_ref)
+      fe_primary_ref = install_fe.(fe_primary)
 
       enable_static_fe? =
         get_option(
@@ -203,11 +197,13 @@ defmodule Mix.Tasks.Pleroma.Instance do
         ) === "y"
 
       fe_mastodon_ref =
-        get_frontend_ref(install_mastodon_fe?, "mastodon", :fe_mastodon_ref, options)
+        case install_mastodon_fe? do
+          true ->
+            install_fe.("mastodon")
 
-      if install_mastodon_fe? do
-        install_fe.("mastodon", fe_mastodon_ref)
-      end
+          false ->
+            "none"
+        end
 
       install_admin_fe? =
         get_option(
@@ -217,11 +213,11 @@ defmodule Mix.Tasks.Pleroma.Instance do
           "y"
         ) === "y"
 
-      fe_admin_ref = get_frontend_ref(install_admin_fe?, "admin", :fe_admin_ref, options)
-
-      if install_admin_fe? do
-        install_fe.("admin", fe_admin_ref)
-      end
+      fe_admin_ref =
+        case install_admin_fe? do
+          true -> install_fe.("admin")
+          false -> "none"
+        end
 
       secret = :crypto.strong_rand_bytes(64) |> Base.encode64() |> binary_part(0, 64)
       jwt_secret = :crypto.strong_rand_bytes(64) |> Base.encode64() |> binary_part(0, 64)
@@ -313,27 +309,5 @@ defmodule Mix.Tasks.Pleroma.Instance do
 
     File.write(robots_txt_path, robots_txt)
     shell_info("Writing #{robots_txt_path}.")
-  end
-
-  defp get_frontend_ref(false, _frontend, _option_key, _options), do: ""
-
-  defp get_frontend_ref(true, frontend, option_key, options) do
-    stable_pleroma? = Pleroma.Application.stable?()
-
-    current_stable_out =
-      if stable_pleroma? do
-        "stable"
-      else
-        "develop"
-      end
-
-    get_option(
-      options,
-      option_key,
-      "You are currently running #{current_stable_out} version of Pleroma. What version of #{
-        frontend
-      } you want to install? (\"stable\", \"develop\" or specific ref)",
-      current_stable_out
-    )
   end
 end
