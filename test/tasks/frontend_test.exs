@@ -71,7 +71,11 @@ defmodule Mix.Tasks.Pleroma.FrontendTest do
     end
   end
 
-  describe "Installation from web, pre-built packages" do
+  describe "Installation from web source" do
+    setup do
+      Pleroma.Utils.command_required!("yarn")
+    end
+
     test "develop" do
       Mix.Tasks.Pleroma.Frontend.run([
         "install",

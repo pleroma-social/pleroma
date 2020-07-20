@@ -115,9 +115,15 @@ defmodule Mix.Tasks.Pleroma.Frontend do
     end
   end
 
+  defp build_frontend("admin", path) do
+    {_out, 0} = System.cmd("yarn", [], cd: path)
+    {_out, 0} = System.cmd("yarn", ["build:prod"], cd: path)
+    :ok
+  end
+
   defp build_frontend(_frontend, path) do
-    System.cmd("yarn", [], cd: path)
-    System.cmd("yarn", ["build"], cd: path)
+    {_out, 0} = System.cmd("yarn", [], cd: path)
+    {_out, 0} = System.cmd("yarn", ["build"], cd: path)
     :ok
   end
 
@@ -226,7 +232,6 @@ defmodule Mix.Tasks.Pleroma.Frontend do
     File.mkdir_p!(dest)
     File.cp_r!(Path.join([source, from]), dest)
     post_install(frontend, dest)
-    :ok
   end
 
   defp http_client do
