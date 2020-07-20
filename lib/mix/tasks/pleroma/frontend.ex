@@ -3,37 +3,9 @@
 # SPDX-License-Identifier: AGPL-3.0-only
 
 defmodule Mix.Tasks.Pleroma.Frontend do
-  @doc """
-  Scenario 1:
-  - clone repo to /frontends/fe/_src_tmp
-  - build fe
-  - move built files into /frontends/fe
-  - remove frontends/fe/_src_tmp
-
-  Scenario 2:
-  - download bundle from CI to /frontends/fe/_src_tmp
-  - move build files
-  - remove tmp
-
-  Scenario 3:
-  - move built files from _path to /frontends/fe
-
-  Pleroma:
-    /dist
-  Kenoma:
-    /build
-  Fedi:
-    /dist
-  Admin:
-    /dist
-  Mastodon
-    /public
-  """
   use Mix.Task
 
   import Mix.Pleroma
-
-  # alias Pleroma.Config
 
   @shortdoc "Manages bundled Pleroma frontends"
   @moduledoc File.read!("docs/administration/CLI_tasks/frontend.md")
