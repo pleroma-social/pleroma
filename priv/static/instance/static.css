@@ -2,7 +2,6 @@ body {
   background-color: #121a24;
   font-family: sans-serif;
   color: #b9b9ba;
-  text-align: center;
 }
 
 .container {
@@ -18,6 +17,7 @@ body {
 h1 {
   margin: 0;
   font-size: 24px;
+  text-align: center;
 }
 
 h2 {
@@ -37,7 +37,6 @@ form {
 }
 
 .input {
-  text-align: left;
   color: #89898a;
   display: flex;
   flex-direction: column;
@@ -60,8 +59,7 @@ input {
 .scopes-input {
   display: flex;
   flex-direction: column;
-  margin-top: 1em;
-  text-align: left;
+  margin: 1em 0;
   color: #89898a;
 }
 
@@ -72,7 +70,6 @@ input {
 .scopes {
   display: flex;
   flex-wrap: wrap;
-  text-align: left;
   color: #b9b9ba;
 }
 
@@ -178,7 +175,6 @@ button:hover {
 .account-header {
   display: flex;
   margin: 20px 0;
-  text-align: left;
 }
 
 .account-header .avatar {
@@ -224,7 +220,6 @@ button:hover {
   display: flex;
 }
 .form-row > label {
-  text-align: left;
   line-height: 47px;
   flex: 1;
 }
