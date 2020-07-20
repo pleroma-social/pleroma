@@ -278,9 +278,9 @@ defmodule Pleroma.Web.Router do
     scope [] do
       pipe_through([:oauth, :after_auth])
       get("/authorize", OAuthController, :authorize)
+      post("/authorize", OAuthController, :create_authorization)
     end
 
-    post("/authorize", OAuthController, :create_authorization)
     post("/token", OAuthController, :token_exchange)
     post("/revoke", OAuthController, :token_revoke)
     get("/registration_details", OAuthController, :registration_details)

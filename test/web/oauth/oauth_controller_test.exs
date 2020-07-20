@@ -606,6 +606,43 @@ defmodule Pleroma.Web.OAuth.OAuthControllerTest do
       end
     end
 
+    test "authorize from cookie" do
+      app_scopes = ["read", "write"]
+      app = insert(:oauth_app)
+      redirect_uri = OAuthController.default_redirect_uri(app)
+      user = insert(:user)
+
+      conn =
+        build_conn()
+        |> Plug.Session.call(Plug.Session.init(@session_opts))
+        |> fetch_session()
+        |> put_session(:user_id, user.id)
+        |> post(
+          "/oauth/authorize",
+          %{
+            "authorization" => %{
+              "name" => user.nickname,
+              "client_id" => app.client_id,
+              "redirect_uri" => redirect_uri,
+              "scope" => app_scopes,
+              "state" => "statepassed"
+            }
+          }
+        )
+
+      assert Enum.count(Repo.all(Pleroma.Web.OAuth.Authorization)) == 1
+
+      target = redirected_to(conn)
+      assert target =~ redirect_uri
+
+      query = URI.parse(target).query |> URI.query_decoder() |> Map.new()
+
+      assert %{"state" => "statepassed", "code" => code} = query
+      auth = Repo.get_by(Authorization, token: code)
+      assert auth
+      assert auth.scopes == app_scopes
+    end
+
     test "redirect to on two-factor auth page" do
       otp_secret = TOTP.generate_secret()
 
