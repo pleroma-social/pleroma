@@ -1,9 +1,14 @@
 # Managing frontends
 
-`mix pleroma.frontend install <frontend> --path <path>`
+`mix pleroma.frontend install <frontend> [--path <path>] [--develop] [--ref <ref>]`
 
+Frontend can be installed either from local path with compiled sources, or from web.
 
-Install locally built frontend.
+If installing from web, make sure you have [yarn](https://yarnpkg.com/getting-started/install)
+since it's needed to build frontend locally. When no `--develop` or `--ref <ref>`
+options passed, latest stable frontend will be installed.
+
+If installing from local path, building of sources is up to you.
 
 Currently supported `<frontend>` values:
 - [admin](https://git.pleroma.social/pleroma/admin-fe)
@@ -11,7 +16,7 @@ Currently supported `<frontend>` values:
 - [mastodon](http://git.pleroma.social/pleroma/mastofe)
 - [pleroma](http://git.pleroma.social/pleroma/pleroma-fe)
 
-The complete process of installing frontend would be following:
+The complete process of installing frontend from local path would be following:
 - download a frontend:
 
 ```bash
@@ -24,4 +29,17 @@ cd pleroma-fe && yarn && yarn build
 - run the following command inside your Pleroma instance root directory:
 ```bash
 mix pleroma.frontend install pleroma --path /path/to/pleroma-fe
+```
+
+The complete process of installing frontend from web would be following:
+- make sure you've got `yarn` installed:
+
+```bash
+yarn -v
+```
+
+- run the following command inside your Pleroma instance root directory to
+install latest develop frontend:
+```bash
+mix pleroma.frontend install pleroma --develop
 ```
