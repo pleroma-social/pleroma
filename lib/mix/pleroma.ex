@@ -4,7 +4,6 @@
 
 defmodule Mix.Pleroma do
   @apps [
-    :restarter,
     :ecto,
     :ecto_sql,
     :postgrex,
