@@ -45,6 +45,13 @@ defmodule Mix.Pleroma do
       ] ++
         http_children(adapter)
 
+    children =
+      if Application.get_env(:tesla, :adapter) == Tesla.Adapter.Gun do
+        [Pleroma.Application.GunSupervisor | children]
+      else
+        children
+      end
+
     cachex_children =
       Enum.map(@cachex_children, &Pleroma.Application.Static.build_cachex({&1, []}))
 
