@@ -27,6 +27,7 @@ defmodule Mix.Tasks.Pleroma.Frontend do
 
   def run(["install", "none" | _args]) do
     shell_info("Skipping frontend installation because none was requested")
+    "none"
   end
 
   def run(["install", unknown_fe | _args]) when unknown_fe not in @known_frontends do

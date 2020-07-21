@@ -706,6 +706,12 @@ config :ex_aws, http_client: Pleroma.HTTP.ExAws
 
 config :pleroma, :instances_favicons, enabled: false
 
+config :pleroma, :frontends,
+  primary: %{"name" => "none", "ref" => "none"},
+  mastodon: %{"name" => "mastodon", "ref" => "none"},
+  admin: %{"name" => "admin", "ref" => "none"},
+  static: true
+
 # Import environment specific config. This must remain at the bottom
 # of this file so it overrides the configuration defined above.
 import_config "#{Mix.env()}.exs"
