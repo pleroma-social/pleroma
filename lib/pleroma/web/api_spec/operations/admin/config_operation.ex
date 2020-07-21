@@ -109,7 +109,7 @@ defmodule Pleroma.Web.ApiSpec.Admin.ConfigOperation do
 
   defp any do
     %Schema{
-      oneOf: [
+      anyOf: [
         %Schema{type: :array},
         %Schema{type: :object},
         %Schema{type: :string},
