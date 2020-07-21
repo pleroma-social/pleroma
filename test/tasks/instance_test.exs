@@ -66,16 +66,10 @@ defmodule Mix.Tasks.Pleroma.InstanceTest do
         "./test/../test/instance_static/",
         "--fe-primary",
         "pleroma",
-        "--fe-primary-ref",
-        "develop",
         "--fe-mastodon",
         "y",
-        "--fe-mastodon-ref",
-        "develop",
         "--fe-admin",
         "y",
-        "--fe-admin-ref",
-        "develop",
         "--fe-static",
         "y"
       ])
@@ -96,9 +90,9 @@ defmodule Mix.Tasks.Pleroma.InstanceTest do
     assert generated_config =~ "password: \"dbpass\""
     assert generated_config =~ "configurable_from_database: true"
     assert generated_config =~ "http: [ip: {127, 0, 0, 1}, port: 4000]"
-    assert generated_config =~ ~s(primary: %{"name" => "pleroma", "ref" => "develop"})
-    assert generated_config =~ ~s(mastodon: %{"name" => "mastodon", "ref" => "develop"})
-    assert generated_config =~ ~s(admin: %{"name" => "admin", "ref" => "develop"})
+    assert generated_config =~ ~s(primary: %{"name" => "pleroma", "ref" => "42"})
+    assert generated_config =~ ~s(mastodon: %{"name" => "mastodon", "ref" => "42"})
+    assert generated_config =~ ~s(admin: %{"name" => "admin", "ref" => "42"})
     assert generated_config =~ "static: true"
     assert File.read!(tmp_path() <> "setup.psql") == generated_setup_psql()
     assert File.exists?(Path.expand("./test/instance_static/robots.txt"))

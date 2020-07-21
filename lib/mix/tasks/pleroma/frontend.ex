@@ -77,16 +77,19 @@ defmodule Mix.Tasks.Pleroma.Frontend do
 
     %{"ref" => ref, "url" => url} = get_frontend_metadata(frontend, ref0)
     dest = dest_path(frontend, ref)
-
-    shell_info("Installing frontend #{frontend} (#{ref})")
-
     tmp_dir = Path.join(dest, "tmp/src")
+    fe_label = "#{frontend} (#{ref})"
+
+    shell_info("Downloading #{fe_label} to #{tmp_dir}")
     :ok = download_frontend(url, tmp_dir)
+
+    shell_info("Building #{fe_label} (this will take some time)")
     :ok = build_frontend(frontend, tmp_dir)
+
+    shell_info("Installing #{fe_label} to #{dest}")
     :ok = install_frontend(frontend, tmp_dir, dest)
 
-    shell_info("Frontend #{frontend} (#{ref}) installed to #{dest}")
-
+    shell_info("Frontend #{fe_label} installed to #{dest}")
     {:ok, ref}
   end
 
@@ -144,14 +147,13 @@ defmodule Mix.Tasks.Pleroma.Frontend do
   # fallback to develop version if compatible stable ref is not defined in
   # mix.exs for the given frontend
   defp get_frontend_metadata(frontend, @ref_stable) do
-    ref =
-      Map.get(
-        Pleroma.Application.frontends(),
-        frontend,
+    case Map.get(Pleroma.Application.frontends(), frontend) do
+      nil ->
         get_frontend_metadata(frontend, @ref_develop)
-      )
 
-    %{"ref" => ref, "url" => archive_url(frontend, ref)}
+      ref ->
+        %{"ref" => ref, "url" => archive_url(frontend, ref)}
+    end
   end
 
   defp get_frontend_metadata(frontend, ref) do
@@ -245,6 +247,8 @@ defmodule Mix.Tasks.Pleroma.Frontend do
       Tesla.Middleware.JSON
     ]
 
-    Tesla.client(middleware)
+    adapter = {Tesla.Adapter.Gun, [timeout: 120_000]}
+
+    Tesla.client(middleware, adapter)
   end
 end

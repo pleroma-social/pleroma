@@ -162,7 +162,8 @@ defmodule Mix.Tasks.Pleroma.Instance do
         )
         |> Path.expand()
 
-      Config.put([:instance, :static_dir], static_dir)
+      Config.put([:instance, :static_dir], static_dir) |> IO.inspect(label: "put #{static_dir}")
+      Config.get!([:instance, :static_dir]) |> IO.inspect(label: :get_instance_static_dir)
 
       install_fe =
         case Mix.env() do
