@@ -96,4 +96,3 @@ defmodule Pleroma.Web.Frontend.DefaultController do
     end
   end
 end
-

@@ -16,6 +16,7 @@ Currently supported `<frontend>` values:
 - [mastodon](http://git.pleroma.social/pleroma/mastofe)
 - [pleroma](http://git.pleroma.social/pleroma/pleroma-fe)
 
+## Example installation from local path
 The complete process of installing frontend from local path would be following:
 - download a frontend:
 
@@ -31,6 +32,7 @@ cd pleroma-fe && yarn && yarn build
 mix pleroma.frontend install pleroma --path /path/to/pleroma-fe
 ```
 
+## Example installation from web
 The complete process of installing frontend from web would be following:
 - make sure you've got `yarn` installed:
 
