@@ -9,7 +9,7 @@ defmodule Pleroma.Application.Agent do
     Agent.start_link(fn -> %{reboot_paths: [], pids: %{}} end, name: __MODULE__)
   end
 
-  @spec pid(any()) :: pid()
+  @spec pid(any()) :: pid() | nil
   def pid(key) do
     Agent.get(__MODULE__, fn state -> state[:pids][key] end)
   end
