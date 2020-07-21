@@ -204,14 +204,6 @@ config :pleroma, :frontend_configurations,
 
 These settings **need to be complete**, they will override the defaults.
 
-### :static_fe
-
-Render profiles and posts using server-generated HTML that is viewable without using JavaScript.
-
-Available options:
-
-* `enabled` - Enables the rendering of static HTML. Defaults to `false`.
-
 ### :assets
 
 This section configures assets to be used with various frontends. Currently the only option
@@ -1019,3 +1011,21 @@ Note: setting `restrict_unauthenticated/timelines/local` to `true` has no practi
 Control favicons for instances.
 
 * `enabled`: Allow/disallow displaying and getting instances favicons
+
+## Frontend management
+
+Frontends in Pleroma are swappable - you can [install different versions of different frontends](../administration/CLI_tasks/frontend.md) and specify which one to use here.
+There are 4 types of frontends: `primary`, `mastodon`, `admin` and `static`. While `static` is a special unswappable case which can only be enabled or disabled, the rest of the frontends are represented in a form of `name` and `ref`.
+
+### :frontends
+
+* `primary`: Primary frontend, the one that is served for all pages by default
+  * `name`: name of the installed primary frontend, `none` for headless
+  * `ref`: reference commit of the installed primary frontend
+* `mastodon`: Mastodon frontend that users can switch to from Primary
+  * `name`: Name of the installed Mastodon frontend (currently supported: \"mastodon\" or \"none\")
+  * `ref`: reference commit of the installed Mastodon frontend to be used
+* `admin`: Admin frontend
+  * `name`: Name of the installed Admin frontend (currently supported: \"admin\" or \"none\")
+  * `ref`: reference commit of the installed Admin frontend to be used
+* `static`: if set to `true`, this will render profiles and posts using server-generated HTML that is viewable without using JavaScript. Defaults to `false`.

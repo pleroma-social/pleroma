@@ -3446,9 +3446,9 @@ config :pleroma, :config_description, [
       %{
         key: :static,
         type: :boolean,
-        description: ""
-        description: "Render profiles and posts using server-generated HTML that is viewable without using JavaScript where possible"
-      },
+        description:
+          "Render profiles and posts using server-generated HTML that is viewable without using JavaScript where possible"
+      }
     ]
-  },
+  }
 ]
