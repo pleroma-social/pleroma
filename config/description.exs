@@ -3055,21 +3055,6 @@ config :pleroma, :config_description, [
   },
   %{
     group: :pleroma,
-    key: :static_fe,
-    label: "Static FE",
-    type: :group,
-    description:
-      "Render profiles and posts using server-generated HTML that is viewable without using JavaScript",
-    children: [
-      %{
-        key: :enabled,
-        type: :boolean,
-        description: "Enables the rendering of static HTML. Default: disabled."
-      }
-    ]
-  },
-  %{
-    group: :pleroma,
     key: :feed,
     type: :group,
     description: "Configure feed rendering",
@@ -3400,5 +3385,70 @@ config :pleroma, :config_description, [
         suggestions: ["s3.eu-central-1.amazonaws.com"]
       }
     ]
-  }
+  },
+  %{
+    group: :pleroma,
+    key: :frontends,
+    type: :group,
+    description: "Installed frontends management",
+    children: [
+      %{
+        key: :primary,
+        type: :map,
+        description: "Primary frontend, the one that is served for all pages by default",
+        children: [
+          %{
+            key: "name",
+            type: :string,
+            description: "Name of the installed primary frontend (\"none\" for headless)"
+          },
+          %{
+            key: "ref",
+            type: :string,
+            description: "reference commit of the installed primary frontend to be used"
+          }
+        ]
+      },
+      %{
+        key: :mastodon,
+        type: :map,
+        description: "Mastodon frontend",
+        children: [
+          %{
+            key: "name",
+            type: :string,
+            description: "Name of the installed Mastodon frontend (\"mastodon\" or \"none\")"
+          },
+          %{
+            key: "ref",
+            type: :string,
+            description: "reference commit of the installed Mastodon frontend to be used"
+          }
+        ]
+      },
+      %{
+        key: :admin,
+        type: :map,
+        description: "Admin frontend",
+        children: [
+          %{
+            key: "name",
+            type: :string,
+            description: "Name of the installed Admin frontend (\"admin\" or \"none\")"
+          },
+          %{
+            key: "ref",
+            type: :string,
+            description: "reference commit of the installed Admin frontend to be used"
+          }
+        ]
+      },
+      %{
+        key: :static,
+        type: :boolean,
+        description: ""
+        description: "Render profiles and posts using server-generated HTML that is viewable without using JavaScript where possible"
+      },
+    ]
+  },
 ]
