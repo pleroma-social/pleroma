@@ -48,53 +48,70 @@ defmodule Mix.Tasks.Pleroma.Frontend do
         strict: [
           ref: :string,
           path: :string,
-          develop: :boolean
+          develop: :boolean,
+          static_dir: :string
         ]
       )
 
-    {:ok, ref} =
-      case options[:path] do
-        nil ->
-          web_install(frontend, options)
-
-        path ->
-          local_install(frontend, path)
+    instance_static_dir =
+      with nil <- options[:static_dir] do
+        Pleroma.Config.get!([:instance, :static_dir])
       end
 
+    ref =
+      case options[:path] do
+        nil ->
+          ref0 =
+            cond do
+              options[:ref] -> options[:ref]
+              options[:develop] -> @ref_develop
+              true -> @ref_stable
+            end
+
+          web_frontend_ref(frontend, ref0)
+
+        path ->
+          local_path_frontend_ref(path)
+      end
+
+    dest =
+      Path.join([
+        instance_static_dir,
+        "frontends",
+        frontend,
+        ref
+      ])
+
+    fe_label = "#{frontend} (#{ref})"
+
+    from =
+      with nil <- options[:path] do
+        Pleroma.Utils.command_required!("yarn")
+
+        url = archive_url(frontend, ref)
+
+        tmp_dir = Path.join(dest, "tmp/src")
+
+        shell_info("Downloading #{fe_label} to #{tmp_dir}")
+        :ok = download_frontend(url, tmp_dir)
+
+        shell_info("Building #{fe_label} (this will take some time)")
+        :ok = build_frontend(frontend, tmp_dir)
+        tmp_dir
+      end
+
+    shell_info("Installing #{fe_label} to #{dest}")
+
+    :ok = install_frontend(frontend, from, dest)
+
+    shell_info("Frontend #{fe_label} installed to #{dest}")
     Logger.configure(level: log_level)
     ref
   end
 
-  defp web_install(frontend, options) do
-    Pleroma.Utils.command_required!("yarn")
-
-    ref0 =
-      cond do
-        options[:ref] -> options[:ref]
-        options[:develop] -> @ref_develop
-        true -> @ref_stable
-      end
-
-    %{"ref" => ref, "url" => url} = get_frontend_metadata(frontend, ref0)
-    dest = dest_path(frontend, ref)
-    tmp_dir = Path.join(dest, "tmp/src")
-    fe_label = "#{frontend} (#{ref})"
-
-    shell_info("Downloading #{fe_label} to #{tmp_dir}")
-    :ok = download_frontend(url, tmp_dir)
-
-    shell_info("Building #{fe_label} (this will take some time)")
-    :ok = build_frontend(frontend, tmp_dir)
-
-    shell_info("Installing #{fe_label} to #{dest}")
-    :ok = install_frontend(frontend, tmp_dir, dest)
-
-    shell_info("Frontend #{fe_label} installed to #{dest}")
-    {:ok, ref}
-  end
-
   defp download_frontend(url, dest) do
-    with {:ok, %{status: 200, body: zip_body}} <- Tesla.get(http_client(), url),
+    with {:ok, %{status: 200, body: zip_body}} <-
+           Pleroma.HTTP.get(url, [], timeout: 120_000, recv_timeout: 120_000),
          {:ok, unzipped} <- :zip.unzip(zip_body, [:memory]) do
       File.rm_rf!(dest)
       File.mkdir_p!(dest)
@@ -123,42 +140,45 @@ defmodule Mix.Tasks.Pleroma.Frontend do
   end
 
   defp build_frontend("admin", path) do
-    {_out, 0} = System.cmd("yarn", [], cd: path)
-    {_out, 0} = System.cmd("yarn", ["build:prod"], cd: path)
+    yarn = Pleroma.Config.get(:yarn, "yarn")
+    {_out, 0} = System.cmd(yarn, [], cd: path)
+    {_out, 0} = System.cmd(yarn, ["build:prod"], cd: path)
     :ok
   end
 
   defp build_frontend(_frontend, path) do
-    {_out, 0} = System.cmd("yarn", [], cd: path)
-    {_out, 0} = System.cmd("yarn", ["build"], cd: path)
+    yarn = Pleroma.Config.get(:yarn, "yarn")
+    {_out, 0} = System.cmd(yarn, [], cd: path)
+    {_out, 0} = System.cmd(yarn, ["build"], cd: path)
     :ok
   end
 
-  defp get_frontend_metadata(frontend, @ref_develop) do
+  defp web_frontend_ref(frontend, @ref_develop) do
     url = project_url(frontend) <> "/repository/branches"
 
-    %{status: 200, body: json} = Tesla.get!(http_client(), url)
+    {:ok, %{status: 200, body: body}} =
+      Pleroma.HTTP.get(url, [], timeout: 120_000, recv_timeout: 120_000)
+
+    json = Jason.decode!(body)
 
     %{"commit" => %{"short_id" => last_commit_ref}} = Enum.find(json, & &1["default"])
 
-    %{"ref" => last_commit_ref, "url" => archive_url(frontend, last_commit_ref)}
+    last_commit_ref
   end
 
   # fallback to develop version if compatible stable ref is not defined in
   # mix.exs for the given frontend
-  defp get_frontend_metadata(frontend, @ref_stable) do
+  defp web_frontend_ref(frontend, @ref_stable) do
     case Map.get(Pleroma.Application.frontends(), frontend) do
       nil ->
-        get_frontend_metadata(frontend, @ref_develop)
+        web_frontend_ref(frontend, @ref_develop)
 
       ref ->
-        %{"ref" => ref, "url" => archive_url(frontend, ref)}
+        ref
     end
   end
 
-  defp get_frontend_metadata(frontend, ref) do
-    %{"ref" => ref, "url" => archive_url(frontend, ref)}
-  end
+  defp web_frontend_ref(_frontend, ref), do: ref
 
   defp project_url(frontend),
     do:
@@ -168,27 +188,6 @@ defmodule Mix.Tasks.Pleroma.Frontend do
 
   defp archive_url(frontend, ref),
     do: "https://#{@pleroma_gitlab_host}/#{@frontends[frontend]["project"]}/-/archive/#{ref}.zip"
-
-  defp local_install(frontend, path) do
-    ref = local_path_frontend_ref(path)
-
-    dest = dest_path(frontend, ref)
-
-    shell_info("Installing frontend #{frontend} (#{ref}) from local path")
-
-    :ok = install_frontend(frontend, path, dest)
-    shell_info("Frontend #{frontend} (#{ref}) installed to #{dest}")
-    {:ok, ref}
-  end
-
-  defp dest_path(frontend, ref) do
-    Path.join([
-      Pleroma.Config.get!([:instance, :static_dir]),
-      "frontends",
-      frontend,
-      ref
-    ])
-  end
 
   defp local_path_frontend_ref(path) do
     path
@@ -239,16 +238,5 @@ defmodule Mix.Tasks.Pleroma.Frontend do
     File.mkdir_p!(dest)
     File.cp_r!(Path.join([source, from]), dest)
     post_install(frontend, dest)
-  end
-
-  defp http_client do
-    middleware = [
-      Tesla.Middleware.FollowRedirects,
-      Tesla.Middleware.JSON
-    ]
-
-    adapter = {Tesla.Adapter.Gun, [timeout: 120_000]}
-
-    Tesla.client(middleware, adapter)
   end
 end

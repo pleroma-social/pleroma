@@ -72,35 +72,37 @@ defmodule Mix.Tasks.Pleroma.FrontendTest do
   end
 
   describe "Installation from web source" do
-    setup do
-      Pleroma.Utils.command_required!("yarn")
-    end
-
     test "develop" do
-      Mix.Tasks.Pleroma.Frontend.run([
-        "install",
-        "pleroma",
-        "--develop"
-      ])
+      if Pleroma.Utils.command_available?("yarn") do
+        Mix.Tasks.Pleroma.Frontend.run([
+          "install",
+          "pleroma",
+          "--develop"
+        ])
 
-      assert File.exists?(Path.join([@dir, "frontends/pleroma/d5457c32/index.html"]))
+        assert File.exists?(Path.join([@dir, "frontends/pleroma/d5457c32/index.html"]))
+      end
     end
 
     test "stable" do
-      Mix.Tasks.Pleroma.Frontend.run(["install", "pleroma"])
+      if Pleroma.Utils.command_available?("yarn") do
+        Mix.Tasks.Pleroma.Frontend.run(["install", "pleroma"])
 
-      assert File.exists?(Path.join([@dir, "frontends/pleroma/5d49edc8/index.html"]))
+        assert File.exists?(Path.join([@dir, "frontends/pleroma/5d49edc8/index.html"]))
+      end
     end
 
     test "ref" do
-      Mix.Tasks.Pleroma.Frontend.run([
-        "install",
-        "pleroma",
-        "--ref",
-        "1.2.3"
-      ])
+      if Pleroma.Utils.command_available?("yarn") do
+        Mix.Tasks.Pleroma.Frontend.run([
+          "install",
+          "pleroma",
+          "--ref",
+          "1.2.3"
+        ])
 
-      assert File.exists?(Path.join([@dir, "frontends/pleroma/1.2.3/index.html"]))
+        assert File.exists?(Path.join([@dir, "frontends/pleroma/1.2.3/index.html"]))
+      end
     end
   end
 end

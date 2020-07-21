@@ -55,9 +55,9 @@ config :pleroma, Pleroma.Repo,
 config :pleroma, Pleroma.Web.ApiSpec.CastAndValidate, strict: true
 
 config :pleroma, :frontends,
-  primary: %{"name" => "pleroma", "ref" => "develop"},
-  mastodon: %{"name" => "mastodon", "ref" => "develop"},
-  admin: %{"name" => "admin", "ref" => "develop"},
+  primary: %{"name" => "pleroma", "ref" => "5d49edc8"},
+  mastodon: %{"name" => "mastodon", "ref" => "b1e42686"},
+  admin: %{"name" => "admin", "ref" => "d7eaf61a"},
   static: true
 
 if File.exists?("./config/dev.secret.exs") do

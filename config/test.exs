@@ -118,6 +118,8 @@ config :pleroma, Pleroma.Uploaders.S3,
   streaming_enabled: true,
   public_endpoint: nil
 
+config :pleroma, yarn: "true"
+
 config :pleroma, :frontends,
   primary: %{"name" => "pleroma", "ref" => "develop"},
   mastodon: %{"name" => "mastodon", "ref" => "develop"},
