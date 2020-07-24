@@ -628,14 +628,14 @@ defmodule Pleroma.Web.AdminAPI.AdminAPIController do
 
   def restart(conn, _params) do
     with :ok <- configurable_from_database() do
-      Task.start(Pleroma.Application.DynamicSupervisor, :restart_children, [])
+      Task.start(Pleroma.Application.DependenciesSupervisor, :restart_children, [])
 
       json(conn, %{})
     end
   end
 
   def need_reboot(conn, _params) do
-    json(conn, %{need_reboot: Pleroma.Application.DynamicSupervisor.need_reboot?()})
+    json(conn, %{need_reboot: Pleroma.Application.DependenciesSupervisor.need_reboot?()})
   end
 
   defp configurable_from_database do

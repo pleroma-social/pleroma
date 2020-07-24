@@ -52,7 +52,7 @@ defmodule Mix.Pleroma do
       end
 
     cachex_children =
-      Enum.map(@cachex_children, &Pleroma.Application.Static.build_cachex({&1, []}))
+      Enum.map(@cachex_children, &Pleroma.Application.Dependencies.cachex_spec({&1, []}))
 
     Supervisor.start_link(children ++ cachex_children,
       strategy: :one_for_one,

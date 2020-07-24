@@ -54,6 +54,7 @@ defmodule Pleroma.Application do
     Config.DeprecationWarnings.warn()
     Pleroma.Plugs.HTTPSecurityPlug.warn_if_disabled()
     Pleroma.Application.Requirements.verify!()
+    Pleroma.Application.Dependencies.save_dynamic_children_config_relations()
     setup_instrumenters()
     load_custom_modules()
     check_system_commands()
@@ -84,8 +85,8 @@ defmodule Pleroma.Application do
     # Define workers and child supervisors to be supervised
     children = [
       Pleroma.Repo,
-      Pleroma.Application.DynamicSupervisor,
-      Pleroma.Application.Agent
+      Pleroma.Application.DependenciesSupervisor,
+      Pleroma.Application.DependenciesState
     ]
 
     # See http://elixir-lang.org/docs/stable/elixir/Supervisor.html
@@ -98,16 +99,22 @@ defmodule Pleroma.Application do
     Pleroma.Config.Environment.load_and_update()
   end
 
-  def start_phase(:static_children, :normal, _args) do
+  def start_phase(:static_deps, :normal, _args) do
     # Start static children,
     # which don't require any configuration or can be configured in runtime
-    Pleroma.Application.Static.start_children(@env)
+
+    @env
+    |> Pleroma.Application.Dependencies.static()
+    |> Pleroma.Application.DependenciesSupervisor.start_children(:static)
   end
 
-  def start_phase(:dynamic_children, :normal, _args) do
+  def start_phase(:dynamic_deps, :normal, _args) do
     # Start dynamic children,
     # which require restart after some config changes
-    Pleroma.Application.DynamicSupervisor.start_children(@env)
+
+    @env
+    |> Pleroma.Application.Dependencies.dynamic()
+    |> Pleroma.Application.DependenciesSupervisor.start_children(:dynamic)
   end
 
   def load_custom_modules do

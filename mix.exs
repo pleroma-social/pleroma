@@ -78,7 +78,7 @@ defmodule Pleroma.Mixfile do
         :fast_sanitize
       ],
       included_applications: [:ex_syslogger],
-      start_phases: [update_env: [], static_children: [], dynamic_children: []]
+      start_phases: [update_env: [], static_deps: [], dynamic_deps: []]
     ]
   end
 

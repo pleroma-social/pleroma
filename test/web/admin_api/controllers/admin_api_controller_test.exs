@@ -1427,7 +1427,7 @@ defmodule Pleroma.Web.AdminAPI.AdminAPIControllerTest do
     test "pleroma restarts", %{conn: conn} do
       assert conn |> get("/api/pleroma/admin/restart") |> json_response(200) == %{}
 
-      refute Pleroma.Application.DynamicSupervisor.need_reboot?()
+      refute Pleroma.Application.DependenciesSupervisor.need_reboot?()
     end
   end
 

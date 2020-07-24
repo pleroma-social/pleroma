@@ -5,6 +5,7 @@
 defmodule Pleroma.Web.AdminAPI.ConfigController do
   use Pleroma.Web, :controller
 
+  alias Pleroma.Application.DependenciesSupervisor
   alias Pleroma.Config
   alias Pleroma.ConfigDB
   alias Pleroma.Plugs.OAuthScopesPlug
@@ -34,7 +35,7 @@ defmodule Pleroma.Web.AdminAPI.ConfigController do
 
       render(conn, "index.json", %{
         configs: configs,
-        need_reboot: Pleroma.Application.DynamicSupervisor.need_reboot?()
+        need_reboot: DependenciesSupervisor.need_reboot?()
       })
     end
   end
@@ -75,7 +76,7 @@ defmodule Pleroma.Web.AdminAPI.ConfigController do
 
       render(conn, "index.json", %{
         configs: merged,
-        need_reboot: Pleroma.Application.DynamicSupervisor.need_reboot?()
+        need_reboot: DependenciesSupervisor.need_reboot?()
       })
     end
   end
@@ -103,11 +104,18 @@ defmodule Pleroma.Web.AdminAPI.ConfigController do
 
       Config.Environment.load_and_update(deleted)
 
-      Pleroma.Application.DynamicSupervisor.save_need_reboot_paths(updated ++ deleted)
+      (updated ++ deleted)
+      |> Enum.map(fn %{group: group, key: key, value: value} ->
+        with {path, _} <- Pleroma.Application.Dependencies.find_relation(group, key, value) do
+          path
+        end
+      end)
+      |> Enum.filter(& &1)
+      |> DependenciesSupervisor.put_paths()
 
       render(conn, "index.json", %{
         configs: updated,
-        need_reboot: Pleroma.Application.DynamicSupervisor.need_reboot?()
+        need_reboot: DependenciesSupervisor.need_reboot?()
       })
     end
   end
