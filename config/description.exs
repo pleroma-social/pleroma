@@ -1426,6 +1426,7 @@ config :pleroma, :config_description, [
     group: :pleroma,
     key: :mrf_simple,
     tab: :mrf,
+    related_policy: "Pleroma.Web.ActivityPub.MRF.SimplePolicy",
     label: "MRF Simple",
     type: :group,
     description: "Simple ingress policies",
@@ -1492,6 +1493,7 @@ config :pleroma, :config_description, [
     group: :pleroma,
     key: :mrf_activity_expiration,
     tab: :mrf,
+    related_policy: "Pleroma.Web.ActivityPub.MRF.ActivityExpirationPolicy",
     label: "MRF Activity Expiration Policy",
     type: :group,
     description: "Adds automatic expiration to all local activities",
@@ -1508,6 +1510,7 @@ config :pleroma, :config_description, [
     group: :pleroma,
     key: :mrf_subchain,
     tab: :mrf,
+    related_policy: "Pleroma.Web.ActivityPub.MRF.SubchainPolicy",
     label: "MRF Subchain",
     type: :group,
     description:
@@ -1530,6 +1533,7 @@ config :pleroma, :config_description, [
     group: :pleroma,
     key: :mrf_rejectnonpublic,
     tab: :mrf,
+    related_policy: "Pleroma.Web.ActivityPub.MRF.RejectNonPublic",
     description: "RejectNonPublic drops posts with non-public visibility settings.",
     label: "MRF Reject Non Public",
     type: :group,
@@ -1551,6 +1555,7 @@ config :pleroma, :config_description, [
     group: :pleroma,
     key: :mrf_hellthread,
     tab: :mrf,
+    related_policy: "Pleroma.Web.ActivityPub.MRF.HellthreadPolicy",
     label: "MRF Hellthread",
     type: :group,
     description: "Block messages with excessive user mentions",
@@ -1576,6 +1581,7 @@ config :pleroma, :config_description, [
     group: :pleroma,
     key: :mrf_keyword,
     tab: :mrf,
+    related_policy: "Pleroma.Web.ActivityPub.MRF.KeywordPolicy",
     label: "MRF Keyword",
     type: :group,
     description: "Reject or Word-Replace messages with a keyword or regex",
@@ -1607,6 +1613,7 @@ config :pleroma, :config_description, [
     group: :pleroma,
     key: :mrf_mention,
     tab: :mrf,
+    related_policy: "Pleroma.Web.ActivityPub.MRF.MentionPolicy",
     label: "MRF Mention",
     type: :group,
     description: "Block messages which mention a specific user",
@@ -1623,6 +1630,7 @@ config :pleroma, :config_description, [
     group: :pleroma,
     key: :mrf_vocabulary,
     tab: :mrf,
+    related_policy: "Pleroma.Web.ActivityPub.MRF.VocabularyPolicy",
     label: "MRF Vocabulary",
     type: :group,
     description: "Filter messages which belong to certain activity vocabularies",
@@ -1646,6 +1654,8 @@ config :pleroma, :config_description, [
   # %{
   #   group: :pleroma,
   #   key: :mrf_user_allowlist,
+  #   tab: :mrf,
+  #   related_policy: "Pleroma.Web.ActivityPub.MRF.UserAllowListPolicy",
   #   type: :map,
   #   description:
   #     "The keys in this section are the domain names that the policy should apply to." <>
@@ -2216,11 +2226,12 @@ config :pleroma, :config_description, [
     ]
   },
   %{
-    group: :auto_linker,
-    key: :opts,
+    group: :pleroma,
+    key: Pleroma.Formatter,
     label: "Auto Linker",
     type: :group,
-    description: "Configuration for the auto_linker library",
+    description:
+      "Configuration for Pleroma's link formatter which parses mentions, hashtags, and URLs.",
     children: [
       %{
         key: :class,
@@ -2237,24 +2248,31 @@ config :pleroma, :config_description, [
       %{
         key: :new_window,
         type: :boolean,
-        description: "Link URLs will open in new window/tab"
+        description: "Link URLs will open in a new window/tab."
       },
       %{
         key: :truncate,
         type: [:integer, false],
         description:
-          "Set to a number to truncate URLs longer then the number. Truncated URLs will end in `..`",
+          "Set to a number to truncate URLs longer than the number. Truncated URLs will end in `...`",
         suggestions: [15, false]
       },
       %{
         key: :strip_prefix,
         type: :boolean,
-        description: "Strip the scheme prefix"
+        description: "Strip the scheme prefix."
       },
       %{
         key: :extra,
         type: :boolean,
         description: "Link URLs with rarely used schemes (magnet, ipfs, irc, etc.)"
+      },
+      %{
+        key: :validate_tld,
+        type: [:atom, :boolean],
+        description:
+          "Set to false to disable TLD validation for URLs/emails. Can be set to :no_scheme to validate TLDs only for URLs without a scheme (e.g `example.com` will be validated, but `http://example.loki` won't)",
+        suggestions: [:no_scheme, true]
       }
     ]
   },
@@ -2902,8 +2920,9 @@ config :pleroma, :config_description, [
   },
   %{
     group: :pleroma,
-    tab: :mrf,
     key: :mrf_normalize_markup,
+    tab: :mrf,
+    related_policy: "Pleroma.Web.ActivityPub.MRF.NormalizeMarkup",
     label: "MRF Normalize Markup",
     description: "MRF NormalizeMarkup settings. Scrub configured hypertext markup.",
     type: :group,
@@ -3098,8 +3117,9 @@ config :pleroma, :config_description, [
   %{
     group: :pleroma,
     key: :mrf_object_age,
-    label: "MRF Object Age",
     tab: :mrf,
+    related_policy: "Pleroma.Web.ActivityPub.MRF.ObjectAgePolicy",
+    label: "MRF Object Age",
     type: :group,
     description:
       "Rejects or delists posts based on their timestamp deviance from your server's clock.",
