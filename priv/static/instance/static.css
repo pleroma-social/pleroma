@@ -49,8 +49,7 @@ body {
   background-color: var(--foreground-color);
   border-radius: 4px;
   overflow: hidden;
-  margin: auto;
-  margin-top: 35px;
+  margin: 35px auto;
   box-shadow: 0 1px 4px 0px rgba(0, 0, 0, 0.5);
 }
 
@@ -168,13 +167,25 @@ input:focus {
   border-bottom: 2px solid var(--brand-color);
 }
 
+.actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.actions button,
+.actions a.button {
+  width: auto;
+  margin-left: 10px;
+}
+
+a.button,
 button {
   width: 100%;
   background-color: #1c2a3a;
   color: var(--primary-text-color);
   border-radius: 4px;
   border: none;
-  padding: 10px;
+  padding: 10px 16px;
   margin-top: 20px;
   margin-bottom: 20px;
   text-transform: uppercase;
@@ -184,6 +195,7 @@ button {
     0px -1px 0px 0px rgba(0, 0, 0, 0.2) inset;
 }
 
+a.button:hover,
 button:hover {
   cursor: pointer;
   box-shadow: 0px 0px 0px 1px var(--brand-color),
@@ -243,7 +255,12 @@ button:hover {
   color: var(--muted-text-color);
 }
 
-@media all and (max-width: 440px) {
+@media all and (max-width: 420px) {
+  .container {
+    margin: 0 auto;
+    border-radius: 0;
+  }
+
   .scope {
     flex-basis: 0%;
   }

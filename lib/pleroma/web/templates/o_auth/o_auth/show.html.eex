@@ -25,7 +25,10 @@
   <% end %>
 
   <%= if @user do %>
-    <%= submit "Authorize" %>
+    <div class="actions">
+      <a class="button button--cancel" href="/">Cancel</a>
+      <%= submit "Approve", class: "button--approve" %>
+    </div>
   <% else %>
     <%= if @params["registration"] in ["true", true] do %>
       <h3>This is the first time you visit! Please enter your Pleroma handle.</h3>
