@@ -134,5 +134,12 @@ defmodule Mix.Tasks.Pleroma.FrontendTest do
 
       assert {:ok, []} == File.ls(@dir)
     end
+
+    test "Missing configs" do
+      clear_config(:frontends, [])
+      Mix.Tasks.Pleroma.Frontend.run(["install", "all"])
+
+      assert {:ok, []} == File.ls(@dir)
+    end
   end
 end

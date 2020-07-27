@@ -35,18 +35,17 @@ defmodule Mix.Tasks.Pleroma.Frontend do
 
     configs = Pleroma.Config.get(:frontends, %{})
 
-    with config <- configs[:primary],
-         frontend <- config["name"],
+    with config when not is_nil(config) <- configs[:primary],
          ref when ref != "none" <- config["ref"] do
-      run(["install", frontend, "--ref", ref])
+      run(["install", config["name"], "--ref", ref])
     end
 
-    with config <- configs[:mastodon],
+    with config when not is_nil(config) <- configs[:mastodon],
          ref when ref != "none" <- config["ref"] do
       run(["install", "mastodon", "--ref", ref])
     end
 
-    with config <- configs[:admin],
+    with config when not is_nil(config) <- configs[:admin],
          ref when ref != "none" <- config["ref"] do
       run(["install", "admin", "--ref", ref])
     end
