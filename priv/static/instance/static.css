@@ -46,12 +46,16 @@ body {
 
 .container {
   max-width: 400px;
-  padding: 20px;
   background-color: var(--foreground-color);
   border-radius: 4px;
+  overflow: hidden;
   margin: auto;
   margin-top: 35px;
   box-shadow: 0 1px 4px 0px rgba(0, 0, 0, 0.5);
+}
+
+.container__content {
+  padding: 0 20px;
 }
 
 h1 {
@@ -208,26 +212,38 @@ button:hover {
   font-size: 16px;
 }
 
-.account-header {
-  display: flex;
-}
-
-.account-header .avatar {
-  display: flex;
-  max-width: 60px;
-  margin-right: 10px;
-}
-
-.account-header .avatar img {
+.account-header__banner {
   width: 100%;
-  border-radius: 4px;
+  height: 112px;
+  background-size: cover;
+  background-position: center;
+}
+
+.account-header__avatar {
+  width: 94px;
+  height: 94px;
+  background-size: cover;
+  background-position: center;
+  margin: -47px 10px 0;
+  border: 6px solid var(--foreground-color);
+  border-radius: 999px;
+}
+
+.account-header__meta {
+  padding: 6px 20px 17px;
+}
+
+.account-header__display-name {
+  font-size: 20px;
+  font-weight: bold;
+}
+
+.account-header__nickname {
+  font-size: 14px;
+  color: var(--muted-text-color);
 }
 
 @media all and (max-width: 440px) {
-  .container {
-    margin-top: 0
-  }
-
   .scope {
     flex-basis: 0%;
   }
