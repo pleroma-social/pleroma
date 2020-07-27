@@ -30,6 +30,28 @@ defmodule Mix.Tasks.Pleroma.Frontend do
     "none"
   end
 
+  def run(["install", "all"]) do
+    {:ok, _} = Application.ensure_all_started(:pleroma)
+
+    configs = Pleroma.Config.get(:frontends, %{})
+
+    with config <- configs[:primary],
+         frontend <- config["name"],
+         ref when ref != "none" <- config["ref"] do
+      run(["install", frontend, "--ref", ref])
+    end
+
+    with config <- configs[:mastodon],
+         ref when ref != "none" <- config["ref"] do
+      run(["install", "mastodon", "--ref", ref])
+    end
+
+    with config <- configs[:admin],
+         ref when ref != "none" <- config["ref"] do
+      run(["install", "admin", "--ref", ref])
+    end
+  end
+
   def run(["install", unknown_fe | _args]) when unknown_fe not in @known_frontends do
     shell_error(
       "Frontend \"#{unknown_fe}\" is not known. Known frontends are: #{

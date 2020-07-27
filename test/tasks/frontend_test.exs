@@ -105,4 +105,34 @@ defmodule Mix.Tasks.Pleroma.FrontendTest do
       end
     end
   end
+
+  describe "Install all" do
+    test "Normal config" do
+      config = [
+        primary: %{"name" => "pleroma", "ref" => "1.2.3"},
+        mastodon: %{"name" => "mastodon", "ref" => "2.3.4"},
+        admin: %{"name" => "admin", "ref" => "3.4.5"}
+      ]
+
+      Pleroma.Config.put(:frontends, config)
+      Mix.Tasks.Pleroma.Frontend.run(["install", "all"])
+
+      assert File.exists?(Path.join([@dir, "frontends/pleroma/1.2.3/index.html"]))
+      assert File.exists?(Path.join([@dir, "frontends/mastodon/2.3.4/sw.js"]))
+      assert File.exists?(Path.join([@dir, "frontends/admin/3.4.5/index.html"]))
+    end
+
+    test "Unconfigured frontends" do
+      config = [
+        primary: %{"name" => "none", "ref" => "1.2.3"},
+        mastodon: %{"name" => "mastodon", "ref" => "none"},
+        admin: %{"name" => "admin", "ref" => "none"}
+      ]
+
+      Pleroma.Config.put(:frontends, config)
+      Mix.Tasks.Pleroma.Frontend.run(["install", "all"])
+
+      assert {:ok, []} == File.ls(@dir)
+    end
+  end
 end
