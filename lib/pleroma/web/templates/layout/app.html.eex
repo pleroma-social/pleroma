@@ -1,16 +1,19 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
   <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width,initial-scale=1,minimal-ui" />
-    <title>
-    <%= Pleroma.Config.get([:instance, :name]) %>
-    </title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1,minimal-ui">
+    <title><%= Pleroma.Config.get([:instance, :name]) %></title>
     <link rel="stylesheet" href="/instance/static.css">
   </head>
   <body>
+    <div class="instance-header">
+      <div class="instance-header__content">
+        <img class="instance-header__thumbnail" src="<%= Pleroma.Config.get([:instance, :instance_thumbnail]) %>">
+        <h1 class="instance-header__title"><%= Pleroma.Config.get([:instance, :name]) %></h1>
+      </div>
+    </div>
     <div class="container">
-      <h1><%= Pleroma.Config.get([:instance, :name]) %></h1>
       <%= render @view_module, @view_template, assigns %>
     </div>
   </body>
