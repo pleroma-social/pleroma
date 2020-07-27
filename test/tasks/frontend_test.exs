@@ -108,38 +108,44 @@ defmodule Mix.Tasks.Pleroma.FrontendTest do
 
   describe "Install all" do
     test "Normal config" do
-      config = [
-        primary: %{"name" => "pleroma", "ref" => "1.2.3"},
-        mastodon: %{"name" => "mastodon", "ref" => "2.3.4"},
-        admin: %{"name" => "admin", "ref" => "3.4.5"}
-      ]
+      if Pleroma.Utils.command_available?("yarn") do
+        config = [
+          primary: %{"name" => "pleroma", "ref" => "1.2.3"},
+          mastodon: %{"name" => "mastodon", "ref" => "2.3.4"},
+          admin: %{"name" => "admin", "ref" => "3.4.5"}
+        ]
 
-      clear_config(:frontends, config)
-      Mix.Tasks.Pleroma.Frontend.run(["install", "all"])
+        clear_config(:frontends, config)
+        Mix.Tasks.Pleroma.Frontend.run(["install", "all"])
 
-      assert File.exists?(Path.join([@dir, "frontends/pleroma/1.2.3/index.html"]))
-      assert File.exists?(Path.join([@dir, "frontends/mastodon/2.3.4/sw.js"]))
-      assert File.exists?(Path.join([@dir, "frontends/admin/3.4.5/index.html"]))
+        assert File.exists?(Path.join([@dir, "frontends/pleroma/1.2.3/index.html"]))
+        assert File.exists?(Path.join([@dir, "frontends/mastodon/2.3.4/sw.js"]))
+        assert File.exists?(Path.join([@dir, "frontends/admin/3.4.5/index.html"]))
+      end
     end
 
     test "Unconfigured frontends" do
-      config = [
-        primary: %{"name" => "none", "ref" => "1.2.3"},
-        mastodon: %{"name" => "mastodon", "ref" => "none"},
-        admin: %{"name" => "admin", "ref" => "none"}
-      ]
+      if Pleroma.Utils.command_available?("yarn") do
+        config = [
+          primary: %{"name" => "none", "ref" => "1.2.3"},
+          mastodon: %{"name" => "mastodon", "ref" => "none"},
+          admin: %{"name" => "admin", "ref" => "none"}
+        ]
 
-      clear_config(:frontends, config)
-      Mix.Tasks.Pleroma.Frontend.run(["install", "all"])
+        clear_config(:frontends, config)
+        Mix.Tasks.Pleroma.Frontend.run(["install", "all"])
 
-      assert {:ok, []} == File.ls(@dir)
+        assert {:ok, []} == File.ls(@dir)
+      end
     end
 
     test "Missing configs" do
-      clear_config(:frontends, [])
-      Mix.Tasks.Pleroma.Frontend.run(["install", "all"])
+      if Pleroma.Utils.command_available?("yarn") do
+        clear_config(:frontends, [])
+        Mix.Tasks.Pleroma.Frontend.run(["install", "all"])
 
-      assert {:ok, []} == File.ls(@dir)
+        assert {:ok, []} == File.ls(@dir)
+      end
     end
   end
 end
