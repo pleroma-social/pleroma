@@ -114,7 +114,7 @@ defmodule Mix.Tasks.Pleroma.FrontendTest do
         admin: %{"name" => "admin", "ref" => "3.4.5"}
       ]
 
-      Pleroma.Config.put(:frontends, config)
+      clear_config(:frontends, config)
       Mix.Tasks.Pleroma.Frontend.run(["install", "all"])
 
       assert File.exists?(Path.join([@dir, "frontends/pleroma/1.2.3/index.html"]))
@@ -129,7 +129,7 @@ defmodule Mix.Tasks.Pleroma.FrontendTest do
         admin: %{"name" => "admin", "ref" => "none"}
       ]
 
-      Pleroma.Config.put(:frontends, config)
+      clear_config(:frontends, config)
       Mix.Tasks.Pleroma.Frontend.run(["install", "all"])
 
       assert {:ok, []} == File.ls(@dir)

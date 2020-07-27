@@ -118,6 +118,8 @@ config :pleroma, Pleroma.Uploaders.S3,
   streaming_enabled: true,
   public_endpoint: nil
 
+config :tzdata, :autoupdate, :disabled
+
 config :pleroma, yarn: "true"
 
 config :pleroma, :frontends,
