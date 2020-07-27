@@ -8,10 +8,10 @@
   </head>
   <body>
     <div class="instance-header">
-      <div class="instance-header__content">
+      <a class="instance-header__content" href="/">
         <img class="instance-header__thumbnail" src="<%= Pleroma.Config.get([:instance, :instance_thumbnail]) %>">
         <h1 class="instance-header__title"><%= Pleroma.Config.get([:instance, :name]) %></h1>
-      </div>
+      </a>
     </div>
     <div class="container">
       <%= render @view_module, @view_template, assigns %>

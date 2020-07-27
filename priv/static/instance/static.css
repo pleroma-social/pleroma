@@ -19,6 +19,7 @@ body {
 }
 
 .instance-header {
+  height: 60px;
   padding: 10px;
   background: var(--foreground-color);
   box-shadow: 0 1px 4px 0px rgba(0, 0, 0, 0.5);
@@ -34,12 +35,13 @@ body {
 .instance-header__thumbnail {
   max-width: 40px;
   border-radius: 4px;
-  margin-right: 10px;
+  margin-right: 12px;
 }
 
 .instance-header__title {
   font-size: 16px;
   font-weight: bold;
+  color: var(--primary-text-color);
 }
 
 .container {
