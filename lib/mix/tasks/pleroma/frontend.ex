@@ -31,7 +31,7 @@ defmodule Mix.Tasks.Pleroma.Frontend do
   end
 
   def run(["install", "all"]) do
-    {:ok, _} = Application.ensure_all_started(:pleroma)
+    start_pleroma()
 
     configs = Pleroma.Config.get(:frontends, %{})
 
@@ -62,7 +62,7 @@ defmodule Mix.Tasks.Pleroma.Frontend do
   def run(["install", frontend | args]) do
     log_level = Logger.level()
     Logger.configure(level: :warn)
-    {:ok, _} = Application.ensure_all_started(:pleroma)
+    start_pleroma()
 
     {options, [], []} =
       OptionParser.parse(
