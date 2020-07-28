@@ -2294,7 +2294,7 @@ defmodule Pleroma.User do
     |> Map.put(:fields, fields)
   end
 
-  def get_domain(%User{ap_id: ap_id} = user) do
+  def get_domain(%User{ap_id: ap_id} = _user) do
     URI.parse(ap_id).host
   end
 end
