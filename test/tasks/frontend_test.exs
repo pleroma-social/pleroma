@@ -8,7 +8,8 @@ defmodule Mix.Tasks.Pleroma.FrontendTest do
 
   import Tesla.Mock, only: [mock_global: 1, json: 1]
 
-  @bundle_zip_path Path.absname("test/fixtures/tesla_mock/fe-bundle.zip")
+  @fe_source_zip_path Path.absname("test/fixtures/tesla_mock/fe-source.zip")
+  @fe_build_zip_path Path.absname("test/fixtures/tesla_mock/fe-build.zip")
 
   @tmp "test/tmp"
   @dir "#{@tmp}/instance_static"
@@ -36,8 +37,17 @@ defmodule Mix.Tasks.Pleroma.FrontendTest do
         |> Jason.decode!()
         |> json()
 
-      %{method: :get, url: _download_url} ->
-        %Tesla.Env{status: 200, body: File.read!(@bundle_zip_path)}
+      %{method: :get, url: download_url} ->
+        cond do
+          String.contains?(download_url, "test-bundle") ->
+            %Tesla.Env{status: 200, body: File.read!(@fe_build_zip_path)}
+
+          String.ends_with?(download_url, "job=build") ->
+            %Tesla.Env{status: 404}
+
+          true ->
+            %Tesla.Env{status: 200, body: File.read!(@fe_source_zip_path)}
+        end
     end)
 
     File.mkdir_p!(@dir)
@@ -71,7 +81,7 @@ defmodule Mix.Tasks.Pleroma.FrontendTest do
     end
   end
 
-  describe "Installation from web source" do
+  describe "Installation from source" do
     test "develop" do
       if Pleroma.Utils.command_available?("yarn") do
         Mix.Tasks.Pleroma.Frontend.run([
@@ -106,11 +116,24 @@ defmodule Mix.Tasks.Pleroma.FrontendTest do
     end
   end
 
+  describe "Installation from pre-built bundle" do
+    test "Installs pleroma" do
+      Mix.Tasks.Pleroma.Frontend.run([
+        "install",
+        "pleroma",
+        "--ref",
+        "test-bundle-1.2.3"
+      ])
+
+      assert File.exists?(Path.join([@dir, "frontends/pleroma/test-bundle-1.2.3/index.html"]))
+    end
+  end
+
   describe "Install all" do
     test "Normal config" do
       if Pleroma.Utils.command_available?("yarn") do
         config = [
-          primary: %{"name" => "pleroma", "ref" => "1.2.3"},
+          primary: %{"name" => "pleroma", "ref" => "test-bundle-1.2.3"},
           mastodon: %{"name" => "mastodon", "ref" => "2.3.4"},
           admin: %{"name" => "admin", "ref" => "3.4.5"}
         ]
@@ -118,7 +141,7 @@ defmodule Mix.Tasks.Pleroma.FrontendTest do
         clear_config(:frontends, config)
         Mix.Tasks.Pleroma.Frontend.run(["install", "all"])
 
-        assert File.exists?(Path.join([@dir, "frontends/pleroma/1.2.3/index.html"]))
+        assert File.exists?(Path.join([@dir, "frontends/pleroma/test-bundle-1.2.3/index.html"]))
         assert File.exists?(Path.join([@dir, "frontends/mastodon/2.3.4/sw.js"]))
         assert File.exists?(Path.join([@dir, "frontends/admin/3.4.5/index.html"]))
       end

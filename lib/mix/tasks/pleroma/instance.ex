@@ -165,31 +165,16 @@ defmodule Mix.Tasks.Pleroma.Instance do
       install_fe =
         case Mix.env() do
           :test ->
-            fn _, _ -> "42" end
+            fn _ -> "42" end
 
           _ ->
-            fn frontend, callback ->
-              case Pleroma.Utils.command_available?("yarn") do
-                false when frontend != "none" ->
-                  message =
-                    "To install #{frontend} frontend, `yarn` command is required. Please install it before continue. ([C]ontinue/[A]bort)"
-
-                  case String.downcase(shell_prompt(message, "C")) do
-                    abort when abort in ["a", "abort"] ->
-                      "none"
-
-                    _continue ->
-                      callback.(frontend, callback)
-                  end
-
-                _ ->
-                  Mix.Tasks.Pleroma.Frontend.run([
-                    "install",
-                    frontend,
-                    "--static-dir",
-                    static_dir
-                  ])
-              end
+            fn frontend ->
+              Mix.Tasks.Pleroma.Frontend.run([
+                "install",
+                frontend,
+                "--static-dir",
+                static_dir
+              ])
             end
         end
 
@@ -201,7 +186,7 @@ defmodule Mix.Tasks.Pleroma.Instance do
           "pleroma"
         )
 
-      fe_primary_ref = install_fe.(fe_primary, install_fe)
+      fe_primary_ref = install_fe.(fe_primary)
 
       enable_static_fe? =
         get_option(
@@ -222,7 +207,7 @@ defmodule Mix.Tasks.Pleroma.Instance do
       fe_mastodon_ref =
         case install_mastodon_fe? do
           true ->
-            install_fe.("mastodon", install_fe)
+            install_fe.("mastodon")
 
           false ->
             "none"
@@ -238,7 +223,7 @@ defmodule Mix.Tasks.Pleroma.Instance do
 
       fe_admin_ref =
         case install_admin_fe? do
-          true -> install_fe.("admin", install_fe)
+          true -> install_fe.("admin")
           false -> "none"
         end
 

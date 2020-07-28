@@ -30,24 +30,24 @@ defmodule Mix.Tasks.Pleroma.Frontend do
     "none"
   end
 
-  def run(["install", "all"]) do
+  def run(["install", "all" | options]) do
     start_pleroma()
 
     configs = Pleroma.Config.get(:frontends, %{})
 
     with config when not is_nil(config) <- configs[:primary],
          ref when ref != "none" <- config["ref"] do
-      run(["install", config["name"], "--ref", ref])
+      run(["install", config["name"], "--ref", ref | options])
     end
 
     with config when not is_nil(config) <- configs[:mastodon],
          ref when ref != "none" <- config["ref"] do
-      run(["install", "mastodon", "--ref", ref])
+      run(["install", "mastodon", "--ref", ref | options])
     end
 
     with config when not is_nil(config) <- configs[:admin],
          ref when ref != "none" <- config["ref"] do
-      run(["install", "admin", "--ref", ref])
+      run(["install", "admin", "--ref", ref | options])
     end
   end
 
@@ -106,32 +106,67 @@ defmodule Mix.Tasks.Pleroma.Frontend do
 
     fe_label = "#{frontend} (#{ref})"
 
-    from =
+    {from, proceed?} =
       with nil <- options[:path] do
-        Pleroma.Utils.command_required!("yarn")
-
-        url = archive_url(frontend, ref)
-
         tmp_dir = Path.join(dest, "tmp/src")
 
-        shell_info("Downloading #{fe_label} to #{tmp_dir}")
-        :ok = download_frontend(url, tmp_dir)
+        shell_info("Downloading pre-built bundle for #{fe_label}")
 
-        shell_info("Building #{fe_label} (this will take some time)")
-        :ok = build_frontend(frontend, tmp_dir)
-        tmp_dir
+        proceed? =
+          with {:error, error} <- download_frontend(frontend, ref, tmp_dir, :build) do
+            shell_info("Could not download pre-built bundle: #{inspect(error)}.")
+            shell_info("Falling back to building locally from source")
+
+            download_and_build = fn callback ->
+              case Pleroma.Utils.command_available?("yarn") do
+                false ->
+                  message =
+                    "To build frontend #{fe_label} from sources, `yarn` command is required. Please install it before continue. ([C]ontinue/[A]bort)"
+
+                  case String.downcase(shell_prompt(message, "C")) do
+                    abort when abort in ["a", "abort"] ->
+                      false
+
+                    _continue ->
+                      callback.(callback)
+                  end
+
+                _ ->
+                  shell_info("Downloading #{fe_label} sources to #{tmp_dir}")
+                  :ok = download_frontend(frontend, ref, tmp_dir, :source)
+
+                  shell_info("Building #{fe_label} (this will take some time)")
+                  :ok = build_frontend(frontend, tmp_dir)
+              end
+            end
+
+            download_and_build.(download_and_build)
+          else
+            _ ->
+              true
+          end
+
+        {tmp_dir, proceed?}
+      else
+        path ->
+          {path, true}
       end
 
-    shell_info("Installing #{fe_label} to #{dest}")
+    if proceed? do
+      shell_info("Installing #{fe_label} to #{dest}")
 
-    :ok = install_frontend(frontend, from, dest)
+      :ok = install_frontend(frontend, from, dest)
 
-    shell_info("Frontend #{fe_label} installed to #{dest}")
+      shell_info("Frontend #{fe_label} installed to #{dest}")
+    end
+
     Logger.configure(level: log_level)
     ref
   end
 
-  defp download_frontend(url, dest) do
+  defp download_frontend(frontend, ref, dest, kind) do
+    url = frontend_url(frontend, ref, kind)
+
     with {:ok, %{status: 200, body: zip_body}} <-
            Pleroma.HTTP.get(url, [], timeout: 120_000, recv_timeout: 120_000),
          {:ok, unzipped} <- :zip.unzip(zip_body, [:memory]) do
@@ -139,8 +174,18 @@ defmodule Mix.Tasks.Pleroma.Frontend do
       File.mkdir_p!(dest)
 
       Enum.each(unzipped, fn {filename, data} ->
-        [_root | paths] = Path.split(filename)
-        path = Enum.join(paths, "/")
+        path =
+          case kind do
+            :source ->
+              filename
+              |> Path.split()
+              |> Enum.drop(1)
+              |> Enum.join("/")
+
+            :build ->
+              filename
+          end
+
         new_file_path = Path.join(dest, path)
 
         new_file_path
@@ -151,10 +196,7 @@ defmodule Mix.Tasks.Pleroma.Frontend do
       end)
     else
       {:ok, %{status: 404}} ->
-        {:error, "Bundle not found"}
-
-      false ->
-        {:error, "Zip archive must contain \"dist\" folder"}
+        {:error, "Zip archive with frontend #{kind} not found at #{url}"}
 
       error ->
         {:error, error}
@@ -208,8 +250,15 @@ defmodule Mix.Tasks.Pleroma.Frontend do
         URI.encode_www_form(@frontends[frontend]["project"])
       }"
 
-  defp archive_url(frontend, ref),
+  defp source_url(frontend, ref),
     do: "https://#{@pleroma_gitlab_host}/#{@frontends[frontend]["project"]}/-/archive/#{ref}.zip"
+
+  defp build_url(frontend, ref),
+    do:
+      "https://#{@pleroma_gitlab_host}/#{@frontends[frontend]["project"]}/-/jobs/artifacts/#{ref}/download?job=build"
+
+  defp frontend_url(frontend, ref, :source), do: source_url(frontend, ref)
+  defp frontend_url(frontend, ref, :build), do: build_url(frontend, ref)
 
   defp local_path_frontend_ref(path) do
     path
