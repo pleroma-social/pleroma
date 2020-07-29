@@ -1886,8 +1886,8 @@ defmodule Pleroma.UserTest do
     assert User.avatar_url(user, no_default: true) == nil
   end
 
-  test "get_domain/1" do
+  test "get_host/1" do
     user = insert(:user, ap_id: "https://lain.com/users/lain", nickname: "lain")
-    assert User.get_domain(user) == "lain.com"
+    assert User.get_host(user) == "lain.com"
   end
 end
