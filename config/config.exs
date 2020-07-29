@@ -205,6 +205,7 @@ config :pleroma, :instance,
   registrations_open: true,
   invites_enabled: false,
   account_activation_required: false,
+  account_approval_required: false,
   federating: true,
   federation_incoming_replies_max_depth: 100,
   federation_reachability_timeout_days: 7,
@@ -237,6 +238,7 @@ config :pleroma, :instance,
   max_remote_account_fields: 20,
   account_field_name_length: 512,
   account_field_value_length: 2048,
+  registration_reason_length: 500,
   external_user_synchronization: true,
   extended_nickname_format: true,
   cleanup_attachments: false,
@@ -644,6 +646,16 @@ config :pleroma, Pleroma.ActivityExpiration, enabled: true
 config :pleroma, Pleroma.Plugs.RemoteIp, enabled: true
 
 config :pleroma, :static_fe, enabled: false
+
+# Example of frontend configuration
+# This example will make us serve the primary frontend from the
+# frontends directory within your `:pleroma, :instance, static_dir`.
+# e.g., instance/static/frontends/pleroma/develop/
+#
+# With no frontend configuration, the bundled files from the `static` directory will
+# be used.
+#
+# config :pleroma, :frontends, primary: %{"name" => "pleroma", "ref" => "develop"}
 
 config :pleroma, :web_cache_ttl,
   activity_pub: nil,
