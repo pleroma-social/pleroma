@@ -99,16 +99,16 @@ defmodule Pleroma.Web.OStatus.OStatusController do
 
           conn
           |> Map.put(:params, params)
-          |> Pleroma.Web.FrontendController.call(:redirector_with_meta)
+          |> Pleroma.Web.FrontendController.call(:index_with_meta)
 
         true ->
-          Pleroma.Web.FrontendController.call(conn, :redirector)
+          Pleroma.Web.FrontendController.call(conn, :index)
       end
     else
       reason when reason in [{:public?, false}, {:activity, nil}] ->
         conn
         |> put_status(404)
-        |> Pleroma.Web.FrontendController.call(:redirector)
+        |> Pleroma.Web.FrontendController.call(:index)
 
       e ->
         e
@@ -135,7 +135,7 @@ defmodule Pleroma.Web.OStatus.OStatusController do
       _error ->
         conn
         |> put_status(404)
-        |> Pleroma.Web.FrontendController.call(:redirector)
+        |> Pleroma.Web.FrontendController.call(:index)
     end
   end
 

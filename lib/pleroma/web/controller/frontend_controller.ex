@@ -13,7 +13,7 @@ defmodule Pleroma.Web.FrontendController do
       end
 
       def registration_page(conn, params) do
-        redirector(conn, params)
+        index(conn, params)
       end
 
       def api_not_implemented(conn, _params) do
@@ -28,7 +28,7 @@ defmodule Pleroma.Web.FrontendController do
         |> text("")
       end
 
-      def redirector(conn, _params) do
+      def index(conn, _params) do
         {:ok, path} = Pleroma.Frontend.file_path("index.html")
 
         conn
@@ -36,28 +36,28 @@ defmodule Pleroma.Web.FrontendController do
         |> send_file(conn.status || 200, path)
       end
 
-      def redirector_with_preload(conn, %{"path" => ["pleroma", "admin"]}) do
+      def index_with_preload(conn, %{"path" => ["pleroma", "admin"]}) do
         redirect(conn, to: "/pleroma/admin/")
       end
 
-      def redirector_with_preload(conn, params) do
+      def index_with_preload(conn, params) do
         index_with_generated_data(conn, params, [:preload])
       end
 
-      def redirector_with_meta(conn, %{"maybe_nickname_or_id" => maybe_nickname_or_id} = params) do
+      def index_with_meta(conn, %{"maybe_nickname_or_id" => maybe_nickname_or_id} = params) do
         with %User{} = user <- User.get_cached_by_nickname_or_id(maybe_nickname_or_id) do
-          redirector_with_meta(conn, %{user: user})
+          index_with_meta(conn, %{user: user})
         else
           nil ->
-            redirector(conn, params)
+            index(conn, params)
         end
       end
 
-      def redirector_with_meta(conn, params) do
+      def index_with_meta(conn, params) do
         index_with_generated_data(conn, params, [:metadata, :preload])
       end
 
-      def index_with_generated_data(conn, params, generators) do
+      defp index_with_generated_data(conn, params, generators) do
         {:ok, path} = Pleroma.Frontend.file_path("index.html")
         {:ok, index_content} = File.read(path)
 
@@ -99,7 +99,13 @@ defmodule Pleroma.Web.FrontendController do
         end
       end
 
-      defoverridable redirector_with_preload: 2, fallback: 2
+      defoverridable api_not_implemented: 2,
+                     empty: 2,
+                     fallback: 2,
+                     index: 2,
+                     index_with_preload: 2,
+                     index_with_meta: 2,
+                     registration_page: 2
     end
   end
 

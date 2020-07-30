@@ -8,7 +8,7 @@ defmodule Pleroma.Web.Frontend.PleromaControllerTest do
 
   describe "neither preloaded data nor metadata attached to" do
     test "GET /registration/:token", %{conn: conn} do
-      response = get(conn, "/registration/foo")
+      response = get(conn, frontend_path(conn, :registration_page, "foo"))
 
       assert html_response(response, 200) =~ "<!--server-generated-meta-->"
     end
@@ -23,8 +23,8 @@ defmodule Pleroma.Web.Frontend.PleromaControllerTest do
   describe "preloaded data and metadata attached to" do
     test "GET /:maybe_nickname_or_id", %{conn: conn} do
       user = insert(:user)
-      user_missing = get(conn, "/foo")
-      user_present = get(conn, "/#{user.nickname}")
+      user_missing = get(conn, frontend_path(conn, :index_with_meta, "foo"))
+      user_present = get(conn, frontend_path(conn, :index_with_meta, user.nickname))
 
       assert(html_response(user_missing, 200) =~ "<!--server-generated-meta-->")
       refute html_response(user_present, 200) =~ "<!--server-generated-meta-->"

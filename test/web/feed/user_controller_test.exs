@@ -197,7 +197,7 @@ defmodule Pleroma.Web.Feed.UserControllerTest do
       expected =
         conn
         |> Map.put(:params, %{user: user})
-        |> Pleroma.Web.FrontendController.call(:redirector_with_meta)
+        |> Pleroma.Web.FrontendController.call(:index_with_meta)
         |> Map.get(:resp_body)
 
       assert response == expected
