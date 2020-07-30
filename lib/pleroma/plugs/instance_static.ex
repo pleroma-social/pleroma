@@ -12,17 +12,6 @@ defmodule Pleroma.Plugs.InstanceStatic do
   """
   @behaviour Plug
 
-  def file_path(path) do
-    instance_path =
-      Path.join(Pleroma.Config.get([:instance, :static_dir], "instance/static/"), path)
-
-    frontend_path = Pleroma.Plugs.FrontendStatic.file_path(path, :primary)
-
-    (File.exists?(instance_path) && instance_path) ||
-      (frontend_path && File.exists?(frontend_path) && frontend_path) ||
-      Path.join(Application.app_dir(:pleroma, "priv/static/"), path)
-  end
-
   def init(opts) do
     opts
     |> Keyword.put(:from, "__unconfigured_instance_static_plug")

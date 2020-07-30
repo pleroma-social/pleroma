@@ -15,7 +15,7 @@ defmodule Pleroma.Web.FrontendStaticPlugTest do
   setup do: clear_config([:instance, :static_dir], @dir)
 
   test "overrides existing static files", %{conn: conn} do
-    name = "pelmora"
+    name = "pleroma"
     ref = "uguu"
 
     clear_config([:frontends, :primary], %{"name" => name, "ref" => ref})

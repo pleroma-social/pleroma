@@ -75,7 +75,8 @@ defmodule Fallback.RedirectController do
   end
 
   defp index_file_path do
-    Pleroma.Plugs.InstanceStatic.file_path("index.html")
+    {:ok, file} = Pleroma.Frontend.file_path("index.html", :primary)
+    file
   end
 
   defp build_tags(conn, params) do

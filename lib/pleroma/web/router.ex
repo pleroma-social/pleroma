@@ -714,12 +714,13 @@ defmodule Pleroma.Web.Router do
     get("/check_password", MongooseIMController, :check_password)
   end
 
-  scope "/", Fallback do
-    get("/registration/:token", RedirectController, :registration_page)
-    get("/:maybe_nickname_or_id", RedirectController, :redirector_with_meta)
-    get("/api*path", RedirectController, :api_not_implemented)
-    get("/*path", RedirectController, :redirector_with_preload)
+  scope "/" do
+    get("/registration/:token", Fallback.RedirectController, :registration_page)
+    get("/:maybe_nickname_or_id", Fallback.RedirectController, :redirector_with_meta)
+    get("/api*path", Fallback.RedirectController, :api_not_implemented)
+    # get("/*path", RedirectController, :redirector_with_preload)
+    get("/*path", Pleroma.Web.FrontendController, :redirector_with_preload)
 
-    options("/*path", RedirectController, :empty)
+    options("/*path", Fallback.RedirectController, :empty)
   end
 end

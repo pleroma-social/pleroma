@@ -13,6 +13,7 @@ defmodule Pleroma.Web.Endpoint do
   plug(CORSPlug)
   plug(Pleroma.Plugs.HTTPSecurityPlug)
   plug(Pleroma.Plugs.UploadedMedia)
+  plug(Pleroma.Plugs.FrontendPlug)
 
   @static_cache_control "public, no-cache"
 

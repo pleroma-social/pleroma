@@ -120,6 +120,8 @@ defmodule Pleroma.Web do
           conn
         end
       end
+
+      defoverridable(action: 2)
     end
   end
 

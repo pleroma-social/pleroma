@@ -6,13 +6,15 @@ defmodule Pleroma.Web.InstanceStaticPlugTest do
   use Pleroma.Web.ConnCase
 
   @dir "test/tmp/instance_static"
+  @fe_name "pleroma"
+  @fe_ref "uguu"
 
   setup do
     File.mkdir_p!(@dir)
     on_exit(fn -> File.rm_rf(@dir) end)
+    clear_config([:instance, :static_dir], @dir)
+    clear_config([:frontends, :primary], %{"name" => @fe_name, "ref" => @fe_ref})
   end
-
-  setup do: clear_config([:instance, :static_dir], @dir)
 
   test "overrides index" do
     bundled_index = get(build_conn(), "/")
@@ -25,15 +27,10 @@ defmodule Pleroma.Web.InstanceStaticPlugTest do
   end
 
   test "also overrides frontend files", %{conn: conn} do
-    name = "pelmora"
-    ref = "uguu"
-
-    clear_config([:frontends, :primary], %{"name" => name, "ref" => ref})
-
     bundled_index = get(conn, "/")
     refute html_response(bundled_index, 200) == "from frontend plug"
 
-    path = "#{@dir}/frontends/#{name}/#{ref}"
+    path = "#{@dir}/frontends/#{@fe_name}/#{@fe_ref}"
     File.mkdir_p!(path)
     File.write!("#{path}/index.html", "from frontend plug")
 
