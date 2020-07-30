@@ -662,6 +662,11 @@ config :pleroma, :config_description, [
         description: "Require users to confirm their emails before signing in"
       },
       %{
+        key: :account_approval_required,
+        type: :boolean,
+        description: "Require users to be manually approved by an admin before signing in"
+      },
+      %{
         key: :federating,
         type: :boolean,
         description: "Enable federation with other instances"
@@ -875,6 +880,14 @@ config :pleroma, :config_description, [
         ]
       },
       %{
+        key: :registration_reason_length,
+        type: :integer,
+        description: "Maximum registration reason length. Default: 500.",
+        suggestions: [
+          500
+        ]
+      },
+      %{
         key: :external_user_synchronization,
         type: :boolean,
         description: "Enabling following/followers counters synchronization for external users"
@@ -942,6 +955,11 @@ config :pleroma, :config_description, [
         description:
           "The instance thumbnail can be any image that represents your instance and is used by some apps or services when they display information about your instance.",
         suggestions: ["/instance/thumbnail.jpeg"]
+      },
+      %{
+        key: :show_reactions,
+        type: :boolean,
+        description: "Let favourites and emoji reactions be viewed through the API."
       }
     ]
   },

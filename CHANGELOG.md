@@ -33,6 +33,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   contents has been renamed to `hide_notification_contents`
 - Mastodon API: Added `pleroma.metadata.post_formats` to /api/v1/instance
 - Mastodon API (legacy): Allow query parameters for `/api/v1/domain_blocks`, e.g. `/api/v1/domain_blocks?domain=badposters.zone`
+- Pleroma API: `/api/pleroma/captcha` responses now include `seconds_valid` with an integer value.
 </details>
 
 <details>
@@ -67,7 +68,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Support pagination in emoji packs API (for packs and for files in pack)
 - Support for viewing instances favicons next to posts and accounts
 - Added Pleroma.Upload.Filter.Exiftool as an alternate EXIF stripping mechanism targeting GPS/location metadata.
+- "By approval" registrations mode.
 - Configuration: Added `:welcome` settings for the welcome message to newly registered users.
+- Ability to hide favourites and emoji reactions in the API with `[:instance, :show_reactions]` config.
 
 <details>
   <summary>API Changes</summary>
