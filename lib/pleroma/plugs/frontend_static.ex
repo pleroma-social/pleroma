@@ -21,8 +21,6 @@ defmodule Pleroma.Plugs.FrontendStatic do
         configuration["ref"],
         path
       ])
-    else
-      nil
     end
   end
 

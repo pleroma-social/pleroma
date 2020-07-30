@@ -1,10 +1,10 @@
-# Pleroma: A lightweight social networking server
-# Copyright © 2017-2020 Pleroma Authors <https://pleroma.social/>
-# SPDX-License-Identifier: AGPL-3.0-only
-
-defmodule Pleroma.Web.FallbackTest do
+defmodule Pleroma.Web.Frontend.PleromaControllerTest do
   use Pleroma.Web.ConnCase
   import Pleroma.Factory
+
+  test "GET /pleroma/admin -> /pleroma/admin/", %{conn: conn} do
+    assert redirected_to(get(conn, "/pleroma/admin")) =~ "/pleroma/admin/"
+  end
 
   describe "neither preloaded data nor metadata attached to" do
     test "GET /registration/:token", %{conn: conn} do
@@ -62,10 +62,6 @@ defmodule Pleroma.Web.FallbackTest do
     assert conn
            |> get("/api/foo")
            |> json_response(404) == %{"error" => "Not implemented"}
-  end
-
-  test "GET /pleroma/admin -> /pleroma/admin/", %{conn: conn} do
-    assert redirected_to(get(conn, "/pleroma/admin")) =~ "/pleroma/admin/"
   end
 
   test "OPTIONS /*path", %{conn: conn} do

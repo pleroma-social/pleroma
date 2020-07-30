@@ -277,7 +277,7 @@ defmodule Mix.Tasks.Pleroma.User do
       shell_info("Generated user invite token " <> String.replace(invite.invite_type, "_", " "))
 
       url =
-        Pleroma.Web.Router.Helpers.redirect_url(
+        Pleroma.Web.Router.Helpers.frontend_url(
           Pleroma.Web.Endpoint,
           :registration_page,
           invite.token

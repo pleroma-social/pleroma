@@ -5,7 +5,6 @@
 defmodule Pleroma.Web.Feed.UserController do
   use Pleroma.Web, :controller
 
-  alias Fallback.RedirectController
   alias Pleroma.User
   alias Pleroma.Web.ActivityPub.ActivityPub
   alias Pleroma.Web.ActivityPub.ActivityPubController
@@ -17,7 +16,9 @@ defmodule Pleroma.Web.Feed.UserController do
 
   def feed_redirect(%{assigns: %{format: "html"}} = conn, %{"nickname" => nickname}) do
     with {_, %User{} = user} <- {:fetch_user, User.get_cached_by_nickname_or_id(nickname)} do
-      RedirectController.redirector_with_meta(conn, %{user: user})
+      conn
+      |> Map.put(:params, %{user: user})
+      |> Pleroma.Web.FrontendController.call(:redirector_with_meta)
     end
   end
 

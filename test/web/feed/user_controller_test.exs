@@ -194,11 +194,13 @@ defmodule Pleroma.Web.Feed.UserControllerTest do
         |> get("/users/#{user.nickname}")
         |> response(200)
 
-      assert response ==
-               Fallback.RedirectController.redirector_with_meta(
-                 conn,
-                 %{user: user}
-               ).resp_body
+      expected =
+        conn
+        |> Map.put(:params, %{user: user})
+        |> Pleroma.Web.FrontendController.call(:redirector_with_meta)
+        |> Map.get(:resp_body)
+
+      assert response == expected
     end
 
     test "with html format, it returns error when user is not found", %{conn: conn} do

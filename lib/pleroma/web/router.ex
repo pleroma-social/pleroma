@@ -715,12 +715,11 @@ defmodule Pleroma.Web.Router do
   end
 
   scope "/" do
-    get("/registration/:token", Fallback.RedirectController, :registration_page)
-    get("/:maybe_nickname_or_id", Fallback.RedirectController, :redirector_with_meta)
-    get("/api*path", Fallback.RedirectController, :api_not_implemented)
-    # get("/*path", RedirectController, :redirector_with_preload)
+    get("/registration/:token", Pleroma.Web.FrontendController, :registration_page)
+    get("/:maybe_nickname_or_id", Pleroma.Web.FrontendController, :redirector_with_meta)
+    get("/api*path", Pleroma.Web.FrontendController, :api_not_implemented)
     get("/*path", Pleroma.Web.FrontendController, :redirector_with_preload)
 
-    options("/*path", Fallback.RedirectController, :empty)
+    options("/*path", Pleroma.Web.FrontendController, :empty)
   end
 end

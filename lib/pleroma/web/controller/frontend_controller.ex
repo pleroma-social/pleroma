@@ -4,11 +4,36 @@ defmodule Pleroma.Web.FrontendController do
   defmacro __using__(_opts) do
     quote do
       require Logger
+      alias Pleroma.User
 
       def fallback(conn, _params) do
         conn
         |> put_status(404)
         |> text("Not found")
+      end
+
+      def registration_page(conn, params) do
+        redirector(conn, params)
+      end
+
+      def api_not_implemented(conn, _params) do
+        conn
+        |> put_status(404)
+        |> json(%{error: "Not implemented"})
+      end
+
+      def empty(conn, _params) do
+        conn
+        |> put_status(204)
+        |> text("")
+      end
+
+      def redirector(conn, _params) do
+        {:ok, path} = Pleroma.Frontend.file_path("index.html")
+
+        conn
+        |> put_resp_content_type("text/html")
+        |> send_file(conn.status || 200, path)
       end
 
       def redirector_with_preload(conn, %{"path" => ["pleroma", "admin"]}) do
@@ -17,6 +42,19 @@ defmodule Pleroma.Web.FrontendController do
 
       def redirector_with_preload(conn, params) do
         index_with_generated_data(conn, params, [:preload])
+      end
+
+      def redirector_with_meta(conn, %{"maybe_nickname_or_id" => maybe_nickname_or_id} = params) do
+        with %User{} = user <- User.get_cached_by_nickname_or_id(maybe_nickname_or_id) do
+          redirector_with_meta(conn, %{user: user})
+        else
+          nil ->
+            redirector(conn, params)
+        end
+      end
+
+      def redirector_with_meta(conn, params) do
+        index_with_generated_data(conn, params, [:metadata, :preload])
       end
 
       def index_with_generated_data(conn, params, generators) do

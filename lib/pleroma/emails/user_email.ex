@@ -52,7 +52,7 @@ defmodule Pleroma.Emails.UserEmail do
         to_name \\ nil
       ) do
     registration_url =
-      Router.Helpers.redirect_url(
+      Router.Helpers.frontend_url(
         Endpoint,
         :registration_page,
         user_invite_token.token

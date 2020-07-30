@@ -5,7 +5,6 @@
 defmodule Pleroma.Web.OStatus.OStatusController do
   use Pleroma.Web, :controller
 
-  alias Fallback.RedirectController
   alias Pleroma.Activity
   alias Pleroma.Object
   alias Pleroma.Plugs.RateLimiter
@@ -91,24 +90,25 @@ defmodule Pleroma.Web.OStatus.OStatusController do
         activity.data["type"] == "Create" ->
           %Object{} = object = Object.normalize(activity)
 
-          RedirectController.redirector_with_meta(
-            conn,
-            %{
-              activity_id: activity.id,
-              object: object,
-              url: Router.Helpers.o_status_url(Endpoint, :notice, activity.id),
-              user: user
-            }
-          )
+          params = %{
+            activity_id: activity.id,
+            object: object,
+            url: Router.Helpers.o_status_url(Endpoint, :notice, activity.id),
+            user: user
+          }
+
+          conn
+          |> Map.put(:params, params)
+          |> Pleroma.Web.FrontendController.call(:redirector_with_meta)
 
         true ->
-          RedirectController.redirector(conn, nil)
+          Pleroma.Web.FrontendController.call(conn, :redirector)
       end
     else
       reason when reason in [{:public?, false}, {:activity, nil}] ->
         conn
         |> put_status(404)
-        |> RedirectController.redirector(nil, 404)
+        |> Pleroma.Web.FrontendController.call(:redirector)
 
       e ->
         e
@@ -135,7 +135,7 @@ defmodule Pleroma.Web.OStatus.OStatusController do
       _error ->
         conn
         |> put_status(404)
-        |> RedirectController.redirector(nil, 404)
+        |> Pleroma.Web.FrontendController.call(:redirector)
     end
   end
 
