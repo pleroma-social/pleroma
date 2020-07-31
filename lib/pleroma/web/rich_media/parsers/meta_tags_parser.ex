@@ -15,7 +15,7 @@ defmodule Pleroma.Web.RichMedia.Parsers.MetaTagsParser do
   end
 
   defp get_elements(html, key_name, prefix) do
-    html |> Floki.find("meta[#{key_name}^='#{prefix}:']")
+    Floki.parse_document!(html) |> Floki.find("meta[#{key_name}^='#{prefix}:']")
   end
 
   defp normalize_attributes(html_node, prefix, key_name, value_name) do
@@ -41,6 +41,6 @@ defmodule Pleroma.Web.RichMedia.Parsers.MetaTagsParser do
   defp maybe_put_title(meta, _), do: meta
 
   defp get_page_title(html) do
-    Floki.find(html, "html head title") |> List.first() |> Floki.text()
+    Floki.parse_document!(html) |> Floki.find("html head title") |> List.first() |> Floki.text()
   end
 end

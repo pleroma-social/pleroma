@@ -14,7 +14,7 @@ defmodule Pleroma.Web.RichMedia.Parsers.OEmbed do
   end
 
   defp get_discovery_data(html) do
-    html |> Floki.find("link[type='application/json+oembed']")
+    Floki.parse_document!(html) |> Floki.find("link[type='application/json+oembed']")
   end
 
   defp get_oembed_url([{"link", attributes, _children} | _]) do

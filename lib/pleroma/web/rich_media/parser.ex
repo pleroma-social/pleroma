@@ -92,7 +92,6 @@ defmodule Pleroma.Web.RichMedia.Parser do
         Pleroma.HTTP.get(url, [{"user-agent", rich_media_agent}], adapter: opts)
 
       html
-      |> parse_html()
       |> maybe_parse()
       |> Map.put("url", url)
       |> clean_parsed_data()
@@ -102,8 +101,6 @@ defmodule Pleroma.Web.RichMedia.Parser do
         {:error, "Parsing error: #{inspect(e)} #{inspect(__STACKTRACE__)}"}
     end
   end
-
-  defp parse_html(html), do: Floki.parse_document!(html)
 
   defp maybe_parse(html) do
     Enum.reduce_while(parsers(), %{}, fn parser, acc ->
