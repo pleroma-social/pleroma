@@ -6,10 +6,6 @@ defmodule Pleroma.Web.RichMedia.Parsers.TwitterCardTest do
   use ExUnit.Case, async: true
   alias Pleroma.Web.RichMedia.Parsers.TwitterCard
 
-  test "returns error when html not contains twitter card" do
-    assert TwitterCard.parse([{"html", [], [{"head", [], []}, {"body", [], []}]}], %{}) == %{}
-  end
-
   test "parses twitter card with only name attributes" do
     html = File.read!("test/fixtures/nypd-facial-recognition-children-teenagers3.html")
 
