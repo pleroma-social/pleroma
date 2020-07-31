@@ -330,6 +330,11 @@ defmodule Pleroma.Web.CommonAPI.Utils do
         sensitive \\ false,
         extra_params \\ %{}
       ) do
+    tags =
+      tags
+      |> Keyword.values()
+      |> Enum.uniq()
+
     %{
       "type" => "Note",
       "to" => to,
@@ -340,7 +345,8 @@ defmodule Pleroma.Web.CommonAPI.Utils do
       "context" => context,
       "attachment" => attachments,
       "actor" => actor,
-      "tag" => Keyword.values(tags) |> Enum.uniq()
+      "tag" => Enum.filter(tags, &is_map(&1)),
+      "hashtags" => Enum.filter(tags, &is_bitstring(&1))
     }
     |> add_in_reply_to(in_reply_to)
     |> Map.merge(extra_params)

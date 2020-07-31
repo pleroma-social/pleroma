@@ -18,6 +18,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - **Breaking** Requires `libmagic` (or `file`) to guess file types.
 - **Breaking:** Pleroma Admin API: emoji packs and files routes changed.
 - **Breaking:** Sensitive/NSFW statuses no longer disable link previews.
+- **Breaking:** Changed storage of hashtags in plain-text to `object->hashtags`, run [`pleroma.database fill_old_hashtags` mix task](docs/administration/CLI_tasks/database.md) for old objects (works while pleroma is running).
 - Search: Users are now findable by their urls.
 - Renamed `:await_up_timeout` in `:connections_pool` namespace to `:connect_timeout`, old name is deprecated.
 - Renamed `:timeout` in `pools` namespace to `:recv_timeout`, old name is deprecated.
@@ -348,7 +349,6 @@ switched to a new configuration mechanism, however it was not officially removed
 - Static-FE: Fix remote posts not being sanitized
 
 ### Fixed
-=======
 - Rate limiter crashes when there is no explicitly specified ip in the config
 - 500 errors when no `Accept` header is present if Static-FE is enabled
 - Instance panel not being updated immediately due to wrong `Cache-Control` headers
