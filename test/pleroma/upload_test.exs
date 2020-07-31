@@ -62,7 +62,7 @@ defmodule Pleroma.UploadTest do
                       "type" => "Link"
                     }
                   ],
-                  "filename" => "image.jpg"
+                  "filename" => nil
                 }}
 
       Task.await(Agent.get(TestUploaderSuccess, fn task_pid -> task_pid end))
@@ -139,7 +139,7 @@ defmodule Pleroma.UploadTest do
       assert data["filename"] == filename
     end
 
-    test "saves default filename if opts don't have one" do
+    test "sets filename to nil if opts don't have one" do
       File.cp!("test/fixtures/image.jpg", "test/fixtures/image_tmp.jpg")
 
       desc = "sample file"
@@ -154,7 +154,7 @@ defmodule Pleroma.UploadTest do
       {:ok, data} = Upload.store(file, description: desc)
 
       assert data["name"] == desc
-      assert data["filename"] == filename
+      refute data["filename"]
     end
 
     @tag capture_log: true

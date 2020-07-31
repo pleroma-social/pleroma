@@ -255,7 +255,7 @@ defmodule Pleroma.Web.CommonAPI.Utils do
   end
 
   defp build_attachment_link(%{"url" => [%{"href" => href} | _]} = attachment) do
-    name = attachment["name"] || URI.decode(Path.basename(href))
+    name = attachment["filename"] || attachment["name"] || URI.decode(Path.basename(href))
     href = MediaProxy.url(href)
     "<a href=\"#{href}\" class='attachment'>#{shortname(name)}</a>"
   end

@@ -126,6 +126,38 @@ defmodule Pleroma.Web.MastodonAPI.StatusControllerTest do
       )
     end
 
+    test "posting a status with an attachment", %{user: user, conn: conn} do
+      clear_config([:instance, :attachment_links], true)
+      filename = "an_image.jpg"
+      custom_filename = "look at this.jpg"
+
+      file = %Plug.Upload{
+        content_type: "image/jpg",
+        path: Path.absname("test/fixtures/image.jpg"),
+        filename: filename
+      }
+
+      {:ok, upload} =
+        ActivityPub.upload(file,
+          actor: user.ap_id,
+          description: "test image",
+          filename: custom_filename
+        )
+
+      response =
+        conn
+        |> put_req_header("content-type", "application/json")
+        |> post("/api/v1/statuses", %{
+          "status" => "cofe",
+          "spoiler_text" => "2hu",
+          "media_ids" => [to_string(upload.id)]
+        })
+        |> json_response_and_validate_schema(200)
+
+      assert String.ends_with?(response["content"], "#{filename}\">#{custom_filename}</a>")
+      assert length(response["media_attachments"]) == 1
+    end
+
     test "it fails to create a status if `expires_in` is less or equal than an hour", %{
       conn: conn
     } do
@@ -166,22 +198,28 @@ defmodule Pleroma.Web.MastodonAPI.StatusControllerTest do
     end
 
     test "posting an undefined status with an attachment", %{user: user, conn: conn} do
+      clear_config([:instance, :attachment_links], true)
+      filename = "an_image.jpg"
+      description = "test image"
+
       file = %Plug.Upload{
         content_type: "image/jpeg",
         path: Path.absname("test/fixtures/image.jpg"),
-        filename: "an_image.jpg"
+        filename: filename
       }
 
-      {:ok, upload} = ActivityPub.upload(file, actor: user.ap_id)
+      {:ok, upload} = ActivityPub.upload(file, actor: user.ap_id, description: description)
 
-      conn =
+      response =
         conn
         |> put_req_header("content-type", "application/json")
         |> post("/api/v1/statuses", %{
           "media_ids" => [to_string(upload.id)]
         })
+        |> json_response_and_validate_schema(200)
 
-      assert json_response_and_validate_schema(conn, 200)
+      assert String.ends_with?(response["content"], "#{filename}\">#{description}</a>")
+      assert length(response["media_attachments"]) == 1
     end
 
     test "replying to a status", %{user: user, conn: conn} do

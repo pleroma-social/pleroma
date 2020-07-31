@@ -91,7 +91,7 @@ defmodule Pleroma.Upload do
            }
          ],
          "name" => description,
-         "filename" => Map.get(opts, :filename) || upload.name
+         "filename" => Map.get(opts, :filename)
        }}
     else
       {:description_limit, _} ->
