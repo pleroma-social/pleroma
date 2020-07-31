@@ -157,6 +157,21 @@ defmodule Pleroma.UploadTest do
       assert data["filename"] == filename
     end
 
+    @tag capture_log: true
+    test "raise error when custom filename has different extension than original one" do
+      File.cp!("test/fixtures/image.jpg", "test/fixtures/image_tmp.jpg")
+
+      fake_name = "free_coins.exe"
+
+      file = %Plug.Upload{
+        content_type: "image/jpg",
+        path: Path.absname("test/fixtures/image_tmp.jpg"),
+        filename: "image_tmp.jpg"
+      }
+
+      assert Upload.store(file, filename: fake_name) == {:error, :invalid_filename_extension}
+    end
+
     test "returns a media url" do
       File.cp!("test/fixtures/image.jpg", "test/fixtures/image_tmp.jpg")
 

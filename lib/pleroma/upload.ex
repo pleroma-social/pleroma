@@ -72,6 +72,7 @@ defmodule Pleroma.Upload do
 
     with {:ok, upload} <- prepare_upload(upload, opts),
          upload = %__MODULE__{upload | path: upload.path || "#{upload.id}/#{upload.name}"},
+         :ok <- check_filename_extension(upload.name, opts),
          {:ok, upload} <- Pleroma.Upload.Filter.filter(opts.filters, upload),
          description = get_description(opts, upload),
          {_, true} <-
@@ -198,6 +199,16 @@ defmodule Pleroma.Upload do
   end
 
   defp check_file_size(_, _), do: :ok
+
+  defp check_filename_extension(name, %{filename: filename}) when is_binary(filename) do
+    if Path.extname(name) == Path.extname(filename) do
+      :ok
+    else
+      {:error, :invalid_filename_extension}
+    end
+  end
+
+  defp check_filename_extension(_, _), do: :ok
 
   # Creates a tempfile using the Plug.Upload Genserver which cleans them up
   # automatically.

@@ -71,6 +71,32 @@ defmodule Pleroma.Web.MastodonAPI.MediaControllerTest do
       object = Object.get_by_id(media["id"])
       assert object.data["actor"] == user.ap_id
     end
+
+    test "returns error when description is too long", %{conn: conn, image: image} do
+      clear_config([:instance, :description_limit], 2)
+
+      response =
+        conn
+        |> put_req_header("content-type", "multipart/form-data")
+        |> post("/api/v1/media", %{"file" => image, "description" => "test-media"})
+        |> json_response(400)
+
+      assert response["error"] == "description_too_long"
+    end
+
+    @tag capture_log: true
+    test "returns error when custom filename has different extension than original one", %{
+      conn: conn,
+      image: image
+    } do
+      response =
+        conn
+        |> put_req_header("content-type", "multipart/form-data")
+        |> post("/api/v1/media", %{"file" => image, "filename" => "wrong.gif"})
+        |> json_response(400)
+
+      assert response["error"] == "invalid_filename_extension"
+    end
   end
 
   describe "Update media description" do
