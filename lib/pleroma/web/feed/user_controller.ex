@@ -12,6 +12,8 @@ defmodule Pleroma.Web.Feed.UserController do
 
   plug(Pleroma.Plugs.SetFormatPlug when action in [:feed_redirect])
 
+  plug(Pleroma.Plugs.StaticFEPlug)
+
   action_fallback(:errors)
 
   def feed_redirect(%{assigns: %{format: "html"}} = conn, %{"nickname" => nickname}) do

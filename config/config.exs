@@ -646,8 +646,6 @@ config :pleroma, Pleroma.ActivityExpiration, enabled: true
 
 config :pleroma, Pleroma.Plugs.RemoteIp, enabled: true
 
-config :pleroma, :static_fe, enabled: false
-
 # Example of frontend configuration
 # This example will make us serve the primary frontend from the
 # frontends directory within your `:pleroma, :instance, static_dir`.

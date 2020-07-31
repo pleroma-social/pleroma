@@ -3153,21 +3153,6 @@ config :pleroma, :config_description, [
   },
   %{
     group: :pleroma,
-    key: :static_fe,
-    label: "Static FE",
-    type: :group,
-    description:
-      "Render profiles and posts using server-generated HTML that is viewable without using JavaScript",
-    children: [
-      %{
-        key: :enabled,
-        type: :boolean,
-        description: "Enables the rendering of static HTML. Default: disabled."
-      }
-    ]
-  },
-  %{
-    group: :pleroma,
     key: :feed,
     type: :group,
     description: "Configure feed rendering",

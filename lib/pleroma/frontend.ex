@@ -9,6 +9,7 @@ defmodule Pleroma.Frontend do
 
   def get_config(:primary) do
     primary_fe_config = Pleroma.Config.get([:frontends, :primary], %{"name" => "pleroma"})
+    static_enabled? = Pleroma.Config.get([:frontends, :static], false)
 
     {config, controller} =
       if primary_fe_config["name"] == "none" do
@@ -21,7 +22,7 @@ defmodule Pleroma.Frontend do
          ])}
       end
 
-    %{"config" => config, "controller" => controller}
+    %{"config" => config, "controller" => controller, "static" => static_enabled?}
   end
 
   @spec file_path(String.t(), frontend_kind()) :: {:ok, String.t()} | {:error, String.t()}

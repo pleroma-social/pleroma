@@ -2,7 +2,7 @@
 # Copyright © 2017-2020 Pleroma Authors <https://pleroma.social/>
 # SPDX-License-Identifier: AGPL-3.0-only
 
-defmodule Pleroma.Web.StaticFE.StaticFEView do
+defmodule Pleroma.Web.Frontend.StaticView do
   use Pleroma.Web, :view
 
   alias Calendar.Strftime

@@ -10,11 +10,12 @@ defmodule Pleroma.FrontendTest do
     test "Primary config" do
       config = %{"name" => "monsta", "ref" => "pika"}
 
-      clear_config([:frontends, :primary], config)
+      clear_config(:frontends, %{primary: config, static: true})
 
       fe_config = Pleroma.Frontend.get_config()
       assert fe_config["config"] == config
       assert fe_config["controller"] == Pleroma.Web.Frontend.MonstaController
+      assert fe_config["static"] == true
     end
 
     test "Headless" do
@@ -25,6 +26,7 @@ defmodule Pleroma.FrontendTest do
       fe_config = Pleroma.Frontend.get_config()
       assert fe_config["config"] == %{}
       assert fe_config["controller"] == Pleroma.Web.Frontend.HeadlessController
+      assert fe_config["static"] == false
     end
   end
 

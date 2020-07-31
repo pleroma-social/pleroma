@@ -1,4 +1,4 @@
-defmodule Pleroma.Web.StaticFE.StaticFEControllerTest do
+defmodule Pleroma.Web.Frontend.StaticControllerTest do
   use Pleroma.Web.ConnCase
 
   alias Pleroma.Activity
@@ -8,7 +8,7 @@ defmodule Pleroma.Web.StaticFE.StaticFEControllerTest do
 
   import Pleroma.Factory
 
-  setup_all do: clear_config([:static_fe, :enabled], true)
+  setup_all do: clear_config([:frontends, :static], true)
   setup do: clear_config([:instance, :federating], true)
 
   setup %{conn: conn} do

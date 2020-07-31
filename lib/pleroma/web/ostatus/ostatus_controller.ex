@@ -29,6 +29,8 @@ defmodule Pleroma.Web.OStatus.OStatusController do
     when action in [:object, :activity, :notice]
   )
 
+  plug(Pleroma.Plugs.StaticFEPlug)
+
   action_fallback(:errors)
 
   def object(%{assigns: %{format: format}} = conn, _params)

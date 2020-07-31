@@ -120,6 +120,10 @@ defmodule Pleroma.Web.FrontendController do
 
     {controller, action} =
       cond do
+        fe_config["static"] &&
+            function_exported?(Pleroma.Web.Frontend.StaticController, action_name, 2) ->
+          {Pleroma.Web.Frontend.StaticController, action_name}
+
         function_exported?(fe_config["controller"], action_name, 2) ->
           {fe_config["controller"], action_name}
 
