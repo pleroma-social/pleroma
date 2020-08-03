@@ -436,7 +436,7 @@ config :pleroma, Pleroma.Web.MediaProxy.Invalidation.Http,
 
 config :pleroma, Pleroma.Web.MediaProxy.Invalidation.Script, script_path: nil
 
-config :pleroma, :shoutbox, enabled: true
+config :pleroma, :shout, enabled: true
 
 config :phoenix, :format_encoders, json: Jason
 
