@@ -192,7 +192,7 @@ defmodule Pleroma.Application do
   end
 
   defp chat_child(_env, true) do
-    [Pleroma.Web.ChatChannel.ChatChannelState]
+    [Pleroma.Web.ShoutChannel.ShoutChannelState]
   end
 
   defp chat_child(_, _), do: []
