@@ -408,8 +408,8 @@ defmodule Pleroma.Web.AdminAPI.ConfigControllerTest do
     end
 
     test "saving config which need pleroma reboot", %{conn: conn} do
-      chat = Config.get(:chat)
-      on_exit(fn -> Config.put(:chat, chat) end)
+      shout = Config.get(:shout)
+      on_exit(fn -> Config.put(:shout, shout) end)
 
       assert conn
              |> put_req_header("content-type", "application/json")
@@ -417,7 +417,7 @@ defmodule Pleroma.Web.AdminAPI.ConfigControllerTest do
                "/api/pleroma/admin/config",
                %{
                  configs: [
-                   %{group: ":pleroma", key: ":chat", value: [%{"tuple" => [":enabled", true]}]}
+                   %{group: ":pleroma", key: ":shout", value: [%{"tuple" => [":enabled", true]}]}
                  ]
                }
              )
@@ -426,7 +426,7 @@ defmodule Pleroma.Web.AdminAPI.ConfigControllerTest do
                  %{
                    "db" => [":enabled"],
                    "group" => ":pleroma",
-                   "key" => ":chat",
+                   "key" => ":shout",
                    "value" => [%{"tuple" => [":enabled", true]}]
                  }
                ],
@@ -454,8 +454,8 @@ defmodule Pleroma.Web.AdminAPI.ConfigControllerTest do
     end
 
     test "update setting which need reboot, don't change reboot flag until reboot", %{conn: conn} do
-      chat = Config.get(:chat)
-      on_exit(fn -> Config.put(:chat, chat) end)
+      shout = Config.get(:shout)
+      on_exit(fn -> Config.put(:shout, shout) end)
 
       assert conn
              |> put_req_header("content-type", "application/json")
@@ -463,7 +463,7 @@ defmodule Pleroma.Web.AdminAPI.ConfigControllerTest do
                "/api/pleroma/admin/config",
                %{
                  configs: [
-                   %{group: ":pleroma", key: ":chat", value: [%{"tuple" => [":enabled", true]}]}
+                   %{group: ":pleroma", key: ":shout", value: [%{"tuple" => [":enabled", true]}]}
                  ]
                }
              )
@@ -472,7 +472,7 @@ defmodule Pleroma.Web.AdminAPI.ConfigControllerTest do
                  %{
                    "db" => [":enabled"],
                    "group" => ":pleroma",
-                   "key" => ":chat",
+                   "key" => ":shout",
                    "value" => [%{"tuple" => [":enabled", true]}]
                  }
                ],

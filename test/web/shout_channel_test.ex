@@ -1,6 +1,6 @@
-defmodule Pleroma.Web.ChatChannelTest do
+defmodule Pleroma.Web.ShoutChannelTest do
   use Pleroma.Web.ChannelCase
-  alias Pleroma.Web.ChatChannel
+  alias Pleroma.Web.ShoutChannel
   alias Pleroma.Web.UserSocket
 
   import Pleroma.Factory
@@ -10,7 +10,7 @@ defmodule Pleroma.Web.ChatChannelTest do
 
     {:ok, _, socket} =
       socket(UserSocket, "", %{user_name: user.nickname})
-      |> subscribe_and_join(ChatChannel, "chat:public")
+      |> subscribe_and_join(ShoutChannel, "shout:public")
 
     {:ok, socket: socket}
   end
@@ -21,7 +21,7 @@ defmodule Pleroma.Web.ChatChannelTest do
   end
 
   describe "message lengths" do
-    setup do: clear_config([:instance, :chat_limit])
+    setup do: clear_config([:instance, :shout_limit])
 
     test "it ignores messages of length zero", %{socket: socket} do
       push(socket, "new_msg", %{"text" => ""})
@@ -29,7 +29,7 @@ defmodule Pleroma.Web.ChatChannelTest do
     end
 
     test "it ignores messages above a certain length", %{socket: socket} do
-      Pleroma.Config.put([:instance, :chat_limit], 2)
+      Pleroma.Config.put([:instance, :shout_limit], 2)
       push(socket, "new_msg", %{"text" => "123"})
       refute_broadcast("new_msg", %{text: "123"})
     end

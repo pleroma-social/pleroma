@@ -15,7 +15,7 @@ defmodule Pleroma.Config.TransferTask do
 
   @reboot_time_keys [
     {:pleroma, :hackney_pools},
-    {:pleroma, :chat},
+    {:pleroma, :shout},
     {:pleroma, Oban},
     {:pleroma, :rate_limit},
     {:pleroma, :markup},

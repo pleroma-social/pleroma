@@ -558,9 +558,9 @@ config :pleroma, :config_description, [
         ]
       },
       %{
-        key: :chat_limit,
+        key: :shout_limit,
         type: :integer,
-        description: "Character limit of the instance chat messages",
+        description: "Character limit of the instance shout messages",
         suggestions: [
           5_000
         ]
@@ -2931,9 +2931,9 @@ config :pleroma, :config_description, [
   },
   %{
     group: :pleroma,
-    key: :chat,
+    key: :shout,
     type: :group,
-    description: "Pleroma chat settings",
+    description: "Pleroma shout settings",
     children: [
       %{
         key: :enabled,
