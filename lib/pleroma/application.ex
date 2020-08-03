@@ -90,7 +90,7 @@ defmodule Pleroma.Application do
         ] ++
         task_children(@env) ++
         streamer_child(@env) ++
-        chat_child(@env, chat_enabled?()) ++
+        shout_child(@env, shout_enabled?()) ++
         [
           Pleroma.Web.Endpoint,
           Pleroma.Gopher.Server
@@ -176,7 +176,7 @@ defmodule Pleroma.Application do
       type: :worker
     }
 
-  defp chat_enabled?, do: Config.get([:chat, :enabled])
+  defp shout_enabled?, do: Config.get([:shout, :enabled])
 
   defp streamer_child(env) when env in [:test, :benchmark], do: []
 
@@ -191,11 +191,11 @@ defmodule Pleroma.Application do
     ]
   end
 
-  defp chat_child(_env, true) do
+  defp shout_child(_env, true) do
     [Pleroma.Web.ShoutChannel.ShoutChannelState]
   end
 
-  defp chat_child(_, _), do: []
+  defp shout_child(_, _), do: []
 
   defp task_children(:test) do
     [
