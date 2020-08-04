@@ -6,7 +6,7 @@ defmodule Pleroma.RepoStreamer do
   alias Pleroma.Repo
   import Ecto.Query
 
-  def chunk_stream(query, chunk_size) do
+  def chunk_stream(query, chunk_size, opts \\ []) do
     Stream.unfold(0, fn
       :halt ->
         {[], :halt}
@@ -16,7 +16,7 @@ defmodule Pleroma.RepoStreamer do
         |> order_by(asc: :id)
         |> where([r], r.id > ^last_id)
         |> limit(^chunk_size)
-        |> Repo.all()
+        |> Repo.all(opts)
         |> case do
           [] ->
             {[], :halt}
