@@ -6,8 +6,8 @@ defmodule Pleroma.Web.ShoutChannel do
   use Phoenix.Channel
 
   alias Pleroma.User
-  alias Pleroma.Web.ShoutChannel.ShoutChannelState
   alias Pleroma.Web.MastodonAPI.AccountView
+  alias Pleroma.Web.ShoutChannel.ShoutChannelState
 
   def join("shout:public", _message, socket) do
     send(self(), :after_join)
