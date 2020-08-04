@@ -558,14 +558,6 @@ config :pleroma, :config_description, [
         ]
       },
       %{
-        key: :shout_limit,
-        type: :integer,
-        description: "Character limit of the instance shout messages",
-        suggestions: [
-          5_000
-        ]
-      },
-      %{
         key: :remote_limit,
         type: :integer,
         description: "Hard character limit beyond which remote posts will be dropped",
@@ -2937,7 +2929,16 @@ config :pleroma, :config_description, [
     children: [
       %{
         key: :enabled,
-        type: :boolean
+        type: :boolean,
+        description: "Enables the backend Shoutbox chat feature."
+      },
+      %{
+        key: :limit,
+        type: :integer,
+        description: "Shout message character limit.",
+        suggestions: [
+          5_000
+        ]
       }
     ]
   },
