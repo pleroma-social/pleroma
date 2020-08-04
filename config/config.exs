@@ -190,7 +190,6 @@ config :pleroma, :instance,
   instance_thumbnail: "/instance/thumbnail.jpeg",
   limit: 5_000,
   description_limit: 5_000,
-  shout_limit: 5_000,
   remote_limit: 100_000,
   upload_limit: 16_000_000,
   avatar_upload_limit: 2_000_000,
@@ -436,7 +435,9 @@ config :pleroma, Pleroma.Web.MediaProxy.Invalidation.Http,
 
 config :pleroma, Pleroma.Web.MediaProxy.Invalidation.Script, script_path: nil
 
-config :pleroma, :shout, enabled: true
+config :pleroma, :shout,
+  enabled: true,
+  limit: 5_000
 
 config :phoenix, :format_encoders, json: Jason
 
