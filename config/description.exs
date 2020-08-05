@@ -998,6 +998,35 @@ config :pleroma, :config_description, [
         ]
       },
       %{
+        group: :chat_message,
+        type: :group,
+        descpiption: "Chat message settings",
+        children: [
+          %{
+            key: :enabled,
+            type: :boolean,
+            description: "Enables sends chat message for new user after registration"
+          },
+          %{
+            key: :message,
+            type: :string,
+            description:
+              "A message that will be sent to a newly registered users as a chat message",
+            suggestions: [
+              "Hello, welcome on board!"
+            ]
+          },
+          %{
+            key: :sender_nickname,
+            type: :string,
+            description: "The nickname of the local user that sends the welcome message",
+            suggestions: [
+              "lain"
+            ]
+          }
+        ]
+      },
+      %{
         group: :email,
         type: :group,
         descpiption: "Email message settings",
@@ -1540,6 +1569,12 @@ config :pleroma, :config_description, [
         key: :accept,
         type: {:list, :string},
         description: "List of instances to only accept activities from (except deletes)",
+        suggestions: ["example.com", "*.example.com"]
+      },
+      %{
+        key: :followers_only,
+        type: {:list, :string},
+        description: "Force posts from the given instances to be visible by followers only",
         suggestions: ["example.com", "*.example.com"]
       },
       %{
@@ -3021,6 +3056,7 @@ config :pleroma, :config_description, [
       %{
         key: :restricted_nicknames,
         type: {:list, :string},
+        description: "List of nicknames users may not register with.",
         suggestions: [
           ".well-known",
           "~",
@@ -3053,6 +3089,12 @@ config :pleroma, :config_description, [
           "users",
           "web"
         ]
+      },
+      %{
+        key: :email_blacklist,
+        type: {:list, :string},
+        description: "List of email domains users may not register with.",
+        suggestions: ["mailinator.com", "maildrop.cc"]
       }
     ]
   },

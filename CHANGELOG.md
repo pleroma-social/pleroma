@@ -49,6 +49,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Added
 
+- Configuration: Added a blacklist for email servers.
 - Chats: Added `accepts_chat_messages` field to user, exposed in APIs and federation.
 - Chats: Added support for federated chats. For details, see the docs.
 - ActivityPub: Added support for existing AP ids for instances migrated from Mastodon.
@@ -69,7 +70,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Support for viewing instances favicons next to posts and accounts
 - Added Pleroma.Upload.Filter.Exiftool as an alternate EXIF stripping mechanism targeting GPS/location metadata.
 - "By approval" registrations mode.
-- Configuration: Added `:welcome` settings for the welcome message to newly registered users.
+- Configuration: Added `:welcome` settings for the welcome message to newly registered users. You can send a welcome message as a direct message, chat or email.
 - Ability to hide favourites and emoji reactions in the API with `[:instance, :show_reactions]` config.
 
 <details>
