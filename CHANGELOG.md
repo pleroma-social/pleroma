@@ -74,6 +74,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - "By approval" registrations mode.
 - Configuration: Added `:welcome` settings for the welcome message to newly registered users. You can send a welcome message as a direct message, chat or email.
 - Ability to hide favourites and emoji reactions in the API with `[:instance, :show_reactions]` config.
+- OAuth form improvements: users are remembered by their cookie, the CSS is overridable by the admin, and the style has been improved.
 
 <details>
   <summary>API Changes</summary>
