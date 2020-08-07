@@ -83,6 +83,13 @@ defmodule Pleroma.Web.OAuth.OAuthController do
         _ -> nil
       end
 
+    scopes =
+      if scopes == [] do
+        available_scopes
+      else
+        scopes
+      end
+
     # Note: `params` might differ from `conn.params`; use `@params` not `@conn.params` in template
     render(conn, Authenticator.auth_template(), %{
       app: app && Map.delete(app, :client_secret),
