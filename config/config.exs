@@ -516,7 +516,13 @@ config :pleroma, Pleroma.User,
     "user-search",
     "user_exists",
     "users",
-    "web"
+    "web",
+    "verify_credentials",
+    "update_credentials",
+    "relationships",
+    "search",
+    "confirmation_resend",
+    "mfa"
   ],
   email_blacklist: []
 
@@ -737,6 +743,10 @@ config :tzdata, :http_client, Pleroma.HTTP.Tzdata
 config :ex_aws, http_client: Pleroma.HTTP.ExAws
 
 config :pleroma, :instances_favicons, enabled: false
+
+config :floki, :html_parser, Floki.HTMLParser.FastHtml
+
+config :pleroma, Pleroma.Web.Auth.Authenticator, Pleroma.Web.Auth.PleromaAuthenticator
 
 # Import environment specific config. This must remain at the bottom
 # of this file so it overrides the configuration defined above.
