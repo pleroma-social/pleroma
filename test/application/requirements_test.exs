@@ -16,18 +16,18 @@ defmodule Pleroma.Application.RequirementsTest do
     setup do: clear_config([Pleroma.Emails.Mailer])
 
     test "raises if welcome email enabled but mail disabled" do
-      Pleroma.Config.put([:welcome, :email, :enabled], true)
-      Pleroma.Config.put([Pleroma.Emails.Mailer, :enabled], false)
+      Config.put([:welcome, :email, :enabled], true)
+      Config.put([Pleroma.Emails.Mailer, :enabled], false)
 
-      assert_raise Pleroma.ApplicationRequirements.VerifyError, "The mail disabled.", fn ->
-        capture_log(&Pleroma.ApplicationRequirements.verify!/0)
+      assert_raise Requirements.VerifyError, "The mail disabled.", fn ->
+        capture_log(&Requirements.verify!/0)
       end
     end
   end
 
   describe "check_confirmation_accounts!" do
     setup_with_mocks([
-      {Pleroma.ApplicationRequirements, [:passthrough],
+      {Pleroma.Application.Requirements, [:passthrough],
        [
          check_migrations_applied!: fn _ -> :ok end
        ]}
@@ -38,26 +38,26 @@ defmodule Pleroma.Application.RequirementsTest do
     setup do: clear_config([:instance, :account_activation_required])
 
     test "raises if account confirmation is required but mailer isn't enable" do
-      Pleroma.Config.put([:instance, :account_activation_required], true)
-      Pleroma.Config.put([Pleroma.Emails.Mailer, :enabled], false)
+      Config.put([:instance, :account_activation_required], true)
+      Config.put([Pleroma.Emails.Mailer, :enabled], false)
 
-      assert_raise Pleroma.ApplicationRequirements.VerifyError,
+      assert_raise Requirements.VerifyError,
                    "Account activation enabled, but Mailer is disabled. Cannot send confirmation emails.",
                    fn ->
-                     capture_log(&Pleroma.ApplicationRequirements.verify!/0)
+                     capture_log(&Requirements.verify!/0)
                    end
     end
 
     test "doesn't do anything if account confirmation is disabled" do
-      Pleroma.Config.put([:instance, :account_activation_required], false)
-      Pleroma.Config.put([Pleroma.Emails.Mailer, :enabled], false)
-      assert Pleroma.ApplicationRequirements.verify!() == :ok
+      Config.put([:instance, :account_activation_required], false)
+      Config.put([Pleroma.Emails.Mailer, :enabled], false)
+      assert Requirements.verify!() == :ok
     end
 
     test "doesn't do anything if account confirmation is required and mailer is enabled" do
-      Pleroma.Config.put([:instance, :account_activation_required], true)
-      Pleroma.Config.put([Pleroma.Emails.Mailer, :enabled], true)
-      assert Pleroma.ApplicationRequirements.verify!() == :ok
+      Config.put([:instance, :account_activation_required], true)
+      Config.put([Pleroma.Emails.Mailer, :enabled], true)
+      assert Requirements.verify!() == :ok
     end
   end
 
