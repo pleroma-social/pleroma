@@ -12,7 +12,7 @@ defmodule Pleroma.Gopher.Server do
     port = Keyword.get(config, :port, 1234)
 
     if Keyword.get(config, :enabled, false) do
-      GenServer.start_link(__MODULE__, [ip, port], [])
+      GenServer.start_link(__MODULE__, [ip, port])
     else
       Logger.info("Gopher server disabled")
       :ignore
@@ -31,7 +31,12 @@ defmodule Pleroma.Gopher.Server do
       []
     )
 
+    Process.flag(:trap_exit, true)
     {:ok, %{ip: ip, port: port}}
+  end
+
+  def terminate(_reason, _state) do
+    :ranch.stop_listener(:gopher)
   end
 end
 
