@@ -40,15 +40,14 @@ defmodule Mix.Pleroma do
       Supervisor.child_spec({Task, &Pleroma.Config.Environment.load_and_update/0},
         id: :update_env
       ),
-      Pleroma.Web.Endpoint,
-      {Oban, Pleroma.Config.get(Oban)}
+      Pleroma.Web.Endpoint
     ]
 
     children =
-      if Application.get_env(:tesla, :adapter) == Tesla.Adapter.Gun do
+      if adapter == Tesla.Adapter.Gun do
         [Pleroma.Application.GunSupervisor | children]
       else
-        [Pleroma.Applicaiton.HackneySupervisor | children]
+        [Pleroma.Application.HackneySupervisor | children]
       end
 
     cachex_children =
