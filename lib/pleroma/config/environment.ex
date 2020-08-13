@@ -92,7 +92,7 @@ defmodule Pleroma.Config.Environment do
       :ok
     else
       nil ->
-        Logger.warn("#{app} is not started.")
+        Logger.info("#{app} is not started.")
 
       error ->
         error
