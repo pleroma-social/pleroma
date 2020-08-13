@@ -83,7 +83,11 @@ defmodule Mix.Tasks.Pleroma.Database do
         ),
       where: o.inserted_at < ^time_deadline,
       where:
-        fragment("split_part(?->>'actor', '/', 3) != ?", o.data, ^Pleroma.Web.Endpoint.host())
+        fragment(
+          "split_part(?->>'actor', '/', 3) != ?",
+          o.data,
+          ^Pleroma.Config.get([Pleroma.Web.Endpoint, :url, :host])
+        )
     )
     |> Repo.delete_all(timeout: :infinity)
 

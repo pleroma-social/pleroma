@@ -39,8 +39,7 @@ defmodule Mix.Pleroma do
       Pleroma.Repo,
       Supervisor.child_spec({Task, &Pleroma.Config.Environment.load_and_update/0},
         id: :update_env
-      ),
-      Pleroma.Web.Endpoint
+      )
     ]
 
     children =
