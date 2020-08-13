@@ -5,6 +5,7 @@
 defmodule Pleroma.Web.ActivityPub.ObjectValidators.UpdateValidator do
   use Ecto.Schema
 
+  alias Pleroma.Object
   alias Pleroma.EctoType.ActivityPub.ObjectValidators
 
   import Ecto.Changeset
@@ -42,13 +43,24 @@ defmodule Pleroma.Web.ActivityPub.ObjectValidators.UpdateValidator do
     |> validate_data
   end
 
+  defp can_update?(actor_id, actor_id), do: true
+
+  @updateable ~w{Article Note Page}
+  defp can_update?(actor_id, object_id) do
+    with %Object{data: %{"actor" => ^actor_id, "type" => type}} when type in @updateable <-
+           Object.get_cached_by_ap_id(object_id) do
+      true
+    else
+      _ -> false
+    end
+  end
+
   # For now we only support updating users, and here the rule is easy:
-  # object id == actor id
   def validate_updating_rights(cng) do
     with actor = get_field(cng, :actor),
          object = get_field(cng, :object),
          {:ok, object_id} <- ObjectValidators.ObjectID.cast(object),
-         true <- actor == object_id do
+         true <- can_update?(actor, object_id) do
       cng
     else
       _e ->
