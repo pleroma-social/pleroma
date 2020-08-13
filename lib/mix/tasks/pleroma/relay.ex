@@ -11,7 +11,7 @@ defmodule Mix.Tasks.Pleroma.Relay do
   @moduledoc File.read!("docs/administration/CLI_tasks/relay.md")
 
   def run(["follow", target]) do
-    start_pleroma()
+    start_pleroma([{Oban, Pleroma.Config.get(Oban)}])
 
     with {:ok, _activity} <- Relay.follow(target) do
       # put this task to sleep to allow the genserver to push out the messages
@@ -22,7 +22,7 @@ defmodule Mix.Tasks.Pleroma.Relay do
   end
 
   def run(["unfollow", target]) do
-    start_pleroma()
+    start_pleroma([{Oban, Pleroma.Config.get(Oban)}])
 
     with {:ok, _activity} <- Relay.unfollow(target) do
       # put this task to sleep to allow the genserver to push out the messages

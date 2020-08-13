@@ -13,9 +13,11 @@ defmodule Mix.Pleroma do
     :swoosh,
     :timex
   ]
+
   @cachex_children ["object", "user", "scrubber"]
+
   @doc "Common functions to be reused in mix tasks"
-  def start_pleroma do
+  def start_pleroma(additional_childs \\ []) do
     Pleroma.Config.Holder.save_default()
     Pleroma.Config.Oban.warn()
     Application.put_env(:phoenix, :serve_endpoints, false, persistent: true)
@@ -35,12 +37,13 @@ defmodule Mix.Pleroma do
 
     Enum.each(apps, &Application.ensure_all_started/1)
 
-    children = [
-      Pleroma.Repo,
-      Supervisor.child_spec({Task, &Pleroma.Config.Environment.load_and_update/0},
-        id: :update_env
-      )
-    ]
+    children =
+      [
+        Pleroma.Repo,
+        Supervisor.child_spec({Task, &Pleroma.Config.Environment.load_and_update/0},
+          id: :update_env
+        )
+      ] ++ additional_childs
 
     children =
       if adapter == Tesla.Adapter.Gun do

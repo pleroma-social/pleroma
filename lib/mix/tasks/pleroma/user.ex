@@ -96,7 +96,7 @@ defmodule Mix.Tasks.Pleroma.User do
   end
 
   def run(["rm", nickname]) do
-    start_pleroma()
+    start_pleroma([{Oban, Pleroma.Config.get(Oban)}])
 
     with %User{local: true} = user <- User.get_cached_by_nickname(nickname),
          {:ok, delete_data, _} <- Builder.delete(user, user.ap_id),
