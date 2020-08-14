@@ -19,6 +19,7 @@ defmodule Pleroma.Gopher.Server do
     end
   end
 
+  @impl true
   def init([ip, port]) do
     Logger.info("Starting gopher server on #{port}")
 
@@ -35,6 +36,7 @@ defmodule Pleroma.Gopher.Server do
     {:ok, %{ip: ip, port: port}}
   end
 
+  @impl true
   def terminate(_reason, _state) do
     :ranch.stop_listener(:gopher)
   end
