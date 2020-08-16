@@ -17,6 +17,7 @@ defmodule Mix.Pleroma do
   @cachex_children ["object", "user", "scrubber"]
 
   @doc "Common functions to be reused in mix tasks"
+  @spec start_pleroma([:supervisor.child_spec() | module()]) :: {:ok, pid()}
   def start_pleroma(additional_childs \\ []) do
     Pleroma.Config.Holder.save_default()
     Pleroma.Config.Oban.warn()
