@@ -46,12 +46,7 @@ defmodule Mix.Pleroma do
         Pleroma.Web.Endpoint
       ] ++ additional_childs
 
-    children =
-      if adapter == Tesla.Adapter.Gun do
-        [Pleroma.Application.GunSupervisor | children]
-      else
-        [Pleroma.Application.HackneySupervisor | children]
-      end
+    children = [Pleroma.Application.Dependencies.adapter_module() | children]
 
     cachex_children =
       Enum.map(@cachex_children, &Pleroma.Application.Dependencies.cachex_spec({&1, []}))

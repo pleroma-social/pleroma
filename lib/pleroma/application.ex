@@ -39,6 +39,7 @@ defmodule Pleroma.Application do
 
   # See http://elixir-lang.org/docs/stable/elixir/Application.html
   # for more information on OTP Applications
+  @impl true
   def start(_type, _args) do
     # Scrubbers are compiled at runtime and therefore will cause a conflict
     # every time the application is restarted, so we disable module
@@ -94,11 +95,13 @@ defmodule Pleroma.Application do
     Supervisor.start_link(children, strategy: :one_for_one, name: Pleroma.Supervisor)
   end
 
+  @impl true
   def start_phase(:update_env, :normal, _args) do
     # Load and update the environment from the config settings in the database
     Pleroma.Config.Environment.load_and_update()
   end
 
+  @impl true
   def start_phase(:static_deps, :normal, _args) do
     # Start static children,
     # which don't require any configuration or can be configured in runtime
@@ -108,6 +111,7 @@ defmodule Pleroma.Application do
     |> Pleroma.Application.DependenciesSupervisor.start_children(:static)
   end
 
+  @impl true
   def start_phase(:dynamic_deps, :normal, _args) do
     # Start dynamic children,
     # which require restart after some config changes

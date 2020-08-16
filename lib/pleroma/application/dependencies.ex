@@ -104,7 +104,8 @@ defmodule Pleroma.Application.Dependencies do
 
   defp add_http_children(children, _), do: [adapter_module() | children]
 
-  defp adapter_module do
+  @spec adapter_module() :: module()
+  def adapter_module do
     if Application.get_env(:tesla, :adapter) == Tesla.Adapter.Gun do
       GunSupervisor
     else
