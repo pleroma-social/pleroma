@@ -7,8 +7,8 @@ defmodule Pleroma.Web.Metadata.Providers.RelMe do
   @behaviour Provider
 
   @impl Provider
-  def build_tags(%{user: user}) do
-    bio_tree = Floki.parse_fragment!(user.bio)
+  def build_tags(%{user: %{bio: bio}}) when is_binary(bio) do
+    bio_tree = Floki.parse_fragment!(bio)
 
     (Floki.attribute(bio_tree, "link[rel~=me]", "href") ++
        Floki.attribute(bio_tree, "a[rel~=me]", "href"))
@@ -16,4 +16,6 @@ defmodule Pleroma.Web.Metadata.Providers.RelMe do
       {:link, [rel: "me", href: link], []}
     end)
   end
+
+  def build_tags(_), do: []
 end
