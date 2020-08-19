@@ -710,6 +710,12 @@ defmodule Pleroma.Web.Router do
     end
   end
 
+  scope "/_matrix", Pleroma.Web do
+    get("/client/versions", MatrixController, :client_versions)
+    get("/client/r0/login", MatrixController, :login_info)
+    post("/client/r0/login", MatrixController, :login)
+  end
+
   scope "/", Pleroma.Web.MongooseIM do
     get("/user_exists", MongooseIMController, :user_exists)
     get("/check_password", MongooseIMController, :check_password)
