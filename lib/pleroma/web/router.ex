@@ -711,9 +711,22 @@ defmodule Pleroma.Web.Router do
   end
 
   scope "/_matrix", Pleroma.Web do
+    pipe_through(:api)
     get("/client/versions", MatrixController, :client_versions)
     get("/client/r0/login", MatrixController, :login_info)
     post("/client/r0/login", MatrixController, :login)
+    get("/client/r0/presence/:user_id/status", MatrixController, :presence_status)
+    get("/client/r0/user/:user_id/filter/:filter_id", MatrixController, :filter)
+  end
+
+  scope "/_matrix", Pleroma.Web do
+    pipe_through(:authenticated_api)
+    put("/client/r0/presence/:user_id/status", MatrixController, :set_presence_status)
+    get("/client/r0/pushrules", MatrixController, :pushrules)
+    post("/client/r0/user/:user_id/filter", MatrixController, :set_filter)
+    get("/client/r0/sync", MatrixController, :sync)
+    post("/client/r0/keys/query", MatrixController, :key_query)
+    get("/client/r0/profile/:user_id", MatrixController, :profile)
   end
 
   scope "/", Pleroma.Web.MongooseIM do

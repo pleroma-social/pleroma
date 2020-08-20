@@ -20,7 +20,7 @@ defmodule Pleroma.Web.Endpoint do
   # If you're adding new paths to `only:` you'll need to configure them in InstanceStatic as well
   # Cache-control headers are duplicated in case we turn off etags in the future
   plug(Pleroma.Plugs.InstanceStatic,
-    at: "/",
+    at: "/s",
     gzip: true,
     cache_control_for_etags: @static_cache_control,
     headers: %{
@@ -30,7 +30,7 @@ defmodule Pleroma.Web.Endpoint do
 
   # Careful! No `only` restriction here, as we don't know what frontends contain.
   plug(Pleroma.Plugs.FrontendStatic,
-    at: "/",
+    at: "/s",
     frontend_type: :primary,
     gzip: true,
     cache_control_for_etags: @static_cache_control,
@@ -45,7 +45,7 @@ defmodule Pleroma.Web.Endpoint do
   # when deploying your static files in production.
   plug(
     Plug.Static,
-    at: "/",
+    at: "/s",
     from: :pleroma,
     only: Pleroma.Constants.static_only_files(),
     # credo:disable-for-previous-line Credo.Check.Readability.MaxLineLength
