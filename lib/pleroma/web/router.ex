@@ -720,6 +720,10 @@ defmodule Pleroma.Web.Router do
     get("/client/r0/presence/:user_id/status", MatrixController, :presence_status)
     get("/client/r0/user/:user_id/filter/:filter_id", MatrixController, :filter)
     get("/media/r0/download/:authority/:file", MatrixController, :download)
+    get("/media/r0/thumbnail/:authority/:file", MatrixController, :download)
+    # Says it's r0 in the documentation, seems it's actually v1 on iOS
+    get("/media/v1/download/:authority/:file", MatrixController, :download)
+    get("/media/v1/thumbnail/:authority/:file", MatrixController, :download)
   end
 
   scope "/_matrix", Pleroma.Web do
