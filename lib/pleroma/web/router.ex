@@ -728,6 +728,15 @@ defmodule Pleroma.Web.Router do
     get("/client/r0/sync", MatrixController, :sync)
     post("/client/r0/keys/query", MatrixController, :key_query)
     get("/client/r0/profile/:user_id", MatrixController, :profile)
+    get("/client/r0/joined_groups", MatrixController, :joined_groups)
+    get("/client/unstable/room_keys/version", MatrixController, :room_keys_version)
+    post("/client/r0/keys/upload", MatrixController, :key_upload)
+    get("/client/r0/capabilities", MatrixController, :capabilities)
+    post("/client/r0/rooms/:room_id/read_markers", MatrixController, :set_read_marker)
+    get("/client/r0/rooms/:room_id/members", MatrixController, :room_members)
+    post("/client/r0/publicised_groups", MatrixController, :publicised_groups)
+    get("/client/r0/voip/turnServer", MatrixController, :turn_server)
+    put("/client/r0/rooms/:room_id/send/:event_type/:txn_id", MatrixController, :send_event)
   end
 
   scope "/", Pleroma.Web.MongooseIM do

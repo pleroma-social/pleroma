@@ -16,6 +16,9 @@ defmodule Pleroma.Web.MatrixController do
   alias Pleroma.Web.MediaProxy
   alias Pleroma.Web.OAuth.App
   alias Pleroma.Web.OAuth.Token
+  alias Pleroma.Web.OAuth.Token
+  alias Pleroma.Web.CommonAPI
+  alias Pleroma.Object
   import Ecto.Query
 
   plug(
@@ -27,7 +30,22 @@ defmodule Pleroma.Web.MatrixController do
   plug(
     OAuthScopesPlug,
     %{scopes: ["read"]}
-    when action in [:pushrules, :sync, :filter, :key_query, :profile]
+    when action in [
+           :pushrules,
+           :sync,
+           :filter,
+           :key_query,
+           :profile,
+           :joined_groups,
+           :room_keys_version,
+           :key_upload,
+           :capabilities,
+           :set_read_marker,
+           :room_members,
+           :publicised_groups,
+           :turn_server,
+           :send_event
+         ]
   )
 
   def mxc(url) do
@@ -37,7 +55,6 @@ defmodule Pleroma.Web.MatrixController do
   def client_versions(conn, _) do
     data = %{
       versions: ["r0.0.1", "r0.1.0", "r0.2.0", "r0.3.0", "r0.4.0", "r0.5.0"]
-      # versions: ["r0.0.1", "r0.1.0"]
     }
 
     conn
@@ -97,9 +114,7 @@ defmodule Pleroma.Web.MatrixController do
     |> json(data)
   end
 
-  def set_presence_status(conn, params) do
-    IO.inspect(params)
-
+  def set_presence_status(conn, _params) do
     conn
     |> json(%{})
   end
@@ -114,8 +129,6 @@ defmodule Pleroma.Web.MatrixController do
   end
 
   def set_filter(conn, params) do
-    IO.inspect(params)
-
     filter_id = :crypto.strong_rand_bytes(32) |> Base.url_encode64(padding: false)
     Cachex.put(:matrix_compat, "filter:#{filter_id}", params)
 
@@ -129,7 +142,6 @@ defmodule Pleroma.Web.MatrixController do
 
   def filter(conn, params) do
     result = Cachex.get(:matrix_compat, "filter:#{params["filter_id"]}")
-    IO.inspect(result)
 
     conn
     |> put_status(200)
@@ -169,23 +181,7 @@ defmodule Pleroma.Web.MatrixController do
 
         membership_events =
           [user, recipient]
-          |> Enum.map(fn member ->
-            avatar = User.avatar_url(user) |> MediaProxy.url()
-
-            %{
-              content: %{
-                membership: "join",
-                avatar_url: mxc(avatar),
-                displayname: member.name
-              },
-              type: "m.room.member",
-              event_id: "#{chat.id}/join/#{member.id}",
-              room_id: chat.id,
-              sender: matrix_name(member),
-              origin_ts: DateTime.utc_now() |> DateTime.to_unix(),
-              state_key: matrix_name(member)
-            }
-          end)
+          |> membership_events_from_list(chat)
 
         messages =
           chat
@@ -196,8 +192,6 @@ defmodule Pleroma.Web.MatrixController do
             author = User.get_cached_by_ap_id(chat_data["actor"])
 
             {:ok, date, _} = DateTime.from_iso8601(chat_data["published"])
-
-            IO.inspect(chat_data["attachment"])
 
             messages = [
               %{
@@ -310,15 +304,11 @@ defmodule Pleroma.Web.MatrixController do
   end
 
   def key_query(conn, params) do
-    IO.inspect(params)
-
     conn
     |> json(params)
   end
 
   def profile(conn, params) do
-    IO.inspect(params)
-
     nickname =
       params["user_id"]
       |> String.trim_leading("@")
@@ -342,5 +332,138 @@ defmodule Pleroma.Web.MatrixController do
 
     conn
     |> redirect(external: url)
+  end
+
+  # Not documented, guessing what's expected here
+  def joined_groups(conn, _) do
+    data = %{
+      joined: %{}
+    }
+
+    conn
+    |> json(data)
+  end
+
+  # Not documented either lololo let's 404
+  def room_keys_version(conn, _) do
+    conn
+    |> put_status(404)
+    |> json("Not found")
+  end
+
+  # let's just pretend this worked.
+  def key_upload(conn, _params) do
+    # Enormous numbers so the client will stop trying to upload more
+    data = %{
+      one_time_key_counts: %{
+        curve25519: 100_000,
+        signed_curve25519: 2_000_000
+      }
+    }
+
+    conn
+    |> put_status(200)
+    |> json(data)
+  end
+
+  def capabilities(conn, _) do
+    data = %{
+      capabilities: %{
+        "m.change_password": %{
+          enabled: false
+        },
+        "m.room_versions": %{
+          default: "1",
+          available: %{
+            "1" => "stable"
+          }
+        }
+      }
+    }
+
+    conn
+    |> json(data)
+  end
+
+  # Just pretend it worked
+  def set_read_marker(conn, _) do
+    conn
+    |> json(%{})
+  end
+
+  def room_members(%{assigns: %{user: %{id: user_id} = user}} = conn, %{"room_id" => chat_id}) do
+    with %Chat{user_id: ^user_id, recipient: recipient_id} = chat <- Chat.get_by_id(chat_id),
+         %User{} = recipient <- User.get_cached_by_ap_id(recipient_id) do
+      membership_events =
+        [user, recipient]
+        |> membership_events_from_list(chat)
+
+      data = %{
+        chunk: membership_events
+      }
+
+      conn
+      |> json(data)
+    end
+  end
+
+  # Undocumented
+  def publicised_groups(conn, _) do
+    data = %{
+      groups: %{}
+    }
+
+    conn
+    |> json(data)
+  end
+
+  defp membership_events_from_list(users, chat) do
+    users
+    |> Enum.map(fn member ->
+      avatar = User.avatar_url(member) |> MediaProxy.url()
+
+      %{
+        content: %{
+          membership: "join",
+          avatar_url: mxc(avatar),
+          displayname: member.name
+        },
+        type: "m.room.member",
+        event_id: "#{chat.id}/join/#{member.id}",
+        room_id: chat.id,
+        sender: matrix_name(member),
+        origin_ts: DateTime.utc_now() |> DateTime.to_unix(),
+        state_key: matrix_name(member)
+      }
+    end)
+  end
+
+  def turn_server(conn, _) do
+    conn
+    |> put_status(404)
+    |> json("not found")
+  end
+
+  def send_event(
+        %{assigns: %{user: %{id: user_id} = user}} = conn,
+        %{
+          "msgtype" => "m.text",
+          "body" => body,
+          "room_id" => chat_id,
+          "event_type" => "m.room.message"
+        }
+      ) do
+    with %Chat{user_id: ^user_id, recipient: recipient_id} <- Chat.get_by_id(chat_id),
+         %User{} = recipient <- User.get_cached_by_ap_id(recipient_id),
+         {:ok, activity} <- CommonAPI.post_chat_message(user, recipient, body) do
+      object = Object.normalize(activity, false)
+
+      data = %{
+        event_id: object.id
+      }
+
+      conn
+      |> json(data)
+    end
   end
 end
