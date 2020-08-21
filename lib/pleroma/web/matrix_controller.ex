@@ -276,8 +276,19 @@ defmodule Pleroma.Web.MatrixController do
         Map.merge(acc, room)
       end)
 
+    most_recent_cmr_id =
+      Enum.reduce(chats, nil, fn {_k, chat}, acc ->
+        id = List.first(chat.timeline.events).event_id
+
+        if !acc || (acc && acc < id) do
+          id
+        else
+          acc
+        end
+      end)
+
     data = %{
-      next_batch: "next",
+      next_batch: most_recent_cmr_id,
       rooms: %{
         join: chats,
         invite: %{},
