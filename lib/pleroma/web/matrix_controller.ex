@@ -335,8 +335,11 @@ defmodule Pleroma.Web.MatrixController do
   def download(conn, params) do
     {:ok, url} = params["file"] |> Base.decode64()
 
-    conn
-    |> redirect(external: url)
+    # This is stupid
+    with {:ok, %{status: 200} = env} = Pleroma.HTTP.get(url) do
+      conn
+      |> send_resp(200, env.body)
+    end
   end
 
   # Not documented, guessing what's expected here
