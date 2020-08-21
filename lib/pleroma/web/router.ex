@@ -710,6 +710,8 @@ defmodule Pleroma.Web.Router do
     end
   end
 
+  get("/.well-known/matrix/client", Pleroma.Web.MatrixController, :wellknown)
+
   scope "/_matrix", Pleroma.Web do
     pipe_through(:api)
     get("/client/versions", MatrixController, :client_versions)
@@ -728,9 +730,13 @@ defmodule Pleroma.Web.Router do
     get("/client/r0/sync", MatrixController, :sync)
     post("/client/r0/keys/query", MatrixController, :key_query)
     get("/client/r0/profile/:user_id", MatrixController, :profile)
+    get("/client/r0/profile/:user_id/displayname", MatrixController, :profile)
+    get("/client/r0/profile/:user_id/avatar_url", MatrixController, :profile)
     get("/client/r0/joined_groups", MatrixController, :joined_groups)
     get("/client/unstable/room_keys/version", MatrixController, :room_keys_version)
     post("/client/r0/keys/upload", MatrixController, :key_upload)
+    # The iOS client uses this call. No idea what it is about.
+    post("/client/r0/keys/upload/:whoknows", MatrixController, :key_upload)
     get("/client/r0/capabilities", MatrixController, :capabilities)
     post("/client/r0/rooms/:room_id/read_markers", MatrixController, :set_read_marker)
     get("/client/r0/rooms/:room_id/members", MatrixController, :room_members)

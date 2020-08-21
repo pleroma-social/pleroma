@@ -308,12 +308,17 @@ defmodule Pleroma.Web.MatrixController do
     |> json(params)
   end
 
+  defp nickname_from_matrix_id(mid) do
+    mid
+    |> String.trim_leading("@")
+    |> String.replace(":", "@")
+    |> String.trim_trailing("@#{Pleroma.Web.Endpoint.host()}")
+  end
+
   def profile(conn, params) do
     nickname =
       params["user_id"]
-      |> String.trim_leading("@")
-      |> String.replace(":", "@")
-      |> String.trim_trailing("@#{Pleroma.Web.Endpoint.host()}")
+      |> nickname_from_matrix_id()
 
     user = User.get_by_nickname(nickname)
     avatar = User.avatar_url(user) |> MediaProxy.url()
@@ -453,17 +458,24 @@ defmodule Pleroma.Web.MatrixController do
           "event_type" => "m.room.message"
         }
       ) do
-    with %Chat{user_id: ^user_id, recipient: recipient_id} <- Chat.get_by_id(chat_id),
+    with %Chat{user_id: ^user_id, recipient: recipient_id} = chat <- Chat.get_by_id(chat_id),
          %User{} = recipient <- User.get_cached_by_ap_id(recipient_id),
          {:ok, activity} <- CommonAPI.post_chat_message(user, recipient, body) do
       object = Object.normalize(activity, false)
+      cmr = MessageReference.for_chat_and_object(chat, object)
 
       data = %{
-        event_id: object.id
+        event_id: cmr.id
       }
 
       conn
       |> json(data)
     end
+  end
+
+  def wellknown(conn, _params) do
+    conn
+    |> put_status(404)
+    |> json("not found")
   end
 end
