@@ -284,7 +284,14 @@ defmodule Pleroma.Web.MatrixController do
         leave: %{}
       },
       account_data: %{
-        events: []
+        events: [
+          %{
+            type: "m.direct",
+            content: %{
+              matrix_name(user) => Map.keys(chats)
+            }
+          }
+        ]
       },
       presence: %{
         events: []
