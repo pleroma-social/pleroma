@@ -5,16 +5,17 @@
 defmodule Pleroma.Web.MatrixController do
   use Pleroma.Web, :controller
 
-  alias Pleroma.User
   # alias Pleroma.Web.MediaProxy
-  alias Pleroma.Plugs.AuthenticationPlug
-  alias Pleroma.Plugs.OAuthScopesPlug
-  alias Pleroma.Web.OAuth.App
-  alias Pleroma.Web.OAuth.Token
   alias Pleroma.Chat
   alias Pleroma.Chat.MessageReference
-  alias Pleroma.Repo
   alias Pleroma.HTML
+  alias Pleroma.Plugs.AuthenticationPlug
+  alias Pleroma.Plugs.OAuthScopesPlug
+  alias Pleroma.Repo
+  alias Pleroma.User
+  alias Pleroma.Web.MediaProxy
+  alias Pleroma.Web.OAuth.App
+  alias Pleroma.Web.OAuth.Token
   import Ecto.Query
 
   plug(
@@ -28,6 +29,10 @@ defmodule Pleroma.Web.MatrixController do
     %{scopes: ["read"]}
     when action in [:pushrules, :sync, :filter, :key_query, :profile]
   )
+
+  def mxc(url) do
+    "mxc://localhost/#{url |> Base.encode64()}"
+  end
 
   def client_versions(conn, _) do
     data = %{
@@ -162,6 +167,26 @@ defmodule Pleroma.Web.MatrixController do
       |> Enum.reduce(%{}, fn chat, acc ->
         recipient = User.get_by_ap_id(chat.recipient)
 
+        membership_events =
+          [user, recipient]
+          |> Enum.map(fn member ->
+            avatar = User.avatar_url(user) |> MediaProxy.url()
+
+            %{
+              content: %{
+                membership: "join",
+                avatar_url: mxc(avatar),
+                displayname: member.name
+              },
+              type: "m.room.member",
+              event_id: "#{chat.id}/join/#{member.id}",
+              room_id: chat.id,
+              sender: matrix_name(member),
+              origin_ts: DateTime.utc_now() |> DateTime.to_unix(),
+              state_key: matrix_name(member)
+            }
+          end)
+
         messages =
           chat
           |> MessageReference.for_chat_query()
@@ -172,23 +197,65 @@ defmodule Pleroma.Web.MatrixController do
 
             {:ok, date, _} = DateTime.from_iso8601(chat_data["published"])
 
-            %{
-              content: %{
-                body: chat_data["content"] |> HTML.strip_tags(),
-                msgtype: "m.text",
-                format: "org.matrix.custom.html",
-                formatted_body: chat_data["content"]
-              },
-              type: "m.room.message",
-              event_id: message.id,
-              room_id: chat.id,
-              sender: matrix_name(author),
-              origin_ts: date |> DateTime.to_unix(),
-              unsigned: %{
-                age: 0
+            IO.inspect(chat_data["attachment"])
+
+            messages = [
+              %{
+                content: %{
+                  body: chat_data["content"] |> HTML.strip_tags(),
+                  msgtype: "m.text",
+                  format: "org.matrix.custom.html",
+                  formatted_body: chat_data["content"]
+                },
+                type: "m.room.message",
+                event_id: message.id,
+                room_id: chat.id,
+                sender: matrix_name(author),
+                origin_server_ts: date |> DateTime.to_unix(:millisecond),
+                unsigned: %{
+                  age: DateTime.diff(DateTime.utc_now(), date, :millisecond)
+                }
               }
-            }
+            ]
+
+            messages =
+              if attachment = chat_data["attachment"] do
+                attachment =
+                  Pleroma.Web.MastodonAPI.StatusView.render("attachment.json",
+                    attachment: attachment
+                  )
+
+                att = %{
+                  content: %{
+                    body: "an image",
+                    msgtype: "m.image",
+                    url: mxc(attachment.url),
+                    info: %{
+                      h: 640,
+                      w: 480,
+                      size: 500_000,
+                      mimetype: attachment.pleroma.mime_type
+                    }
+                  },
+                  type: "m.room.message",
+                  event_id: attachment.id,
+                  room_id: chat.id,
+                  sender: matrix_name(author),
+                  origin_server_ts: date |> DateTime.to_unix(:millisecond),
+                  unsigned: %{
+                    age: DateTime.diff(DateTime.utc_now(), date, :millisecond)
+                  }
+                }
+
+                [att | messages]
+              else
+                messages
+              end
+
+            messages
           end)
+          |> List.flatten()
+          |> Enum.reverse()
 
         room = %{
           chat.id => %{
@@ -197,7 +264,7 @@ defmodule Pleroma.Web.MatrixController do
               "m.joined_member_count" => 2,
               "m.invited_member_count" => 0
             },
-            state: %{events: []},
+            state: %{events: membership_events},
             ephemeral: %{events: []},
             timeline: %{
               events: messages,
@@ -259,12 +326,21 @@ defmodule Pleroma.Web.MatrixController do
       |> String.trim_trailing("@#{Pleroma.Web.Endpoint.host()}")
 
     user = User.get_by_nickname(nickname)
+    avatar = User.avatar_url(user) |> MediaProxy.url()
 
     data = %{
-      displayname: user.name
+      displayname: user.name,
+      avatar_url: mxc(avatar)
     }
 
     conn
     |> json(data)
+  end
+
+  def download(conn, params) do
+    {:ok, url} = params["file"] |> Base.decode64()
+
+    conn
+    |> redirect(external: url)
   end
 end

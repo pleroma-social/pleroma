@@ -717,6 +717,7 @@ defmodule Pleroma.Web.Router do
     post("/client/r0/login", MatrixController, :login)
     get("/client/r0/presence/:user_id/status", MatrixController, :presence_status)
     get("/client/r0/user/:user_id/filter/:filter_id", MatrixController, :filter)
+    get("/media/r0/download/:authority/:file", MatrixController, :download)
   end
 
   scope "/_matrix", Pleroma.Web do

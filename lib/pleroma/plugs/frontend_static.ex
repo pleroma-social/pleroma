@@ -32,6 +32,9 @@ defmodule Pleroma.Plugs.FrontendStatic do
     |> Plug.Static.init()
   end
 
+  def call(%{path_info: ["_matrix" | _]} = conn, _opts), do: conn
+  def call(%{path_info: ["api" | _]} = conn, _opts), do: conn
+
   def call(conn, opts) do
     frontend_type = Map.get(opts, :frontend_type, :primary)
     path = file_path("", frontend_type)
