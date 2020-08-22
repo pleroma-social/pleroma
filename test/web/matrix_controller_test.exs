@@ -118,7 +118,7 @@ defmodule Pleroma.Web.MatrixControllerTest do
         |> get("_matrix/client/r0/sync?since=#{cmr_two.id}")
         |> json_response(200)
 
-      refute joined_rooms[chat_two.id]
+      assert joined_rooms[chat_two.id]
       assert chat_room = joined_rooms[chat.id]
       assert [message] = chat_room["timeline"]["events"]
       assert message["content"]["body"] == "morning weebs"

@@ -292,16 +292,12 @@ defmodule Pleroma.Web.MatrixController do
           }
         }
 
-        if length(messages) > 0 do
-          Map.merge(acc, room)
-        else
-          acc
-        end
+        Map.merge(acc, room)
       end)
 
     most_recent_cmr_id =
       Enum.reduce(chats, nil, fn {_k, chat}, acc ->
-        id = List.last(chat.timeline.events).event_id
+        id = List.last(chat.timeline.events)[:event_id]
 
         if !acc || (acc && acc < id) do
           id
