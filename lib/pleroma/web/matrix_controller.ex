@@ -24,7 +24,14 @@ defmodule Pleroma.Web.MatrixController do
   plug(
     OAuthScopesPlug,
     %{scopes: ["write"]}
-    when action in [:set_presence_status, :set_filter]
+    when action in [
+           :set_presence_status,
+           :set_filter,
+           :send_event,
+           :set_read_marker,
+           :typing,
+           :set_account_data
+         ]
   )
 
   plug(
@@ -40,11 +47,9 @@ defmodule Pleroma.Web.MatrixController do
            :room_keys_version,
            :key_upload,
            :capabilities,
-           :set_read_marker,
            :room_members,
            :publicised_groups,
-           :turn_server,
-           :send_event
+           :turn_server
          ]
   )
 
@@ -521,5 +526,15 @@ defmodule Pleroma.Web.MatrixController do
     conn
     |> put_status(404)
     |> json("not found")
+  end
+
+  def typing(conn, _) do
+    conn
+    |> json(%{})
+  end
+
+  def set_account_data(conn, _) do
+    conn
+    |> json(%{})
   end
 end
