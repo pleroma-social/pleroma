@@ -428,7 +428,14 @@ defmodule Pleroma.Web.MatrixController do
   end
 
   # Just pretend it worked
-  def set_read_marker(conn, _) do
+  def set_read_marker(%{assigns: %{user: %{id: user_id}}} = conn, %{
+        "m.fully_read" => read_up_to,
+        "room_id" => chat_id
+      }) do
+    with %Chat{user_id: ^user_id} = chat <- Chat.get_by_id(chat_id) do
+      MessageReference.set_all_seen_for_chat(chat, read_up_to)
+    end
+
     conn
     |> json(%{})
   end

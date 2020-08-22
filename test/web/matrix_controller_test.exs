@@ -11,38 +11,60 @@ defmodule Pleroma.Web.MatrixControllerTest do
   alias Pleroma.Object
   import Pleroma.Factory
 
-  describe "sync" do
-    setup do
-      %{user: user, conn: conn} = oauth_access(["read"])
-      other_user = insert(:user)
-      third_user = insert(:user)
+  setup do
+    %{user: user, conn: conn} = oauth_access(["read"])
+    other_user = insert(:user)
+    third_user = insert(:user)
 
-      {:ok, chat_activity} = CommonAPI.post_chat_message(user, other_user, "Hey")
-      {:ok, chat_activity_two} = CommonAPI.post_chat_message(third_user, user, "Henlo")
+    {:ok, chat_activity} = CommonAPI.post_chat_message(user, other_user, "Hey")
+    {:ok, chat_activity_two} = CommonAPI.post_chat_message(third_user, user, "Henlo")
 
-      chat = Chat.get(user.id, other_user.ap_id)
-      chat_two = Chat.get(user.id, third_user.ap_id)
+    chat = Chat.get(user.id, other_user.ap_id)
+    chat_two = Chat.get(user.id, third_user.ap_id)
 
+    chat_object = Object.normalize(chat_activity)
+    cmr = MessageReference.for_chat_and_object(chat, chat_object)
+
+    chat_object_two = Object.normalize(chat_activity_two)
+    cmr_two = MessageReference.for_chat_and_object(chat_two, chat_object_two)
+
+    %{
+      user: user,
+      other_user: other_user,
+      third_user: third_user,
+      conn: conn,
+      chat_activity: chat_activity,
+      chat_activity_two: chat_activity_two,
+      chat: chat,
+      chat_two: chat_two,
+      cmr: cmr,
+      cmr_two: cmr_two
+    }
+  end
+
+  describe "setting read markers" do
+    test "it sets all messages up to a point as read", %{
+      conn: conn,
+      cmr: cmr,
+      chat: chat,
+      user: user,
+      other_user: other_user
+    } do
+      {:ok, chat_activity} = CommonAPI.post_chat_message(other_user, user, "morning weebs 2")
       chat_object = Object.normalize(chat_activity)
-      cmr = MessageReference.for_chat_and_object(chat, chat_object)
 
-      chat_object_two = Object.normalize(chat_activity_two)
-      cmr_two = MessageReference.for_chat_and_object(chat_two, chat_object_two)
+      conn
+      |> post("/_matrix/client/r0/rooms/#{chat.id}/read_markers", %{"m.fully_read": cmr.id})
 
-      %{
-        user: user,
-        other_user: other_user,
-        third_user: third_user,
-        conn: conn,
-        chat_activity: chat_activity,
-        chat_activity_two: chat_activity_two,
-        chat: chat,
-        chat_two: chat_two,
-        cmr: cmr,
-        cmr_two: cmr_two
-      }
+      cmr_two = MessageReference.for_chat_and_object(chat, chat_object)
+      assert cmr_two.unread
+
+      cmr = MessageReference.get_by_id(cmr.id)
+      refute cmr.unread
     end
+  end
 
+  describe "sync" do
     test "without options, it returns all chat messages the user has", %{
       conn: conn,
       chat: chat,
