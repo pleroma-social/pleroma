@@ -135,7 +135,7 @@ defmodule Pleroma.Web.MatrixController do
 
   def set_filter(conn, params) do
     filter_id = :crypto.strong_rand_bytes(32) |> Base.url_encode64(padding: false)
-    Cachex.put(:matrix_compat, "filter:#{filter_id}", params)
+    Cachex.put(:matrix_cache, "filter:#{filter_id}", params)
 
     data = %{
       filter_id: filter_id
@@ -146,11 +146,11 @@ defmodule Pleroma.Web.MatrixController do
   end
 
   def filter(conn, params) do
-    result = Cachex.get(:matrix_compat, "filter:#{params["filter_id"]}")
+    {:ok, result} = Cachex.get(:matrix_cache, "filter:#{params["filter_id"]}")
 
     conn
     |> put_status(200)
-    |> json(result)
+    |> json(result || %{})
   end
 
   defp matrix_name(%{local: true, nickname: nick}) do
@@ -209,6 +209,7 @@ defmodule Pleroma.Web.MatrixController do
             author = User.get_cached_by_ap_id(chat_data["actor"])
 
             {:ok, date, _} = DateTime.from_iso8601(chat_data["published"])
+            {:ok, txn_id} = Cachex.get(:matrix_cache, "txn_id:#{message.id}")
 
             messages = [
               %{
@@ -224,7 +225,8 @@ defmodule Pleroma.Web.MatrixController do
                 sender: matrix_name(author),
                 origin_server_ts: date |> DateTime.to_unix(:millisecond),
                 unsigned: %{
-                  age: DateTime.diff(DateTime.utc_now(), date, :millisecond)
+                  age: DateTime.diff(DateTime.utc_now(), date, :millisecond),
+                  transaction_id: txn_id
                 }
               }
             ]
@@ -504,7 +506,8 @@ defmodule Pleroma.Web.MatrixController do
           "msgtype" => "m.text",
           "body" => body,
           "room_id" => chat_id,
-          "event_type" => "m.room.message"
+          "event_type" => "m.room.message",
+          "txn_id" => txn_id
         }
       ) do
     with %Chat{user_id: ^user_id, recipient: recipient_id} = chat <- Chat.get_by_id(chat_id),
@@ -512,6 +515,12 @@ defmodule Pleroma.Web.MatrixController do
          {:ok, activity} <- CommonAPI.post_chat_message(user, recipient, body) do
       object = Object.normalize(activity, false)
       cmr = MessageReference.for_chat_and_object(chat, object)
+
+      # Hard to believe, but element (web) does not use the event id to figure out
+      # if an event returned via sync is the same as the event we send off, but 
+      # instead it uses this transaction id, so if we don't save this (for a
+      # little while) we get doubled messages in the frontend.
+      Cachex.put(:matrix_cache, "txn_id:#{cmr.id}", txn_id)
 
       data = %{
         event_id: cmr.id
