@@ -161,7 +161,7 @@ defmodule Pleroma.Web.MatrixController do
   end
 
   def sync(%{assigns: %{user: user}} = conn, params) do
-    with {:ok, timeout} <- Ecto.Type.cast(:integer, params["timeout"]) do
+    with {:ok, timeout} when not is_nil(timeout) <- Ecto.Type.cast(:integer, params["timeout"]) do
       :timer.sleep(timeout)
     end
 
@@ -183,9 +183,21 @@ defmodule Pleroma.Web.MatrixController do
           [user, recipient]
           |> membership_events_from_list(chat)
 
-        messages =
+        q =
           chat
           |> MessageReference.for_chat_query()
+
+        q =
+          if since = params["since"] do
+            from(mr in q,
+              where: mr.id > ^since
+            )
+          else
+            q
+          end
+
+        messages =
+          q
           |> Repo.all()
           |> Enum.map(fn message ->
             chat_data = message.object.data
@@ -273,12 +285,16 @@ defmodule Pleroma.Web.MatrixController do
           }
         }
 
-        Map.merge(acc, room)
+        if length(messages) > 0 do
+          Map.merge(acc, room)
+        else
+          acc
+        end
       end)
 
     most_recent_cmr_id =
       Enum.reduce(chats, nil, fn {_k, chat}, acc ->
-        id = List.first(chat.timeline.events).event_id
+        id = List.last(chat.timeline.events).event_id
 
         if !acc || (acc && acc < id) do
           id
