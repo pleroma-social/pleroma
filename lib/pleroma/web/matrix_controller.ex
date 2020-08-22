@@ -384,7 +384,7 @@ defmodule Pleroma.Web.MatrixController do
   # Not documented, guessing what's expected here
   def joined_groups(conn, _) do
     data = %{
-      joined: %{}
+      groups: []
     }
 
     conn
