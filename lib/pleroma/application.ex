@@ -94,7 +94,8 @@ defmodule Pleroma.Application do
         chat_child(@env, chat_enabled?()) ++
         [
           Pleroma.Web.Endpoint,
-          Pleroma.Gopher.Server
+          Pleroma.Gopher.Server,
+          {Phoenix.PubSub.PG2, name: :matrix}
         ]
 
     # See http://elixir-lang.org/docs/stable/elixir/Supervisor.html

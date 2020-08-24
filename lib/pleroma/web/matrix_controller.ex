@@ -167,7 +167,14 @@ defmodule Pleroma.Web.MatrixController do
 
   def sync(%{assigns: %{user: user}} = conn, params) do
     with {:ok, timeout} when not is_nil(timeout) <- Ecto.Type.cast(:integer, params["timeout"]) do
-      :timer.sleep(timeout)
+      Phoenix.PubSub.subscribe(:matrix, "user:#{user.id}")
+
+      receive do
+        _ -> :ok
+      after
+        timeout ->
+          :timeout
+      end
     end
 
     blocked_ap_ids = User.blocked_users_ap_ids(user)

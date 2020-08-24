@@ -414,6 +414,12 @@ defmodule Pleroma.Web.ActivityPub.SideEffects do
     Keyword.get(meta, :streamables, [])
     |> Enum.each(fn {topics, items} ->
       Streamer.stream(topics, items)
+
+      # Tell the matrix controller that a new message is there so it can
+      # start fetching.
+      with {%User{id: user_id}, %MessageReference{}} <- items do
+        Phoenix.PubSub.broadcast(:matrix, "user:#{user_id}", :chat)
+      end
     end)
 
     meta
