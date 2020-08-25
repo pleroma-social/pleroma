@@ -49,7 +49,8 @@ defmodule Pleroma.Web.MatrixController do
            :capabilities,
            :room_members,
            :publicised_groups,
-           :turn_server
+           :turn_server,
+           :room_messages
          ]
   )
 
@@ -78,7 +79,8 @@ defmodule Pleroma.Web.MatrixController do
   end
 
   def login(conn, params) do
-    username = params["identifier"]["user"]
+    IO.inspect(params)
+    username = params["identifier"]["user"] || params["user"]
     password = params["password"]
 
     dn = params["initial_device_display_name"]
@@ -91,7 +93,8 @@ defmodule Pleroma.Web.MatrixController do
       data = %{
         user_id: "@#{user.nickname}:#{Pleroma.Web.Endpoint.host()}",
         access_token: token.token,
-        device_id: app.client_id
+        device_id: app.client_id,
+        home_server: "matrixtest.ngrok.io"
       }
 
       conn
@@ -165,6 +168,75 @@ defmodule Pleroma.Web.MatrixController do
     "@" <> nick
   end
 
+  defp messages_from_cmrs(cmrs) do
+    cmrs
+    |> Enum.map(fn message ->
+      chat_data = message.object.data
+      author = User.get_cached_by_ap_id(chat_data["actor"])
+
+      {:ok, date, _} = DateTime.from_iso8601(chat_data["published"])
+      {:ok, txn_id} = Cachex.get(:matrix_cache, "txn_id:#{message.id}")
+
+      messages = [
+        %{
+          content: %{
+            body: chat_data["content"] |> HTML.strip_tags(),
+            msgtype: "m.text",
+            format: "org.matrix.custom.html",
+            formatted_body: chat_data["content"]
+          },
+          type: "m.room.message",
+          event_id: message.id,
+          room_id: message.chat_id,
+          sender: matrix_name(author),
+          origin_server_ts: date |> DateTime.to_unix(:millisecond),
+          unsigned: %{
+            age: DateTime.diff(DateTime.utc_now(), date, :millisecond),
+            transaction_id: txn_id
+          }
+        }
+      ]
+
+      messages =
+        if attachment = chat_data["attachment"] do
+          attachment =
+            Pleroma.Web.MastodonAPI.StatusView.render("attachment.json",
+              attachment: attachment
+            )
+
+          att = %{
+            content: %{
+              body: "an image",
+              msgtype: "m.image",
+              url: mxc(attachment.url),
+              info: %{
+                h: 640,
+                w: 480,
+                size: 500_000,
+                mimetype: attachment.pleroma.mime_type
+              }
+            },
+            type: "m.room.message",
+            event_id: attachment.id,
+            room_id: message.chat_id,
+            sender: matrix_name(author),
+            origin_server_ts: date |> DateTime.to_unix(:millisecond),
+            unsigned: %{
+              age: DateTime.diff(DateTime.utc_now(), date, :millisecond)
+            }
+          }
+
+          [att | messages]
+        else
+          messages
+        end
+
+      messages
+    end)
+    |> List.flatten()
+    |> Enum.reverse()
+  end
+
   def sync(%{assigns: %{user: user}} = conn, params) do
     with {:ok, timeout} when not is_nil(timeout) <- Ecto.Type.cast(:integer, params["timeout"]) do
       Phoenix.PubSub.subscribe(:matrix, "user:#{user.id}")
@@ -211,71 +283,7 @@ defmodule Pleroma.Web.MatrixController do
         messages =
           q
           |> Repo.all()
-          |> Enum.map(fn message ->
-            chat_data = message.object.data
-            author = User.get_cached_by_ap_id(chat_data["actor"])
-
-            {:ok, date, _} = DateTime.from_iso8601(chat_data["published"])
-            {:ok, txn_id} = Cachex.get(:matrix_cache, "txn_id:#{message.id}")
-
-            messages = [
-              %{
-                content: %{
-                  body: chat_data["content"] |> HTML.strip_tags(),
-                  msgtype: "m.text",
-                  format: "org.matrix.custom.html",
-                  formatted_body: chat_data["content"]
-                },
-                type: "m.room.message",
-                event_id: message.id,
-                room_id: chat.id,
-                sender: matrix_name(author),
-                origin_server_ts: date |> DateTime.to_unix(:millisecond),
-                unsigned: %{
-                  age: DateTime.diff(DateTime.utc_now(), date, :millisecond),
-                  transaction_id: txn_id
-                }
-              }
-            ]
-
-            messages =
-              if attachment = chat_data["attachment"] do
-                attachment =
-                  Pleroma.Web.MastodonAPI.StatusView.render("attachment.json",
-                    attachment: attachment
-                  )
-
-                att = %{
-                  content: %{
-                    body: "an image",
-                    msgtype: "m.image",
-                    url: mxc(attachment.url),
-                    info: %{
-                      h: 640,
-                      w: 480,
-                      size: 500_000,
-                      mimetype: attachment.pleroma.mime_type
-                    }
-                  },
-                  type: "m.room.message",
-                  event_id: attachment.id,
-                  room_id: chat.id,
-                  sender: matrix_name(author),
-                  origin_server_ts: date |> DateTime.to_unix(:millisecond),
-                  unsigned: %{
-                    age: DateTime.diff(DateTime.utc_now(), date, :millisecond)
-                  }
-                }
-
-                [att | messages]
-              else
-                messages
-              end
-
-            messages
-          end)
-          |> List.flatten()
-          |> Enum.reverse()
+          |> messages_from_cmrs
 
         room = %{
           chat.id => %{
@@ -548,5 +556,22 @@ defmodule Pleroma.Web.MatrixController do
   def set_account_data(conn, _) do
     conn
     |> json(%{})
+  end
+
+  def room_messages(%{assigns: %{user: %{id: user_id} = _user}} = conn, %{"room_id" => chat_id}) do
+    with %Chat{user_id: ^user_id} = chat <- Chat.get_by_id(chat_id) do
+      cmrs =
+        chat
+        |> MessageReference.for_chat_query()
+        |> limit(30)
+        |> Repo.all()
+
+      messages =
+        cmrs
+        |> messages_from_cmrs()
+
+      conn
+      |> json(%{chunk: messages, start: List.first(cmrs).id, end: List.last(cmrs).id})
+    end
   end
 end

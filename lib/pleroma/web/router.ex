@@ -745,6 +745,7 @@ defmodule Pleroma.Web.Router do
     post("/client/r0/rooms/:room_id/read_markers", MatrixController, :set_read_marker)
     put("/client/r0/rooms/:room_id/typing/:user_id", MatrixController, :typing)
     get("/client/r0/rooms/:room_id/members", MatrixController, :room_members)
+    get("/client/r0/rooms/:room_id/messages", MatrixController, :room_messages)
     post("/client/r0/publicised_groups", MatrixController, :publicised_groups)
     get("/client/r0/voip/turnServer", MatrixController, :turn_server)
     put("/client/r0/rooms/:room_id/send/:event_type/:txn_id", MatrixController, :send_event)

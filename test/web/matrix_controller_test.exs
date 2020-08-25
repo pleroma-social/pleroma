@@ -124,4 +124,20 @@ defmodule Pleroma.Web.MatrixControllerTest do
       assert message["content"]["body"] == "morning weebs"
     end
   end
+
+  describe "room messages" do
+    test "it returns messages", %{
+      conn: conn,
+      chat: chat
+    } do
+      res =
+        conn
+        |> get("_matrix/client/r0/rooms/#{chat.id}/messages")
+        |> json_response(200)
+
+      assert res["chunk"]
+      assert res["start"]
+      assert res["end"]
+    end
+  end
 end
