@@ -86,10 +86,27 @@ defmodule Pleroma.Web.Federator do
         {:error, :already_present}
 
       e ->
-        # Just drop those for now
+        if Pleroma.Config.get([:debug_failed_activities, :enabled]) do
+          save_failed_activity(params)
+        end
+
         Logger.debug("Unhandled activity")
         Logger.debug(Jason.encode!(params, pretty: true))
         {:error, e}
+    end
+  end
+
+  defp save_failed_activity(params) do
+    folder = Pleroma.Config.get([:debug_failed_activities, :folder], "failed_activities")
+    File.mkdir_p!(folder)
+    filename = URI.encode_www_form(params["id"] || Ecto.UUID.generate())
+
+    case File.write(Path.join([folder, filename]), Jason.encode!(params)) do
+      {:error, e} ->
+        Logger.debug("Can't write failed activity, reason: #{inspect(e)}")
+
+      _ ->
+        nil
     end
   end
 

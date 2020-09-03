@@ -135,6 +135,27 @@ defmodule Pleroma.Web.FederatorTest do
       assert {:error, :already_present} = ObanHelpers.perform(job)
     end
 
+    test "rejects unknown activities" do
+      params = %{
+        "@context" => "https://www.w3.org/ns/activitystreams",
+        "actor" => "http://mastodon.example.org/users/admin",
+        "type" => "Frobnicate",
+        "id" => "http://mastodon.example.org/users/admin/activities/1"
+      }
+
+      assert {:ok, job} = Federator.incoming_ap_doc(params)
+      assert {:error, _activity} = ObanHelpers.perform(job)
+
+      clear_config([:debug_failed_activities, :enabled], true)
+
+      assert {:ok, job} = Federator.incoming_ap_doc(params)
+      assert {:error, _activity} = ObanHelpers.perform(job)
+
+      debug_folder = Pleroma.Config.get([:debug_failed_activities, :folder])
+
+      assert File.exists?(Path.join(debug_folder, URI.encode_www_form(params["id"])))
+    end
+
     test "rejects incoming AP docs with incorrect origin" do
       params = %{
         "@context" => "https://www.w3.org/ns/activitystreams",
