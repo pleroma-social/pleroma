@@ -87,7 +87,7 @@ To add configuration to your config file, you can copy it from the base config. 
       direct_message: [
         enabled: true,
         sender_nickname: "lain",
-        message: "Hi, @username! Welcome on board!"
+        message: "Hi! Welcome on board!"
         ],
       email: [
         enabled: true,
@@ -361,6 +361,7 @@ config :pleroma, Pleroma.Web.MediaProxy.Invalidation.Http,
 * `ignore_hosts`: list of hosts which will be ignored by the metadata parser. For example `["accounts.google.com", "xss.website"]`, defaults to `[]`.
 * `ignore_tld`: list TLDs (top-level domains) which will ignore for parse metadata. default is ["local", "localdomain", "lan"].
 * `parsers`: list of Rich Media parsers.
+* `failure_backoff`: Amount of milliseconds after request failure, during which the request will not be retried.
 
 ## HTTP server
 
@@ -1070,11 +1071,11 @@ Control favicons for instances.
 
 Frontends in Pleroma are swappable - you can specify which one to use here.
 
-For now, you can set a frontend with the key `primary` and the options of `name` and `ref`. This will then make Pleroma serve the frontend from a folder constructed by concatenating the instance static path, `frontends` and the name and ref.
+You can set a frontends for the key `primary` and `admin` and the options of `name` and `ref`. This will then make Pleroma serve the frontend from a folder constructed by concatenating the instance static path, `frontends` and the name and ref.
 
-The key `primary` refers to the frontend that will be served by default for general requests. In the future, other frontends like the admin frontend will also be configurable here.
+The key `primary` refers to the frontend that will be served by default for general requests. The key `admin` refers to the frontend that will be served at the `/pleroma/admin` path.
 
-If you don't set anything here, the bundled frontend will be used.
+If you don't set anything here, the bundled frontends will be used.
 
 Example:
 
@@ -1083,6 +1084,10 @@ config :pleroma, :frontends,
   primary: %{
     "name" => "pleroma",
     "ref" => "stable"
+  },
+  admin: %{
+    "name" => "admin",
+    "ref" => "develop"
   }
 ```
 

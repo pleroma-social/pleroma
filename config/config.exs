@@ -412,6 +412,7 @@ config :pleroma, :rich_media,
     Pleroma.Web.RichMedia.Parsers.TwitterCard,
     Pleroma.Web.RichMedia.Parsers.OEmbed
   ],
+  failure_backoff: 60_000,
   ttl_setters: [Pleroma.Web.RichMedia.Parser.TTL.AwsSignedUrl]
 
 config :pleroma, :media_proxy,
@@ -671,7 +672,50 @@ config :pleroma, :static_fe, enabled: false
 # With no frontend configuration, the bundled files from the `static` directory will
 # be used.
 #
-# config :pleroma, :frontends, primary: %{"name" => "pleroma", "ref" => "develop"}
+# config :pleroma, :frontends, 
+# primary: %{"name" => "pleroma-fe", "ref" => "develop"},
+# admin: %{"name" => "admin-fe", "ref" => "stable"},
+# available: %{...}
+
+config :pleroma, :frontends,
+  available: %{
+    "kenoma" => %{
+      "name" => "kenoma",
+      "git" => "https://git.pleroma.social/lambadalambda/kenoma",
+      "build_url" =>
+        "https://git.pleroma.social/lambadalambda/kenoma/-/jobs/artifacts/${ref}/download?job=build",
+      "ref" => "master"
+    },
+    "pleroma-fe" => %{
+      "name" => "pleroma-fe",
+      "git" => "https://git.pleroma.social/pleroma/pleroma-fe",
+      "build_url" =>
+        "https://git.pleroma.social/pleroma/pleroma-fe/-/jobs/artifacts/${ref}/download?job=build",
+      "ref" => "develop"
+    },
+    "fedi-fe" => %{
+      "name" => "fedi-fe",
+      "git" => "https://git.pleroma.social/pleroma/fedi-fe",
+      "build_url" =>
+        "https://git.pleroma.social/pleroma/fedi-fe/-/jobs/artifacts/${ref}/download?job=build",
+      "ref" => "master"
+    },
+    "admin-fe" => %{
+      "name" => "admin-fe",
+      "git" => "https://git.pleroma.social/pleroma/admin-fe",
+      "build_url" =>
+        "https://git.pleroma.social/pleroma/admin-fe/-/jobs/artifacts/${ref}/download?job=build",
+      "ref" => "develop"
+    },
+    "soapbox-fe" => %{
+      "name" => "soapbox-fe",
+      "git" => "https://gitlab.com/soapbox-pub/soapbox-fe",
+      "build_url" =>
+        "https://gitlab.com/soapbox-pub/soapbox-fe/-/jobs/artifacts/${ref}/download?job=build-production",
+      "ref" => "v1.0.0",
+      "build_dir" => "static"
+    }
+  }
 
 config :pleroma, :web_cache_ttl,
   activity_pub: nil,
@@ -697,19 +741,23 @@ config :pleroma, :connections_pool,
 config :pleroma, :pools,
   federation: [
     size: 50,
-    max_waiting: 10
+    max_waiting: 10,
+    timeout: 10_000
   ],
   media: [
     size: 50,
-    max_waiting: 10
+    max_waiting: 10,
+    timeout: 10_000
   ],
   upload: [
     size: 25,
-    max_waiting: 5
+    max_waiting: 5,
+    timeout: 15_000
   ],
   default: [
     size: 10,
-    max_waiting: 2
+    max_waiting: 2,
+    timeout: 5_000
   ]
 
 config :pleroma, :hackney_pools,
