@@ -22,6 +22,8 @@ defmodule Pleroma.Web.MastodonAPI.AccountViewTest do
   setup do: clear_config([:instances_favicons, :enabled])
 
   test "Represent a user account" do
+    clear_config([:instances_favicons, :enabled], true)
+
     background_image = %{
       "url" => [%{"href" => "https://example.com/images/asuka_hospital.png"}]
     }
@@ -133,6 +135,8 @@ defmodule Pleroma.Web.MastodonAPI.AccountViewTest do
   end
 
   test "Represent a Service(bot) account" do
+    clear_config([:instances_favicons, :enabled], true)
+
     user =
       insert(:user, %{
         follower_count: 3,
