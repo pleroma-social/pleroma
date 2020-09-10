@@ -126,7 +126,6 @@ defmodule Pleroma.Object.FetcherTest do
         Fetcher.fetch_object_from_id("http://mastodon.example.org/@admin/99541947525187367")
 
       assert activity = Activity.get_create_by_object_ap_id(object.data["id"])
-      assert activity.data["id"]
 
       {:ok, object_again} =
         Fetcher.fetch_object_from_id("http://mastodon.example.org/@admin/99541947525187367")
