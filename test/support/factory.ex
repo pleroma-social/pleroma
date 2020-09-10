@@ -77,7 +77,13 @@ defmodule Pleroma.Factory do
       "like_count" => 0,
       "context" => "2hu",
       "summary" => "2hu",
-      "tag" => ["2hu"],
+      "tag" => [
+        %{
+          "type" => "Hashtag",
+          "name" => "#2hu",
+          "href" => Pleroma.Web.Endpoint.url() <> "/tags/2hu"
+        }
+      ],
       "emoji" => %{
         "2hu" => "corndog.png"
       }

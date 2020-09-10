@@ -467,7 +467,7 @@ defmodule Pleroma.Web.ActivityPub.ActivityPubControllerTest do
         File.read!("test/fixtures/mastodon-post-activity.json")
         |> Poison.decode!()
         |> Map.put("actor", user.ap_id)
-        |> put_in(["object", "attridbutedTo"], user.ap_id)
+        |> put_in(["object", "attributedTo"], user.ap_id)
 
       conn =
         conn
@@ -754,14 +754,9 @@ defmodule Pleroma.Web.ActivityPub.ActivityPubControllerTest do
       data =
         File.read!("test/fixtures/activitypub-client-post-activity.json")
         |> Poison.decode!()
-
-      object = Map.put(data["object"], "attributedTo", actor.ap_id)
-
-      data =
-        data
         |> Map.put("id", Utils.generate_object_id())
         |> Map.put("actor", actor.ap_id)
-        |> Map.put("object", object)
+        |> Kernel.put_in(["object", "attributedTo"], actor.ap_id)
         |> Map.put("cc", [
           recipient.follower_address,
           actor.follower_address
