@@ -59,7 +59,7 @@ defmodule Pleroma.Web.ActivityPub.Pipeline do
   defp validation_fixups(message, meta) do
     message =
       if message["tag"] do
-        tag = Object.hashtags(%Object{data: message}) ++ (message["tag"] || [])
+        tag = (message["tag"] || []) ++ Object.hashtags(%Object{data: message})
         Map.put(message, "tag", tag)
       else
         message
