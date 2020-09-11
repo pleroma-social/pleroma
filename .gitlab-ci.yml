@@ -257,6 +257,15 @@ arm64:
   before_script: *before-release
   script: *release
 
+arm64qemu:
+  stage: release
+  artifacts: *release-artifacts
+  image: arm64v8/elixir:1.10.3
+  cache: *release-cache
+  variables: *release-variables
+  before_script: *before-release
+  script: *release
+
 arm64-musl:
   stage: release
   artifacts: *release-artifacts
