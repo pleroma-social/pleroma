@@ -294,9 +294,10 @@ defmodule Pleroma.Web.ActivityPub.Transmogrifier.NoteHandlingTest do
       object = Map.put(data["object"], "likes", likes)
       data = Map.put(data, "object", object)
 
-      {:ok, %Activity{object: object}} = Transmogrifier.handle_incoming(data)
+      {:ok, %Activity{} = activity} = Transmogrifier.handle_incoming(data)
 
-      refute Map.has_key?(object.data, "likes")
+      %Object{data: object} = Object.normalize(activity)
+      assert object["likes"] == []
     end
 
     test "it strips internal reactions" do
