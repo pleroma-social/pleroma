@@ -577,7 +577,11 @@ defmodule Pleroma.Web.ActivityPub.ActivityPubControllerTest do
 
     test "it inserts an incoming activity into the database", %{conn: conn, data: data} do
       user = insert(:user)
-      data = Map.put(data, "bcc", [user.ap_id])
+
+      data =
+        data
+        |> Map.put("bcc", [user.ap_id])
+        |> Kernel.put_in(["object", "bcc"], [user.ap_id])
 
       conn =
         conn
@@ -594,8 +598,11 @@ defmodule Pleroma.Web.ActivityPub.ActivityPubControllerTest do
       user = insert(:user)
 
       data =
-        Map.put(data, "to", user.ap_id)
-        |> Map.delete("cc")
+        data
+        |> Map.put("to", user.ap_id)
+        |> Map.put("cc", [])
+        |> Kernel.put_in(["object", "to"], user.ap_id)
+        |> Kernel.put_in(["object", "cc"], [])
 
       conn =
         conn
@@ -612,8 +619,11 @@ defmodule Pleroma.Web.ActivityPub.ActivityPubControllerTest do
       user = insert(:user)
 
       data =
-        Map.put(data, "cc", user.ap_id)
-        |> Map.delete("to")
+        data
+        |> Map.put("to", [])
+        |> Map.put("cc", user.ap_id)
+        |> Kernel.put_in(["object", "to"], [])
+        |> Kernel.put_in(["object", "cc"], user.ap_id)
 
       conn =
         conn
@@ -631,9 +641,13 @@ defmodule Pleroma.Web.ActivityPub.ActivityPubControllerTest do
       user = insert(:user)
 
       data =
-        Map.put(data, "bcc", user.ap_id)
-        |> Map.delete("to")
-        |> Map.delete("cc")
+        data
+        |> Map.put("to", [])
+        |> Map.put("cc", [])
+        |> Map.put("bcc", user.ap_id)
+        |> Kernel.put_in(["object", "to"], [])
+        |> Kernel.put_in(["object", "cc"], [])
+        |> Kernel.put_in(["object", "bcc"], user.ap_id)
 
       conn =
         conn
@@ -751,21 +765,24 @@ defmodule Pleroma.Web.ActivityPub.ActivityPubControllerTest do
     test "it removes all follower collections but actor's", %{conn: conn} do
       [actor, recipient] = insert_pair(:user)
 
+      to = [
+        recipient.ap_id,
+        recipient.follower_address,
+        "https://www.w3.org/ns/activitystreams#Public"
+      ]
+
+      cc = [recipient.follower_address, actor.follower_address]
+
       data =
         File.read!("test/fixtures/activitypub-client-post-activity.json")
         |> Poison.decode!()
         |> Map.put("id", Utils.generate_object_id())
         |> Map.put("actor", actor.ap_id)
+        |> Map.put("to", to)
+        |> Map.put("cc", cc)
         |> Kernel.put_in(["object", "attributedTo"], actor.ap_id)
-        |> Map.put("cc", [
-          recipient.follower_address,
-          actor.follower_address
-        ])
-        |> Map.put("to", [
-          recipient.ap_id,
-          recipient.follower_address,
-          "https://www.w3.org/ns/activitystreams#Public"
-        ])
+        |> Kernel.put_in(["object", "to"], to)
+        |> Kernel.put_in(["object", "cc"], cc)
 
       conn
       |> assign(:valid_signature, true)
