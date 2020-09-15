@@ -50,36 +50,6 @@ defmodule Pleroma.Web.ActivityPub.Transmogrifier.NoteHandlingTest do
              ]
     end
 
-    test "it cleans up incoming notices which are not really DMs" do
-      user = insert(:user)
-      other_user = insert(:user)
-
-      to = [user.ap_id, other_user.ap_id]
-
-      data =
-        File.read!("test/fixtures/mastodon-post-activity.json")
-        |> Jason.decode!()
-        |> Map.put("to", to)
-        |> Map.put("cc", [])
-
-      object =
-        data["object"]
-        |> Map.put("to", to)
-        |> Map.put("cc", [])
-
-      data = Map.put(data, "object", object)
-
-      {:ok, %Activity{data: data, local: false} = activity} = Transmogrifier.handle_incoming(data)
-
-      assert data["to"] == []
-      assert data["cc"] == to
-
-      object_data = Object.normalize(activity).data
-
-      assert object_data["to"] == []
-      assert object_data["cc"] == to
-    end
-
     @tag capture_log: true
     test "it fetches reply-to activities if we don't have them" do
       data =
