@@ -762,6 +762,7 @@ defmodule Pleroma.Web.ActivityPub.ActivityPubControllerTest do
       assert Instances.reachable?(sender_host)
     end
 
+    @tag capture_log: true
     test "it removes all follower collections but actor's", %{conn: conn} do
       [actor, recipient] = insert_pair(:user)
 
@@ -773,16 +774,22 @@ defmodule Pleroma.Web.ActivityPub.ActivityPubControllerTest do
 
       cc = [recipient.follower_address, actor.follower_address]
 
-      data =
-        File.read!("test/fixtures/activitypub-client-post-activity.json")
-        |> Poison.decode!()
-        |> Map.put("id", Utils.generate_object_id())
-        |> Map.put("actor", actor.ap_id)
-        |> Map.put("to", to)
-        |> Map.put("cc", cc)
-        |> Kernel.put_in(["object", "attributedTo"], actor.ap_id)
-        |> Kernel.put_in(["object", "to"], to)
-        |> Kernel.put_in(["object", "cc"], cc)
+      data = %{
+        "@context" => ["https://www.w3.org/ns/activitystreams"],
+        "type" => "Create",
+        "id" => Utils.generate_activity_id(),
+        "to" => to,
+        "cc" => cc,
+        "actor" => actor.ap_id,
+        "object" => %{
+          "type" => "Note",
+          "to" => to,
+          "cc" => cc,
+          "content" => "It's a note",
+          "attributedTo" => actor.ap_id,
+          "id" => Utils.generate_object_id()
+        }
+      }
 
       conn
       |> assign(:valid_signature, true)
@@ -792,7 +799,7 @@ defmodule Pleroma.Web.ActivityPub.ActivityPubControllerTest do
 
       ObanHelpers.perform(all_enqueued(worker: ReceiverWorker))
 
-      activity = Activity.get_by_ap_id(data["id"])
+      assert activity = Activity.get_by_ap_id(data["id"])
 
       assert activity.id
       assert actor.follower_address in activity.recipients
