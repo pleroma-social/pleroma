@@ -190,8 +190,6 @@ defmodule Pleroma.Web.MastodonAPI.StatusViewTest do
       (object_data["published"] || "")
       |> String.replace(~r/\.\d+Z/, ".000Z")
 
-    [%{"type" => "Hashtag", "name" => "#" <> tag}] = object_data["tag"]
-
     expected = %{
       id: to_string(note.id),
       uri: object_data["id"],
@@ -218,7 +216,7 @@ defmodule Pleroma.Web.MastodonAPI.StatusViewTest do
       visibility: "public",
       media_attachments: [],
       mentions: [],
-      tags: [%{name: "##{tag}", url: "/tag/#{tag}"}],
+      tags: [],
       application: %{
         name: "Web",
         website: nil
