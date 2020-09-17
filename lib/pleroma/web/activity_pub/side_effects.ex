@@ -193,6 +193,7 @@ defmodule Pleroma.Web.ActivityPub.SideEffects do
 
       reply_depth = (meta[:depth] || 0) + 1
 
+      # FIXME: Force inReplyTo to replies
       if Pleroma.Web.Federator.allowed_thread_distance?(reply_depth) and
            object.data["replies"] != nil do
         for reply_id <- object.data["replies"] do

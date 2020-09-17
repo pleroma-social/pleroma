@@ -350,7 +350,11 @@ defmodule Pleroma.Web.ActivityPub.Transmogrifier.NoteHandlingTest do
     } do
       Pleroma.Config.put([:instance, :federation_incoming_replies_max_depth], 10)
 
-      {:ok, _activity} = Transmogrifier.handle_incoming(data)
+      {:ok, activity} = Transmogrifier.handle_incoming(data)
+
+      object = Object.normalize(activity.data["object"])
+
+      assert object.data["replies"] == items
 
       for id <- items do
         job_args = %{"op" => "fetch_remote", "id" => id, "depth" => 1}

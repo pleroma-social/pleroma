@@ -86,7 +86,10 @@ defmodule Pleroma.Web.ActivityPub.ObjectValidators.ArticleNoteValidator do
   defp fix_replies(%{"replies" => %{"items" => replies}} = data) when is_list(replies),
     do: Map.put(data, "replies", replies)
 
-  defp fix_replies(data), do: Map.drop(data, ["replies"])
+  defp fix_replies(%{"replies" => replies} = data) when is_bitstring(replies),
+    do: Map.drop(data, ["replies"])
+
+  defp fix_replies(data), do: data
 
   defp fix(data) do
     data
