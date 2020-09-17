@@ -67,8 +67,6 @@ defmodule Pleroma.Web.ActivityPub.ObjectValidators.ArticleNoteValidator do
   end
 
   def cast_data(data) do
-    data = fix(data)
-
     %__MODULE__{}
     |> changeset(data)
   end
