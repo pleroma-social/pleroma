@@ -34,11 +34,12 @@ defmodule Pleroma.Application.DependenciesSupervisor do
 
   defp start_while(children, fun) do
     Enum.reduce_while(children, :ok, fn child, acc ->
-      with {:ok, _} <- fun.(child) do
-        {:cont, acc}
-      else
+      case fun.(child) do
+        {:ok, _} ->
+          {:cont, acc}
+
+        # consider this behavior is normal
         :ignore ->
-          # consider this behavior is normal
           Logger.info("#{inspect(child)} is ignored.")
           {:cont, acc}
 
@@ -54,19 +55,13 @@ defmodule Pleroma.Application.DependenciesSupervisor do
   end
 
   defp start_dynamic_child(child) do
-    with {:ok, pid} = result <- dynamic_child(child),
-         relations when is_list(relations) <- Dependencies.find_relations(child) do
+    with {:ok, relations} <- Dependencies.find_relations(child),
+         {:ok, pid} <- DynamicSupervisor.start_child(__MODULE__, spec(child)) do
       Enum.each(relations, fn {key, _} ->
         DependenciesState.put_pid(key, pid)
       end)
 
-      result
-    end
-  end
-
-  defp dynamic_child(child) do
-    with {:error, _} = error <- DynamicSupervisor.start_child(__MODULE__, spec(child)) do
-      error
+      {:ok, pid}
     end
   end
 
@@ -95,9 +90,10 @@ defmodule Pleroma.Application.DependenciesSupervisor do
   def restart_children do
     DependenciesState.get_and_reset_paths()
     |> Enum.reduce_while(:ok, fn path, acc ->
-      with {:ok, _} <- restart_child(path) do
-        {:cont, acc}
-      else
+      case restart_child(path) do
+        {:ok, _} ->
+          {:cont, acc}
+
         :ignore ->
           Logger.info("path #{inspect(path)} is ignored.")
           {:cont, acc}
@@ -127,7 +123,7 @@ defmodule Pleroma.Application.DependenciesSupervisor do
     with {_, module} <- Dependencies.find_relation(path),
          :ok <- terminate(pid, module),
          # then we search for mappings, which depends on this main module
-         relations when is_list(relations) <- Dependencies.find_relations(module) do
+         {:ok, relations} <- Dependencies.find_relations(module) do
       Enum.each(relations, fn {key, _} ->
         DependenciesState.delete_pid(key)
       end)

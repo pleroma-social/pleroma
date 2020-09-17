@@ -382,7 +382,9 @@ defmodule Pleroma.ConfigDB do
 
   @spec load_and_merge_with_defaults([t()]) :: [{atom(), atom(), term(), term()}]
   def load_and_merge_with_defaults(deleted \\ []) do
-    (Repo.all(ConfigDB) ++ deleted)
+    ConfigDB
+    |> Repo.all()
+    |> Enum.concat(deleted)
     |> Enum.map(&merge_with_defaults/1)
   end
 

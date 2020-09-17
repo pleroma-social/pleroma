@@ -38,14 +38,14 @@ defmodule Mix.Pleroma do
 
     Enum.each(apps, &Application.ensure_all_started/1)
 
-    children =
-      [
-        Pleroma.Repo,
-        Supervisor.child_spec({Task, &Pleroma.Config.Environment.load_and_update/0},
-          id: :update_env
-        ),
-        Pleroma.Web.Endpoint
-      ] ++ additional_childs
+    children = [
+      Pleroma.Repo,
+      Supervisor.child_spec({Task, &Pleroma.Config.Environment.load_and_update/0},
+        id: :update_env
+      ),
+      Pleroma.Web.Endpoint
+      | additional_childs
+    ]
 
     children = [Pleroma.Application.Dependencies.adapter_module() | children]
 

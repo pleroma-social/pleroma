@@ -155,10 +155,14 @@ defmodule Pleroma.Application.Dependencies do
     end)
   end
 
-  @spec find_relations(module()) :: [relation()] | {:error, :relations_not_found}
+  @spec find_relations(module()) :: {:ok, [relation()]} | {:error, :relations_not_found}
   def find_relations(module) do
-    with [] <- Enum.filter(config_relations(), fn {_, m} -> m == module end) do
-      {:error, :relations_not_found}
+    case Enum.filter(config_relations(), fn {_, m} -> m == module end) do
+      [] ->
+        {:error, :relations_not_found}
+
+      relations ->
+        {:ok, relations}
     end
   end
 end
