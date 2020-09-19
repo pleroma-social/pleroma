@@ -85,15 +85,19 @@ defmodule Pleroma.Web.FedSockets.OutgoingHandler do
 
     %{host: host, port: port, path: path} = URI.parse(ws_uri)
 
-    with {:ok, conn_pid} <- :gun.open(to_charlist(host), port),
+    with {:ok, conn_pid} <- :gun.open(to_charlist(host), port, %{protocols: [:http]}),
          {:ok, _} <- :gun.await_up(conn_pid),
          reference <- :gun.get(conn_pid, to_charlist(path)),
-         {:response, :fin, 204, _} <- :gun.await(conn_pid, reference),
+         {:response, :fin, 204, _} <- :gun.await(conn_pid, reference) |> IO.inspect(),
+         :ok <- :gun.flush(conn_pid),
          headers <- build_headers(uri),
          ref <- :gun.ws_upgrade(conn_pid, to_charlist(path), headers, %{silence_pings: false}) do
       receive do
         {:gun_upgrade, ^conn_pid, ^ref, [<<"websocket">>], _} ->
           {:ok, ws_uri, conn_pid}
+
+        mes ->
+          IO.inspect(mes)
       after
         15_000 ->
           Logger.debug("Fedsocket timeout connecting to #{inspect(uri)}")
@@ -118,7 +122,7 @@ defmodule Pleroma.Web.FedSockets.OutgoingHandler do
     shake_size = byte_size(shake)
 
     signature_opts = %{
-      "(request-target)": shake,
+      #      "(request-target)": shake,
       "content-length": to_charlist("#{shake_size}"),
       date: date,
       digest: digest,
@@ -131,8 +135,8 @@ defmodule Pleroma.Web.FedSockets.OutgoingHandler do
       {'signature', to_charlist(signature)},
       {'date', date},
       {'digest', to_charlist(digest)},
-      {'content-length', to_charlist("#{shake_size}")},
-      {to_charlist("(request-target)"), to_charlist(shake)}
+      {'content-length', to_charlist("#{shake_size}")}
+      #      {to_charlist("(request-target)"), to_charlist(shake)}
     ]
   end
 

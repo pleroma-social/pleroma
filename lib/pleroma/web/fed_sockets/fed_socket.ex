@@ -45,35 +45,15 @@ defmodule Pleroma.Web.FedSockets.FedSocket do
     |> send_packet(socket_pid)
   end
 
-  def fetch(%SocketInfo{pid: socket_pid}, id) do
-    fetch_uuid = FetchRegistry.register_fetch(id)
-
-    %{action: :fetch, data: id, uuid: fetch_uuid}
-    |> Jason.encode!()
-    |> send_packet(socket_pid)
-
-    wait_for_fetch_to_return(fetch_uuid, 0)
+  def fetch(%SocketInfo{pid: socket_pid}, data) do
+    timeout = Pleroma.Config.get([:fed_sockets, :fetch_timeout], 12_000)
+    FetchRegistry.fetch(socket_pid, data, timeout)
   end
 
   def receive_package(%SocketInfo{} = fed_socket, json) do
     json
     |> Jason.decode!()
     |> process_package(fed_socket)
-  end
-
-  defp wait_for_fetch_to_return(uuid, cntr) do
-    case FetchRegistry.check_fetch(uuid) do
-      {:error, :waiting} ->
-        Process.sleep(:math.pow(cntr, 3) |> Kernel.trunc())
-        wait_for_fetch_to_return(uuid, cntr + 1)
-
-      {:error, :missing} ->
-        Logger.error("FedSocket fetch timed out - #{inspect(uuid)}")
-        {:error, :timeout}
-
-      {:ok, _fr} ->
-        FetchRegistry.pop_fetch(uuid)
-    end
   end
 
   defp process_package(%{"action" => "publish", "data" => data}, %{origin: origin} = _fed_socket) do
@@ -85,7 +65,7 @@ defmodule Pleroma.Web.FedSockets.FedSocket do
   end
 
   defp process_package(%{"action" => "fetch_reply", "uuid" => uuid, "data" => data}, _fed_socket) do
-    FetchRegistry.register_fetch_received(uuid, data)
+    FetchRegistry.receive_callback(uuid, data)
     {:noreply, nil}
   end
 
@@ -129,7 +109,8 @@ defmodule Pleroma.Web.FedSockets.FedSocket do
     end
   end
 
-  defp send_packet(data, socket_pid) do
+  @spec send_packet(binary(), pid()) :: :ok
+  def send_packet(data, socket_pid) do
     Process.send(socket_pid, {:send, data}, [])
   end
 

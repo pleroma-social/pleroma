@@ -23,129 +23,83 @@ defmodule Pleroma.Web.FedSockets.FetchRegistry do
 
   """
 
-  defmodule FetchRegistryData do
-    defstruct uuid: nil,
-              sent_json: nil,
-              received_json: nil,
-              sent_at: nil,
-              received_at: nil
-  end
-
   alias Ecto.UUID
+  alias Pleroma.Web.FedSockets.FedSocket
 
   require Logger
 
   @fetches :fed_socket_fetches
 
+  @type fetch_id :: Ecto.UUID.t()
+
+  @doc "Synchronous version of `fetch_async/2`"
+  @spec fetch(any(), pid(), pos_integer()) :: {:ok, any()} | {:error, :timeout}
+  def fetch(socket_pid, data, timeout) do
+    fetch_id = fetch_async(socket_pid, data)
+
+    receive do
+      {:fetch, ^fetch_id, response} -> {:ok, response}
+    after
+      timeout ->
+        cancel(fetch_id)
+        {:error, :timeout}
+    end
+  end
+
   @doc """
-  Registers a json request wth the FetchRegistry and returns the identifying UUID.
+  Starts a fetch and returns it's id.
+  Once a reply to a fetch is received, the following message is sent
+  to the caller:
+  `{:fetch, fetch_id, reply}`
   """
-  def register_fetch(json) do
-    %FetchRegistryData{uuid: uuid} =
-      json
-      |> new_registry_data
-      |> save_registry_data
+  @spec fetch_async(any(), pid()) :: fetch_id()
+  def fetch_async(socket_pid, data) do
+    send_to = self()
+    uuid = UUID.generate()
+
+    # Set up a sentinel process to cancel the fetch if the caller exits
+    # before finishing the fetch (i.e the fetch was requested while processing
+    # an http request, but the caller got killed because the client closed the
+    # connection)
+    sentinel =
+      spawn(fn ->
+        ref = Process.monitor(send_to)
+
+        receive do
+          {:DOWN, ^ref, _, _, _} -> cancel(uuid)
+        end
+      end)
+
+    {:ok, true} = Cachex.put(@fetches, uuid, {send_to, sentinel})
+
+    %{action: :fetch, data: data, uuid: uuid}
+    |> Jason.encode!()
+    |> FedSocket.send_packet(socket_pid)
 
     uuid
   end
 
-  @doc """
-  Reports on the status of a Fetch given the identifying UUID.
-
-  Will return
-    * {:ok, fetched_object} if a fetch has completed
-    * {:error, :waiting} if a fetch is still pending
-    * {:error, other_error} usually :missing to indicate a fetch that has timed out
-  """
-  def check_fetch(uuid) do
-    case get_registry_data(uuid) do
-      {:ok, %FetchRegistryData{received_at: nil}} ->
-        {:error, :waiting}
-
-      {:ok, %FetchRegistryData{} = reg_data} ->
-        {:ok, reg_data}
-
-      e ->
-        e
-    end
+  @doc "Removes the fetch from the registry. Any responses to it will be ignored afterwards."
+  @spec cancel(fetch_id()) :: :ok
+  def cancel(id) do
+    {:ok, true} = Cachex.del(@fetches, id)
   end
 
-  @doc """
-  Retrieves the response to a fetch given the identifying UUID.
-  The completed fetch will be deleted from the FetchRegistry
+  @doc "This is called to register a fetch has returned."
+  @spec receive_callback(fetch_id(), any()) :: :ok
+  def receive_callback(uuid, data) do
+    case Cachex.get(@fetches, uuid) do
+      {:ok, {caller, sentinel}} ->
+        :ok = cancel(uuid)
+        Process.exit(sentinel, :normal)
+        send(caller, {:fetch, uuid, data})
 
-  Will return
-    * {:ok, fetched_object} if a fetch has completed
-    * {:error, :waiting} if a fetch is still pending
-    * {:error, other_error} usually :missing to indicate a fetch that has timed out
-  """
-  def pop_fetch(uuid) do
-    case check_fetch(uuid) do
-      {:ok, %FetchRegistryData{received_json: received_json}} ->
-        delete_registry_data(uuid)
-        {:ok, received_json}
-
-      e ->
-        e
-    end
-  end
-
-  @doc """
-  This is called to register a fetch has returned.
-  It expects the result data along with the UUID that was sent in the request
-
-  Will return the fetched object or :error
-  """
-  def register_fetch_received(uuid, data) do
-    case get_registry_data(uuid) do
-      {:ok, %FetchRegistryData{received_at: nil} = reg_data} ->
-        reg_data
-        |> set_fetch_received(data)
-        |> save_registry_data()
-
-      {:ok, %FetchRegistryData{} = reg_data} ->
-        Logger.warn("tried to add fetched data twice - #{uuid}")
-        reg_data
-
-      {:error, _} ->
-        Logger.warn("Error adding fetch to registry - #{uuid}")
-        :error
-    end
-  end
-
-  defp new_registry_data(json) do
-    %FetchRegistryData{
-      uuid: UUID.generate(),
-      sent_json: json,
-      sent_at: :erlang.monotonic_time(:millisecond)
-    }
-  end
-
-  defp get_registry_data(origin) do
-    case Cachex.get(@fetches, origin) do
       {:ok, nil} ->
-        {:error, :missing}
-
-      {:ok, reg_data} ->
-        {:ok, reg_data}
-
-      _ ->
-        {:error, :cache_error}
+        Logger.debug(fn ->
+          "#{__MODULE__}: Got a reply to #{uuid}, but no such fetch is registered. This is probably a timeout."
+        end)
     end
+
+    :ok
   end
-
-  defp set_fetch_received(%FetchRegistryData{} = reg_data, data),
-    do: %FetchRegistryData{
-      reg_data
-      | received_at: :erlang.monotonic_time(:millisecond),
-        received_json: data
-    }
-
-  defp save_registry_data(%FetchRegistryData{uuid: uuid} = reg_data) do
-    {:ok, true} = Cachex.put(@fetches, uuid, reg_data)
-    reg_data
-  end
-
-  defp delete_registry_data(origin),
-    do: {:ok, true} = Cachex.del(@fetches, origin)
 end
