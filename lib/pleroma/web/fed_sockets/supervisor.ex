@@ -12,9 +12,8 @@ defmodule Pleroma.Web.FedSockets.Supervisor do
 
   def init(args) do
     children = [
-      build_cache(:fed_socket_fetches, args),
       build_cache(:fed_socket_rejections, args),
-      {Registry, keys: :unique, name: FedSockets.Registry, meta: [rejected: %{}]}
+      {Registry, keys: :unique, name: FedSockets.Registry}
     ]
 
     opts = [strategy: :one_for_all, name: Pleroma.Web.Streamer.Supervisor]
@@ -31,8 +30,7 @@ defmodule Pleroma.Web.FedSockets.Supervisor do
     }
   end
 
-  defp get_opts(cache_name, args)
-       when cache_name in [:fed_socket_fetches, :fed_socket_rejections] do
+  defp get_opts(:fed_socket_rejections = cache_name, args) do
     default = get_opts_or_config(args, cache_name, :default, 15_000)
     interval = get_opts_or_config(args, cache_name, :interval, 3_000)
     lazy = get_opts_or_config(args, cache_name, :lazy, false)

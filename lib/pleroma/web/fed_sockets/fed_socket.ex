@@ -17,7 +17,6 @@ defmodule Pleroma.Web.FedSockets.FedSocket do
   alias Pleroma.Web.ActivityPub.ObjectView
   alias Pleroma.Web.ActivityPub.UserView
   alias Pleroma.Web.ActivityPub.Visibility
-  alias Pleroma.Web.FedSockets.FetchRegistry
   alias Pleroma.Web.FedSockets.IngesterWorker
   alias Pleroma.Web.FedSockets.OutgoingHandler
   alias Pleroma.Web.FedSockets.SocketInfo
@@ -46,8 +45,8 @@ defmodule Pleroma.Web.FedSockets.FedSocket do
   end
 
   def fetch(%SocketInfo{pid: socket_pid}, data) do
-    timeout = Pleroma.Config.get([:fed_sockets, :fetch_timeout], 12_000)
-    FetchRegistry.fetch(socket_pid, data, timeout)
+    _timeout = Pleroma.Config.get([:fed_sockets, :fetch_timeout], 12_000)
+    OutgoingHandler.fetch(socket_pid, data)
   end
 
   def receive_package(%SocketInfo{} = fed_socket, json) do
@@ -64,18 +63,9 @@ defmodule Pleroma.Web.FedSockets.FedSocket do
     {:reply, %{"action" => "publish_reply", "status" => "processed"}}
   end
 
-  defp process_package(%{"action" => "fetch_reply", "uuid" => uuid, "data" => data}, _fed_socket) do
-    FetchRegistry.receive_callback(uuid, data)
-    {:noreply, nil}
-  end
-
   defp process_package(%{"action" => "fetch", "uuid" => uuid, "data" => ap_id}, _fed_socket) do
     {:ok, data} = render_fetched_data(ap_id, uuid)
     {:reply, data}
-  end
-
-  defp process_package(%{"action" => "publish_reply"}, _fed_socket) do
-    {:noreply, nil}
   end
 
   defp process_package(other, _fed_socket) do

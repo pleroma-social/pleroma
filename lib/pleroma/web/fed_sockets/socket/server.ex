@@ -2,17 +2,28 @@
 # Copyright © 2017-2020 Pleroma Authors <https://pleroma.social/>
 # SPDX-License-Identifier: AGPL-3.0-only
 
-defmodule Pleroma.Web.FedSockets.IncomingHandler do
+defmodule Pleroma.Web.FedSockets.Socket.Server do
   require Logger
 
+  alias Pleroma.Web.FedSockets.Socket
   alias Pleroma.Web.FedSockets.FedRegistry
   alias Pleroma.Web.FedSockets.FedSocket
   alias Pleroma.Web.FedSockets.SocketInfo
 
   import HTTPSignatures, only: [validate_conn: 1, split_signature: 1]
 
-  @behaviour :cowboy_websocket
+  require Logger
 
+  @behaviour :cowboy_websocket
+  @behaviour Socket
+
+  @impl true
+  def fetch(_socket, _data, _timeout), do: {:error, :not_implemented}
+
+  @impl true
+  def publish(_socket, _data), do: {:error, :not_implemented}
+
+  @impl true
   def init(req, state) do
     shake = FedSocket.shake()
 
@@ -30,11 +41,13 @@ defmodule Pleroma.Web.FedSockets.IncomingHandler do
 
       {:cowboy_websocket, req, %{origin: origin}, %{}}
     else
-      _ ->
+      e ->
+        Logger.debug(fn -> "#{__MODULE__}: Websocket switch failed, #{inspect(e)}" end)
         {:ok, req, state}
     end
   end
 
+  @impl true
   def websocket_init(%{origin: origin}) do
     case FedRegistry.add_fed_socket(origin) do
       {:ok, socket_info} ->
@@ -46,28 +59,24 @@ defmodule Pleroma.Web.FedSockets.IncomingHandler do
     end
   end
 
-  # Use the ping to  check if the connection should be expired
-  def websocket_handle(:ping, socket_info) do
-    if SocketInfo.expired?(socket_info) do
-      {:stop, socket_info}
-    else
-      {:ok, socket_info, :hibernate}
-    end
-  end
+  @impl true
+  def websocket_handle(:ping, socket_info), do: {:ok, socket_info}
 
-  def websocket_handle({:text, data}, socket_info) do
+  def websocket_handle({:text, raw_message}, socket_info) do
     socket_info = SocketInfo.touch(socket_info)
 
-    case FedSocket.receive_package(socket_info, data) do
-      {:noreply, _} ->
-        {:ok, socket_info}
+    case Jason.decode(raw_message) do
+      {:ok, message} ->
+        case message do
+          message ->
+            case Socket.process_message(socket_info, message) do
+              :noreply -> {:ok, socket_info}
+              {:reply, data} -> {:reply, Jason.encode!(data), socket_info}
+            end
+        end
 
-      {:reply, reply} ->
-        {:reply, {:text, Jason.encode!(reply)}, socket_info}
-
-      {:error, reason} ->
-        Logger.error("incoming error - receive_package: #{inspect(reason)}")
-        {:ok, socket_info}
+      {:error, decode_error} ->
+        exit({:malformed_message, decode_error})
     end
   end
 
