@@ -33,13 +33,12 @@ build:
   - mix compile --force
 
 spec-build:
-  stage: build
+  stage: test
   artifacts:
     paths:
     - spec.josn
   script:
   - mix pleroma.openapi_spec spec.json
-  needs: ["build"]
 
 benchmark:
   stage: benchmark
