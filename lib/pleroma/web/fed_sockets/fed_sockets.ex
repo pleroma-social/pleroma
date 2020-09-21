@@ -80,9 +80,7 @@ defmodule Pleroma.Web.FedSockets do
   """
   require Logger
 
-  alias Pleroma.Web.FedSockets.FedRegistry
-  alias Pleroma.Web.FedSockets.FedSocket
-  alias Pleroma.Web.FedSockets.SocketInfo
+  alias Pleroma.Web.FedSockets.Registry
 
   @doc """
   returns a FedSocket for the given origin. Will reuse an existing one or create a new one.
@@ -93,93 +91,7 @@ defmodule Pleroma.Web.FedSockets do
   It can and usually does include additional path parameters,
   but these are ignored as the FedSockets are organized by host and port info alone.
   """
-  def get_or_create_fed_socket(address) do
-    with {:cache, {:error, :missing}} <- {:cache, get_fed_socket(address)},
-         {:connect, {:ok, _pid}} <- {:connect, FedSocket.connect_to_host(address)},
-         {:cache, {:ok, fed_socket}} <- {:cache, get_fed_socket(address)} do
-      Logger.debug("fedsocket created for - #{inspect(address)}")
-      {:ok, fed_socket}
-    else
-      {:cache, {:ok, socket}} ->
-        Logger.debug("fedsocket found in cache - #{inspect(address)}")
-        {:ok, socket}
 
-      {:cache, {:error, :rejected} = e} ->
-        e
-
-      {:connect, {:error, _host}} ->
-        Logger.debug("set host rejected for - #{inspect(address)}")
-        FedRegistry.set_host_rejected(address)
-        {:error, :rejected}
-
-      {_, {:error, :disabled}} ->
-        {:error, :disabled}
-
-      {_, {:error, reason}} ->
-        Logger.warn("get_or_create_fed_socket error - #{inspect(reason)}")
-        {:error, reason}
-    end
-  end
-
-  @doc """
-  returns a FedSocket for the given origin. Will not create a new FedSocket if one does not exist.
-
-  address is expected to be a fully formed URL such as:
-    "http://www.example.com" or "http://www.example.com:8080"
-  """
-  def get_fed_socket(address) do
-    origin = SocketInfo.origin(address)
-
-    with {:config, true} <- {:config, Pleroma.Config.get([:fed_sockets, :enabled], false)},
-         {:ok, socket} <- FedRegistry.get_fed_socket(origin) do
-      {:ok, socket}
-    else
-      {:config, _} ->
-        {:error, :disabled}
-
-      {:error, :rejected} ->
-        Logger.debug("FedSocket previously rejected - #{inspect(origin)}")
-        {:error, :rejected}
-
-      {:error, reason} ->
-        {:error, reason}
-    end
-  end
-
-  @doc """
-  Sends the supplied data via the publish protocol.
-  It will not block waiting for a reply.
-  Returns :ok but this is not an indication of a successful transfer.
-
-  the data is expected to be JSON encoded binary data.
-  """
-  def publish(%SocketInfo{} = fed_socket, json) do
-    FedSocket.publish(fed_socket, json)
-  end
-
-  @doc """
-  Sends the supplied data via the fetch protocol.
-  It will block waiting for a reply or timeout.
-
-  Returns {:ok, object} where object is the requested object (or nil)
-          {:error, :timeout} in the event the message was not responded to
-
-  the id is expected to be the URI of an ActivityPub object.
-  """
-  def fetch(%SocketInfo{} = fed_socket, id) do
-    FedSocket.fetch(fed_socket, id)
-  end
-
-  @doc """
-  Disconnect all and restart FedSockets.
-  This is mainly used in development and testing but could be useful in production.
-  """
-  def reset do
-    FedRegistry
-    |> Process.whereis()
-    |> Process.exit(:testing)
-  end
-
-  def uri_for_origin(origin),
-    do: "ws://#{origin}/api/fedsocket/v1"
+  defdelegate fetch(id), to: Registry
+  defdelegate publish(inbox, data), to: Registry
 end

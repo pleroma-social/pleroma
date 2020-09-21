@@ -30,7 +30,10 @@ defmodule Pleroma.Web.FedSockets.Adapter.Cowboy do
   end
 
   @impl true
-  def publish(_socket, _data), do: {:error, :not_implemented}
+  def publish(pid, _, data) do
+    message = %{action: :publish, data: data}
+    send(pid, {:send, Jason.encode!(message)})
+  end
 
   @impl true
   def init(req, state) do
@@ -53,7 +56,9 @@ defmodule Pleroma.Web.FedSockets.Adapter.Cowboy do
     else
       {:has_request_target, headers} ->
         Logger.debug(fn ->
-          "#{__MODULE__}: Wrong or no \"(request-target)\" header. Rejecting websocket switch. Headers:\n#{inspect(headers)}"
+          "#{__MODULE__}: Wrong or no \"(request-target)\" header. Rejecting websocket switch. Headers:\n#{
+            inspect(headers)
+          }"
         end)
 
         :cowboy_req.reply(400, req)
@@ -115,7 +120,7 @@ defmodule Pleroma.Web.FedSockets.Adapter.Cowboy do
           message ->
             case Adapter.process_message(message, origin) do
               :noreply -> {:ok, state}
-              {:reply, data} -> {:reply, Jason.encode!(data), state}
+              {:reply, data} -> {:reply, {:text, Jason.encode!(data)}, state}
             end
         end
 

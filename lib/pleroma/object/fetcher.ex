@@ -192,8 +192,7 @@ defmodule Pleroma.Object.Fetcher do
     Logger.debug("Fetching object #{id} via AP")
 
     with {:scheme, true} <- {:scheme, String.starts_with?(id, "http")},
-         {:ok, body} <- get_object(id, opts),
-         {:ok, data} <- safe_json_decode(body),
+         {:ok, data} <- get_object(id, opts),
          :ok <- Containment.contain_origin_from_id(id, data) do
       {:ok, data}
     else
@@ -214,7 +213,7 @@ defmodule Pleroma.Object.Fetcher do
   defp get_object(id, opts) do
     with false <- Keyword.get(opts, :force_http, false) do
       Logger.debug("fetching via fedsocket - #{inspect(id)}")
-      FedSockets.Registry.fetch(id)
+      FedSockets.fetch(id)
     else
       _other ->
         Logger.debug("fetching via http - #{inspect(id)}")
@@ -232,7 +231,7 @@ defmodule Pleroma.Object.Fetcher do
 
     case HTTP.get(id, headers) do
       {:ok, %{body: body, status: code}} when code in 200..299 ->
-        {:ok, body}
+        safe_json_decode(body)
 
       {:ok, %{status: code}} when code in [404, 410] ->
         {:error, "Object has been deleted"}

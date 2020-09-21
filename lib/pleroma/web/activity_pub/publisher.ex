@@ -51,10 +51,10 @@ defmodule Pleroma.Web.ActivityPub.Publisher do
   def publish_one(%{inbox: inbox, json: json, actor: %User{} = actor, id: id} = params) do
     Logger.debug("Federating #{id} to #{inbox}")
 
-    case FedSockets.get_or_create_fed_socket(inbox) do
-      {:ok, fedsocket} ->
-        Logger.debug("publishing via fedsockets - #{inspect(inbox)}")
-        FedSockets.publish(fedsocket, json)
+    case FedSockets.publish(inbox, json) do
+      :ok ->
+        Logger.debug("Published via FedSocket - #{inspect(inbox)}")
+        :ok
 
       _ ->
         Logger.debug("publishing via http - #{inspect(inbox)}")
