@@ -124,7 +124,7 @@ defmodule Pleroma.Web.FedSockets.Adapter.Gun do
               end
 
             message ->
-              case Socket.process_message(message, origin) do
+              case Adapter.process_message(message, origin) do
                 :noreply -> :noop
                 {:reply, data} -> send_json(conn_pid, data)
               end
