@@ -13,7 +13,8 @@ defmodule Pleroma.Web.FedSockets.Supervisor do
   def init(args) do
     children = [
       build_cache(:fed_socket_rejections, args),
-      {Registry, keys: :unique, name: FedSockets.Registry}
+      {Registry, keys: :unique, name: Pleroma.Web.FedSockets.Registry},
+      {DynamicSupervisor, name: Pleroma.Web.FedSockets.ClientSupervisor, strategy: :one_for_one}
     ]
 
     opts = [strategy: :one_for_all, name: Pleroma.Web.Streamer.Supervisor]

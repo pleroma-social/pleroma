@@ -212,10 +212,9 @@ defmodule Pleroma.Object.Fetcher do
     do: {:error, "id must be a string"}
 
   defp get_object(id, opts) do
-    with false <- Keyword.get(opts, :force_http, false),
-         {:ok, fedsocket} <- FedSockets.get_or_create_fed_socket(id) do
+    with false <- Keyword.get(opts, :force_http, false) do
       Logger.debug("fetching via fedsocket - #{inspect(id)}")
-      FedSockets.fetch(fedsocket, id)
+      FedSockets.Registry.fetch(id)
     else
       _other ->
         Logger.debug("fetching via http - #{inspect(id)}")

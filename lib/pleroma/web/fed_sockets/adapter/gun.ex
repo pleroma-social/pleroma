@@ -2,32 +2,80 @@
 # Copyright © 2017-2020 Pleroma Authors <https://pleroma.social/>
 # SPDX-License-Identifier: AGPL-3.0-only
 
-defmodule Pleroma.Web.FedSockets.Socket.Client do
-  use GenServer
+defmodule Pleroma.Web.FedSockets.Adapter.Gun do
+  use GenServer, restart: :temporary
 
   require Logger
 
   alias Pleroma.Web.ActivityPub.InternalFetchActor
-  alias Pleroma.Web.FedSockets
-  alias Pleroma.Web.FedSockets.FedRegistry
+  alias Pleroma.Web.FedSockets.Registry.Value
   alias Pleroma.Web.FedSockets.FedSocket
-  alias Pleroma.Web.FedSockets.Socket
-  alias Pleroma.Web.FedSockets.SocketInfo
+  alias Pleroma.Web.FedSockets.Adapter
 
-  @behaviour Socket
+  @behaviour Adapter
+
+  @registry Pleroma.Web.FedSockets.Registry
 
   @impl true
-  def fetch(%{pid: handler_pid}, data, timeout) do
-    GenServer.call(handler_pid, {:fetch, data}, timeout)
+  def fetch(pid, state, id, timeout) do
+    # TODO: refactor with atomics and encoding on the client
+    with {:ok, _} <- await_connected(pid, state) do
+      GenServer.call(pid, {:fetch, id}, timeout)
+    end
   end
 
   @impl true
-  def publish(socket_info, data) do
-    send_json(socket_info, %{action: :publish, data: data})
+  def publish(pid, state, data) do
+    with {:ok, conn_pid} <- await_connected(pid, state) do
+      send_json(conn_pid, %{action: :publish, data: data})
+    end
   end
 
-  def start_link(uri) do
-    GenServer.start_link(__MODULE__, %{uri: uri})
+  defp await_connected(_pid, %{conn_pid: conn_pid}), do: {:ok, conn_pid}
+
+  defp await_connected(pid, _) do
+    monitor = Process.monitor(pid)
+    GenServer.cast(pid, {:await_connected, self()})
+
+    receive do
+      {:DOWN, ^monitor, _, _, {:shutdown, reason}} -> reason
+      {:DOWN, ^monitor, _, _, reason} -> {:error, reason}
+      {:await_connected, ^pid, conn_pid} -> {:ok, conn_pid}
+    end
+  end
+
+  def start_link([key | _] = opts) do
+    GenServer.start_link(__MODULE__, opts,
+      name: {:via, Registry, {@registry, key, %Value{adapter: __MODULE__, adapter_state: %{}}}}
+    )
+  end
+
+  @impl true
+  def init(opts) do
+    {:ok, nil, {:continue, {:connect, opts}}}
+  end
+
+  @impl true
+  def handle_continue({:connect, [key, uri] = opts}, _) do
+    case initiate_connection(uri) do
+      {:ok, conn_pid} ->
+        Registry.update_value(@registry, key, fn value ->
+          %{value | adapter_state: %{conn_pid: conn_pid}}
+        end)
+
+        {:noreply,
+         %{conn_pid: conn_pid, waiting_fetches: %{}, last_fetch_id: 0, origin: uri, key: key}}
+
+      {:error, reason} = e ->
+        Logger.debug("Outgoing connection failed - #{inspect(reason)}")
+        {:stop, {:shutdown, e}, opts}
+    end
+  end
+
+  @impl true
+  def handle_cast({:await_connected, pid}, %{conn_pid: conn_pid} = state) do
+    send(pid, {:await_connected, self(), conn_pid})
+    {:noreply, state}
   end
 
   @impl true
@@ -36,50 +84,32 @@ defmodule Pleroma.Web.FedSockets.Socket.Client do
         from,
         %{
           last_fetch_id: last_fetch_id,
-          socket_info: socket_info,
+          conn_pid: conn_pid,
           waiting_fetches: waiting_fetches
         } = state
       ) do
     last_fetch_id = last_fetch_id + 1
     request = %{action: :fetch, data: data, uuid: last_fetch_id}
-    socket_info = send_json(socket_info, request)
+    :ok = send_json(conn_pid, request)
     waiting_fetches = Map.put(waiting_fetches, last_fetch_id, from)
 
     {:noreply,
      %{
        state
-       | socket_info: socket_info,
-         waiting_fetches: waiting_fetches,
+       | waiting_fetches: waiting_fetches,
          last_fetch_id: last_fetch_id
      }}
   end
 
-  defp send_json(%{conn_pid: conn_pid} = socket_info, data) do
-    socket_info = SocketInfo.touch(socket_info)
+  defp send_json(conn_pid, data) do
     :gun.ws_send(conn_pid, {:text, Jason.encode!(data)})
-    socket_info
-  end
-
-  @impl true
-  def init(%{uri: uri}) do
-    case initiate_connection(uri) do
-      {:ok, ws_origin, conn_pid} ->
-        {:ok, socket_info} = FedRegistry.add_fed_socket(ws_origin, conn_pid)
-        {:ok, %{socket_info: socket_info, waiting_fetches: %{}, last_fetch_id: 0}}
-
-      {:error, reason} ->
-        Logger.debug("Outgoing connection failed - #{inspect(reason)}")
-        :ignore
-    end
   end
 
   @impl true
   def handle_info(
         {:gun_ws, _conn_pid, _ref, {:text, raw_message}},
-        %{socket_info: socket_info} = state
+        %{conn_pid: conn_pid, origin: origin} = state
       ) do
-    socket_info = SocketInfo.touch(socket_info)
-
     state =
       case Jason.decode(raw_message) do
         {:ok, message} ->
@@ -94,19 +124,19 @@ defmodule Pleroma.Web.FedSockets.Socket.Client do
               end
 
             message ->
-              case Socket.process_message(socket_info, message) do
+              case Socket.process_message(message, origin) do
                 :noreply -> :noop
-                {:reply, data} -> send_json(socket_info, data)
+                {:reply, data} -> send_json(conn_pid, data)
               end
 
               state
           end
 
-        {:error, _e} ->
-          state
+        {:error, decode_error} ->
+          exit({:malformed_message, decode_error})
       end
 
-    {:noreply, %{state | socket_info: socket_info}}
+    {:noreply, state}
   end
 
   @impl true
@@ -140,13 +170,9 @@ defmodule Pleroma.Web.FedSockets.Socket.Client do
     {:ok, state}
   end
 
+  @path '/api/fedsocket/v1'
   def initiate_connection(uri) do
-    ws_uri =
-      uri
-      |> SocketInfo.origin()
-      |> FedSockets.uri_for_origin()
-
-    %{host: host, port: port, path: path} = URI.parse(ws_uri)
+    %{host: host, port: port} = URI.parse(uri)
 
     with {:ok, conn_pid} <- :gun.open(to_charlist(host), port, %{protocols: [:http]}),
          {:ok, _} <- :gun.await_up(conn_pid),
@@ -155,10 +181,10 @@ defmodule Pleroma.Web.FedSockets.Socket.Client do
          #         {:response, :fin, 204, _} <- :gun.await(conn_pid, reference) |> IO.inspect(),
          #         :ok <- :gun.flush(conn_pid),
          headers <- build_headers(uri),
-         ref <- :gun.ws_upgrade(conn_pid, to_charlist(path), headers, %{silence_pings: false}) do
+         ref <- :gun.ws_upgrade(conn_pid, @path, headers, %{silence_pings: false}) do
       receive do
         {:gun_upgrade, ^conn_pid, ^ref, [<<"websocket">>], _} ->
-          {:ok, ws_uri, conn_pid}
+          {:ok, conn_pid}
 
           #        mes ->
           #          IO.inspect(mes)
