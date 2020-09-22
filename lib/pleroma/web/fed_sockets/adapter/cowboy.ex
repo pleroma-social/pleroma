@@ -33,6 +33,7 @@ defmodule Pleroma.Web.FedSockets.Adapter.Cowboy do
   def publish(pid, _, data) do
     message = %{action: :publish, data: data}
     send(pid, {:send, Jason.encode!(message)})
+    :ok
   end
 
   @impl true
@@ -104,28 +105,16 @@ defmodule Pleroma.Web.FedSockets.Adapter.Cowboy do
   @impl true
   def websocket_handle(:ping, socket_info), do: {:ok, socket_info}
 
-  def websocket_handle({:text, raw_message}, %{origin: origin} = state) do
-    case Jason.decode(raw_message) do
-      {:ok, message} ->
-        case message do
-          %{"action" => "fetch_reply", "uuid" => uuid, "data" => data} ->
-            with {pid, waiting_fetches} when is_pid(pid) <- Map.pop(state.waiting_fetches, uuid) do
-              send(pid, {:fetch_reply, uuid, data})
-              {:ok, %{state | waiting_fetches: waiting_fetches}}
-            else
-              _ ->
-                {:ok, state}
-            end
+  def websocket_handle(
+        {:text, raw_message},
+        %{origin: origin, waiting_fetches: waiting_fetches} = state
+      ) do
+    case Adapter.process_message(raw_message, origin, waiting_fetches) do
+      {:reply, frame, waiting_fetches} ->
+        {:reply, frame, %{state | waiting_fetches: waiting_fetches}}
 
-          message ->
-            case Adapter.process_message(message, origin) do
-              :noreply -> {:ok, state}
-              {:reply, data} -> {:reply, {:text, Jason.encode!(data)}, state}
-            end
-        end
-
-      {:error, decode_error} ->
-        exit({:malformed_message, decode_error})
+      {:noreply, waiting_fetches} ->
+        {:ok, %{state | waiting_fetches: waiting_fetches}}
     end
   end
 

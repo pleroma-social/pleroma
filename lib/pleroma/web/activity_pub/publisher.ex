@@ -56,7 +56,8 @@ defmodule Pleroma.Web.ActivityPub.Publisher do
         Logger.debug("Published via FedSocket - #{inspect(inbox)}")
         :ok
 
-      _ ->
+      e ->
+        Logger.debug("Shit broke - #{inspect(e)}")
         Logger.debug("publishing via http - #{inspect(inbox)}")
         http_publish(inbox, actor, json, params)
     end

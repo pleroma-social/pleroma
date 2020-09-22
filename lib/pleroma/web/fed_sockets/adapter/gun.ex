@@ -18,20 +18,29 @@ defmodule Pleroma.Web.FedSockets.Adapter.Gun do
 
   @impl true
   def fetch(pid, state, id, timeout) do
-    # TODO: refactor with atomics and encoding on the client
-    with {:ok, _} <- await_connected(pid, state) do
-      GenServer.call(pid, {:fetch, id}, timeout)
+    with {:ok, conn_pid, last_fetch_id_ref} <- await_connected(pid, state) do
+      fetch_id = :atomics.add_get(last_fetch_id_ref, 1, 1)
+      message = %{action: :fetch, data: id, uuid: fetch_id}
+      send(pid, {:register_fetch, fetch_id, self()})
+      send_json(conn_pid, message)
+
+      receive do
+        {:fetch_reply, ^fetch_id, data} -> {:ok, data}
+      after
+        timeout -> {:error, :timeout}
+      end
     end
   end
 
   @impl true
   def publish(pid, state, data) do
-    with {:ok, conn_pid} <- await_connected(pid, state) do
+    with {:ok, conn_pid, _} <- await_connected(pid, state) do
       send_json(conn_pid, %{action: :publish, data: data})
     end
   end
 
-  defp await_connected(_pid, %{conn_pid: conn_pid}), do: {:ok, conn_pid}
+  defp await_connected(_pid, %{conn_pid: conn_pid, last_fetch_id_ref: last_fetch_id_ref}),
+    do: {:ok, conn_pid, last_fetch_id_ref}
 
   defp await_connected(pid, _) do
     monitor = Process.monitor(pid)
@@ -40,13 +49,19 @@ defmodule Pleroma.Web.FedSockets.Adapter.Gun do
     receive do
       {:DOWN, ^monitor, _, _, {:shutdown, reason}} -> reason
       {:DOWN, ^monitor, _, _, reason} -> {:error, reason}
-      {:await_connected, ^pid, conn_pid} -> {:ok, conn_pid}
+      {:await_connected, ^pid, conn_pid, last_fetch_id_ref} -> {:ok, conn_pid, last_fetch_id_ref}
     end
   end
 
   def start_link([key | _] = opts) do
-    GenServer.start_link(__MODULE__, opts,
-      name: {:via, Registry, {@registry, key, %Value{adapter: __MODULE__, adapter_state: %{}}}}
+    last_fetch_id_ref = :atomics.new(1, [])
+    :ok = :atomics.put(last_fetch_id_ref, 1, 0)
+
+    GenServer.start_link(__MODULE__, [last_fetch_id_ref | opts],
+      name:
+        {:via, Registry,
+         {@registry, key,
+          %Value{adapter: __MODULE__, adapter_state: %{last_fetch_id_ref: last_fetch_id_ref}}}}
     )
   end
 
@@ -56,15 +71,21 @@ defmodule Pleroma.Web.FedSockets.Adapter.Gun do
   end
 
   @impl true
-  def handle_continue({:connect, [key, uri] = opts}, _) do
+  def handle_continue({:connect, [last_fetch_id_ref, key, uri] = opts}, _) do
     case initiate_connection(uri) do
       {:ok, conn_pid} ->
         Registry.update_value(@registry, key, fn value ->
-          %{value | adapter_state: %{conn_pid: conn_pid}}
+          %{value | adapter_state: Map.put(value.adapter_state, :conn_pid, conn_pid)}
         end)
 
         {:noreply,
-         %{conn_pid: conn_pid, waiting_fetches: %{}, last_fetch_id: 0, origin: uri, key: key}}
+         %{
+           conn_pid: conn_pid,
+           waiting_fetches: %{},
+           last_fetch_id_ref: last_fetch_id_ref,
+           origin: uri,
+           key: key
+         }}
 
       {:error, reason} = e ->
         Logger.debug("Outgoing connection failed - #{inspect(reason)}")
@@ -73,32 +94,12 @@ defmodule Pleroma.Web.FedSockets.Adapter.Gun do
   end
 
   @impl true
-  def handle_cast({:await_connected, pid}, %{conn_pid: conn_pid} = state) do
-    send(pid, {:await_connected, self(), conn_pid})
-    {:noreply, state}
-  end
-
-  @impl true
-  def handle_call(
-        {:fetch, data},
-        from,
-        %{
-          last_fetch_id: last_fetch_id,
-          conn_pid: conn_pid,
-          waiting_fetches: waiting_fetches
-        } = state
+  def handle_cast(
+        {:await_connected, pid},
+        %{conn_pid: conn_pid, last_fetch_id_ref: last_fetch_id_ref} = state
       ) do
-    last_fetch_id = last_fetch_id + 1
-    request = %{action: :fetch, data: data, uuid: last_fetch_id}
-    :ok = send_json(conn_pid, request)
-    waiting_fetches = Map.put(waiting_fetches, last_fetch_id, from)
-
-    {:noreply,
-     %{
-       state
-       | waiting_fetches: waiting_fetches,
-         last_fetch_id: last_fetch_id
-     }}
+    send(pid, {:await_connected, self(), conn_pid, last_fetch_id_ref})
+    {:noreply, state}
   end
 
   defp send_json(conn_pid, data) do
@@ -106,37 +107,27 @@ defmodule Pleroma.Web.FedSockets.Adapter.Gun do
   end
 
   @impl true
+  def handle_info({:register_fetch, fetch_id, pid}, %{waiting_fetches: waiting_fetches} = state) do
+    waiting_fetches = Map.put(waiting_fetches, fetch_id, pid)
+    {:noreply, %{state | waiting_fetches: waiting_fetches}}
+  end
+
+  @impl true
   def handle_info(
         {:gun_ws, _conn_pid, _ref, {:text, raw_message}},
-        %{conn_pid: conn_pid, origin: origin} = state
+        %{conn_pid: conn_pid, origin: origin, waiting_fetches: waiting_fetches} = state
       ) do
-    state =
-      case Jason.decode(raw_message) do
-        {:ok, message} ->
-          case message do
-            %{"action" => "fetch_reply", "uuid" => uuid, "data" => data} ->
-              with {{_, _} = client, waiting_fetches} <- Map.pop(state.waiting_fetches, uuid) do
-                GenServer.reply(client, {:ok, data})
-                %{state | waiting_fetches: waiting_fetches}
-              else
-                _ ->
-                  state
-              end
+    waiting_fetches =
+      case Adapter.process_message(raw_message, origin, waiting_fetches) do
+        {:reply, frame, waiting_fetches} ->
+          :gun.ws_send(conn_pid, frame)
+          waiting_fetches
 
-            message ->
-              case Adapter.process_message(message, origin) do
-                :noreply -> :noop
-                {:reply, data} -> send_json(conn_pid, data)
-              end
-
-              state
-          end
-
-        {:error, decode_error} ->
-          exit({:malformed_message, decode_error})
+        {:noreply, waiting_fetches} ->
+          waiting_fetches
       end
 
-    {:noreply, state}
+    {:noreply, %{state | waiting_fetches: waiting_fetches}}
   end
 
   @impl true

@@ -1,7 +1,7 @@
 defmodule Pleroma.Web.FedSockets.Adapter do
   @moduledoc """
    A behavior both types of sockets (server and client) should implement
-   and a collection of helper functions useful to both.
+   and a collection of helper functions useful to both
   """
 
   @type adapter_state :: map()
@@ -20,23 +20,30 @@ defmodule Pleroma.Web.FedSockets.Adapter do
   alias Pleroma.Web.ActivityPub.Visibility
   alias Pleroma.Web.FedSockets.IngesterWorker
 
-  @typedoc """
-    Should be "fetch" or "publish"
-  """
-  @type common_action :: String.t()
   @type origin :: String.t()
-  @doc "Process non adapter-specific messages."
-  @spec process_message(map(), origin()) ::
-          {:reply, term()} | :noreply | {:error, :unknown_action}
-  def process_message(%{"action" => "publish", "data" => data}, origin) do
+  @type fetch_id :: integer()
+  @type waiting_fetches :: %{required(fetch_id()) => pid()}
+  @doc "Processes incoming messages. Returns {:reply, websocket_frame, waiting_fetches} or `{:noreply, waiting_fetches}`"
+  @spec process_message(binary() | map(), origin(), waiting_fetches()) ::
+          {:reply, term(), waiting_fetches()} | {:noreply, waiting_fetches()}
+  def process_message(message, origin, waiting_fetches) when is_binary(message) do
+    case Jason.decode(message) do
+      {:ok, message} -> process_message(message, origin, waiting_fetches)
+      # 1003 indicates that an endpoint is terminating the connection
+      # because it has received a type of data it cannot accept. 
+      {:error, decode_error} -> {:reply, {:close, 1003, Exception.message(decode_error)}}
+    end
+  end
+
+  def process_message(%{"action" => "publish", "data" => data}, origin, waiting_fetches) do
     if Containment.contain_origin(origin, data) do
       IngesterWorker.enqueue("ingest", %{"object" => data})
     end
 
-    :noreply
+    {:noreply, waiting_fetches}
   end
 
-  def process_message(%{"action" => "fetch", "uuid" => uuid, "data" => ap_id}, _) do
+  def process_message(%{"action" => "fetch", "uuid" => uuid, "data" => ap_id}, _, _) do
     data = %{
       "action" => "fetch_reply",
       "status" => "processed",
@@ -44,11 +51,25 @@ defmodule Pleroma.Web.FedSockets.Adapter do
       "data" => represent_item(ap_id)
     }
 
-    {:reply, data}
+    {:reply, {:text, Jason.encode!(data)}}
   end
 
-  def process_message(_, _) do
-    {:error, :unknown_action}
+  def process_message(
+        %{"action" => "fetch_reply", "uuid" => uuid, "data" => data},
+        _,
+        waiting_fetches
+      ) do
+    with {pid, waiting_fetches} when is_pid(pid) <- Map.pop(waiting_fetches, uuid) do
+      send(pid, {:fetch_reply, uuid, data})
+      {:noreply, waiting_fetches}
+    else
+      _ ->
+        {:noreply, waiting_fetches}
+    end
+  end
+
+  def process_message(_, _, waiting_fetches) do
+    {:reply, {:close, 1003, "Unknown message type."}, waiting_fetches}
   end
 
   defp represent_item(ap_id) do
