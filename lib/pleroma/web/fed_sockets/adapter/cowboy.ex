@@ -95,7 +95,7 @@ defmodule Pleroma.Web.FedSockets.Adapter.Cowboy do
            adapter_state: %{last_fetch_id_ref: last_fetch_id_ref, waiting_fetches: %{}}
          }) do
       {:ok, _owner} ->
-        {:ok, %{origin: origin}}
+        {:ok, %{origin: origin, waiting_fetches: %{}}}
 
       {:error, {:already_registered, _}} ->
         {:stop, origin}
@@ -103,7 +103,7 @@ defmodule Pleroma.Web.FedSockets.Adapter.Cowboy do
   end
 
   @impl true
-  def websocket_handle(:ping, socket_info), do: {:ok, socket_info}
+  def websocket_handle(:ping, state), do: {:ok, state}
 
   def websocket_handle(
         {:text, raw_message},
@@ -111,7 +111,8 @@ defmodule Pleroma.Web.FedSockets.Adapter.Cowboy do
       ) do
     case Adapter.process_message(raw_message, origin, waiting_fetches) do
       {:reply, frame, waiting_fetches} ->
-        {:reply, frame, %{state | waiting_fetches: waiting_fetches}}
+        state = %{state | waiting_fetches: waiting_fetches}
+        {:reply, frame, state}
 
       {:noreply, waiting_fetches} ->
         {:ok, %{state | waiting_fetches: waiting_fetches}}

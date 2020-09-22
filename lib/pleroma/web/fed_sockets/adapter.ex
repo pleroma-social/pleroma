@@ -43,7 +43,7 @@ defmodule Pleroma.Web.FedSockets.Adapter do
     {:noreply, waiting_fetches}
   end
 
-  def process_message(%{"action" => "fetch", "uuid" => uuid, "data" => ap_id}, _, _) do
+  def process_message(%{"action" => "fetch", "uuid" => uuid, "data" => ap_id}, _, waiting_fetches) do
     data = %{
       "action" => "fetch_reply",
       "status" => "processed",
@@ -51,7 +51,7 @@ defmodule Pleroma.Web.FedSockets.Adapter do
       "data" => represent_item(ap_id)
     }
 
-    {:reply, {:text, Jason.encode!(data)}}
+    {:reply, {:text, Jason.encode!(data)}, waiting_fetches}
   end
 
   def process_message(
