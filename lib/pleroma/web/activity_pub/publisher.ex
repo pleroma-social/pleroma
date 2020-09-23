@@ -52,9 +52,9 @@ defmodule Pleroma.Web.ActivityPub.Publisher do
     # Backwards compatibility for jobs that might have been left
     # before updating.
     data =
-      if params["data"],
-        do: params["data"],
-        else: Jason.decode!(params["json"])
+      if params[:data],
+        do: params[:data],
+        else: Jason.decode!(params[:json])
 
     Logger.debug("Federating #{id} to #{inbox}")
 
