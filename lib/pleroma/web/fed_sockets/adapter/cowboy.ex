@@ -17,23 +17,16 @@ defmodule Pleroma.Web.FedSockets.Adapter.Cowboy do
   @behaviour Adapter
 
   @impl true
-  def fetch(pid, %{last_fetch_id_ref: last_fetch_id_ref}, id, timeout) do
-    fetch_id = :atomics.add_get(last_fetch_id_ref, 1, 1)
-    message = %{action: :fetch, data: id, uuid: fetch_id}
-    send(pid, {:send_fetch, Jason.encode!(message), fetch_id, self()})
+  def request(pid, %{last_request_id_ref: last_request_id_ref}, message, timeout) do
+    request_id = :atomics.add_get(last_request_id_ref, 1, 1)
+    message = Map.put(message, :uuid, request_id)
+    send(pid, {:send_request, Jason.encode!(message), request_id, self()})
 
     receive do
-      {:fetch_reply, ^fetch_id, data} -> {:ok, data}
+      {:request_reply, ^request_id, data} -> {:ok, data}
     after
       timeout -> {:error, :timeout}
     end
-  end
-
-  @impl true
-  def publish(pid, _, data) do
-    message = %{action: :publish, data: data}
-    send(pid, {:send, Jason.encode!(message)})
-    :ok
   end
 
   @impl true
@@ -87,15 +80,15 @@ defmodule Pleroma.Web.FedSockets.Adapter.Cowboy do
     key = Pleroma.Web.FedSockets.Registry.key_from_uri(URI.parse(origin))
     # Since, unlike with gun, we don't have calls.
     # We store last fetch id in an atomic counter and use casts.
-    last_fetch_id_ref = :atomics.new(1, [])
-    :ok = :atomics.put(last_fetch_id_ref, 1, 0)
+    last_request_id_ref = :atomics.new(1, [])
+    :ok = :atomics.put(last_request_id_ref, 1, 0)
 
     case Registry.register(@registry, key, %Value{
            adapter: __MODULE__,
-           adapter_state: %{last_fetch_id_ref: last_fetch_id_ref}
+           adapter_state: %{last_request_id_ref: last_request_id_ref}
          }) do
       {:ok, _owner} ->
-        {:ok, %{origin: origin, waiting_fetches: %{}}}
+        {:ok, %{origin: origin, waiting_requests: %{}}}
 
       {:error, {:already_registered, _}} ->
         {:stop, origin}
@@ -107,25 +100,25 @@ defmodule Pleroma.Web.FedSockets.Adapter.Cowboy do
 
   def websocket_handle(
         {:text, raw_message},
-        %{origin: origin, waiting_fetches: waiting_fetches} = state
+        %{origin: origin, waiting_requests: waiting_requests} = state
       ) do
-    case Adapter.process_message(raw_message, origin, waiting_fetches) do
-      {:reply, frame, waiting_fetches} ->
-        state = %{state | waiting_fetches: waiting_fetches}
+    case Adapter.process_message(raw_message, origin, waiting_requests) do
+      {:reply, frame, waiting_requests} ->
+        state = %{state | waiting_requests: waiting_requests}
         {:reply, frame, state}
 
-      {:noreply, waiting_fetches} ->
-        {:ok, %{state | waiting_fetches: waiting_fetches}}
+      {:noreply, waiting_requests} ->
+        {:ok, %{state | waiting_requests: waiting_requests}}
     end
   end
 
   @impl true
   def websocket_info(
-        {:send_fetch, message, fetch_id, pid},
-        %{waiting_fetches: waiting_fetches} = state
+        {:send_request, message, request_id, pid},
+        %{waiting_requests: waiting_requests} = state
       ) do
-    waiting_fetches = Map.put(waiting_fetches, fetch_id, pid)
-    {:reply, {:text, message}, %{state | waiting_fetches: waiting_fetches}}
+    waiting_requests = Map.put(waiting_requests, request_id, pid)
+    {:reply, {:text, message}, %{state | waiting_requests: waiting_requests}}
   end
 
   @impl true

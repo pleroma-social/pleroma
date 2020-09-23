@@ -3,6 +3,7 @@ defmodule Pleroma.Web.FedSockets.Registry.Value do
 end
 
 defmodule Pleroma.Web.FedSockets.Registry do
+  alias Pleroma.Web.FedSockets.Adapter
   alias Pleroma.Web.FedSockets.Registry.Value
 
   @registry __MODULE__
@@ -11,7 +12,7 @@ defmodule Pleroma.Web.FedSockets.Registry do
   def fetch(object_id) do
     case get_socket(object_id) do
       {:ok, pid, %Value{adapter: adapter, adapter_state: adapter_state}} ->
-        apply(adapter, :fetch, [pid, adapter_state, object_id, 5_000])
+        Adapter.fetch(pid, adapter, adapter_state, object_id, 5_000)
 
       e ->
         e
@@ -22,7 +23,8 @@ defmodule Pleroma.Web.FedSockets.Registry do
   def publish(inbox, data) do
     case get_socket(inbox) do
       {:ok, pid, %Value{adapter: adapter, adapter_state: adapter_state}} ->
-        apply(adapter, :publish, [pid, adapter_state, data])
+        Adapter.publish(pid, adapter, adapter_state, data, 5_000)
+        |> IO.inspect(label: "publish reply")
 
       e ->
         e
