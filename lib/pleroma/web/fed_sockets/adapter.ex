@@ -29,10 +29,14 @@ defmodule Pleroma.Web.FedSockets.Adapter do
   end
 
   @spec publish(pid(), module(), adapter_state(), term(), timeout()) ::
-          {:ok, term()} | {:error, term()}
+          :ok | {:error, term()}
   def publish(pid, adapter, adapter_state, data, timeout) do
     data = %{action: :publish, data: data}
-    apply(adapter, :request, [pid, adapter_state, data, timeout])
+
+    case apply(adapter, :request, [pid, adapter_state, data, timeout]) do
+      {:ok, _} -> :ok
+      e -> e
+    end
   end
 
   @type origin :: String.t()
@@ -65,7 +69,7 @@ defmodule Pleroma.Web.FedSockets.Adapter do
     data = %{
       "action" => "reply",
       "uuid" => uuid,
-      "data" => "ok"
+      "data" => nil
     }
 
     {:reply, {:text, Jason.encode!(data)}, waiting_requests}
