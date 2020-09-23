@@ -47,7 +47,6 @@ defmodule Pleroma.Web.FedSockets.Adapter.Gun do
     GenServer.cast(pid, {:await_connected, self()})
 
     receive do
-      {:DOWN, ^monitor, _, _, {:shutdown, reason}} -> reason
       {:DOWN, ^monitor, _, _, reason} -> {:error, reason}
       {:await_connected, ^pid, conn_pid, last_fetch_id_ref} -> {:ok, conn_pid, last_fetch_id_ref}
     end
@@ -131,12 +130,6 @@ defmodule Pleroma.Web.FedSockets.Adapter.Gun do
   end
 
   @impl true
-  def handle_info(:close, state) do
-    Logger.debug("Sending close frame !!!!!!!")
-    {:close, state}
-  end
-
-  @impl true
   def handle_info({:gun_down, _pid, _prot, :closed, _}, state) do
     {:stop, :normal, state}
   end
@@ -165,7 +158,7 @@ defmodule Pleroma.Web.FedSockets.Adapter.Gun do
   def initiate_connection(uri) do
     %{host: host, port: port} = URI.parse(uri)
 
-    with {:ok, conn_pid} <- :gun.open(to_charlist(host), port, %{protocols: [:http]}),
+    with {:ok, conn_pid} <- :gun.open(to_charlist(host), port, %{protocols: [:http], retry: 0}),
          {:ok, _} <- :gun.await_up(conn_pid),
          # TODO: nodeinfo-based support detection
          #         reference <- :gun.get(conn_pid, to_charlist(path)),
@@ -177,12 +170,14 @@ defmodule Pleroma.Web.FedSockets.Adapter.Gun do
         {:gun_upgrade, ^conn_pid, ^ref, [<<"websocket">>], _} ->
           {:ok, conn_pid}
 
-          #        mes ->
-          #          IO.inspect(mes)
-      after
-        15_000 ->
-          Logger.debug("Fedsocket timeout connecting to #{inspect(uri)}")
-          {:error, :timeout}
+        {:gun_response, ^conn_pid, _, _, status, _} ->
+          {:error, {:ws_upgrade_failed, {:status, status}}}
+
+        {:gun_error, ^conn_pid, ^ref, reason} ->
+          {:error, {:ws_upgrade_failed, reason}}
+
+        {:gun_down, ^conn_pid, _, reason, _} ->
+          {:error, {:ws_upgrade_failed, reason}}
       end
     else
       {:response, :nofin, 404, _} ->

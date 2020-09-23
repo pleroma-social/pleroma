@@ -92,7 +92,7 @@ defmodule Pleroma.Web.FedSockets.Adapter.Cowboy do
 
     case Registry.register(@registry, key, %Value{
            adapter: __MODULE__,
-           adapter_state: %{last_fetch_id_ref: last_fetch_id_ref, waiting_fetches: %{}}
+           adapter_state: %{last_fetch_id_ref: last_fetch_id_ref}
          }) do
       {:ok, _owner} ->
         {:ok, %{origin: origin, waiting_fetches: %{}}}

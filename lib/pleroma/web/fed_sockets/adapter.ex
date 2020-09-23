@@ -18,7 +18,7 @@ defmodule Pleroma.Web.FedSockets.Adapter do
   alias Pleroma.Web.ActivityPub.ObjectView
   alias Pleroma.Web.ActivityPub.UserView
   alias Pleroma.Web.ActivityPub.Visibility
-  alias Pleroma.Web.FedSockets.IngesterWorker
+  alias Pleroma.Web.Federator
 
   @type origin :: String.t()
   @type fetch_id :: integer()
@@ -37,7 +37,7 @@ defmodule Pleroma.Web.FedSockets.Adapter do
 
   def process_message(%{"action" => "publish", "data" => data}, origin, waiting_fetches) do
     if Containment.contain_origin(origin, data) do
-      IngesterWorker.enqueue("ingest", %{"object" => data})
+      Federator.incoming_ap_doc(data)
     end
 
     {:noreply, waiting_fetches}
