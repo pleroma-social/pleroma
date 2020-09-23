@@ -130,8 +130,8 @@ defmodule Pleroma.Web.FedSockets.Adapter.Gun do
   end
 
   @impl true
-  def handle_info({:gun_down, _pid, _prot, :closed, _}, state) do
-    {:stop, :normal, state}
+  def handle_info({:gun_down, conn_pid, _, reason, _}, %{conn_pid: conn_pid} = state) do
+    {:stop, reason, state}
   end
 
   @impl true

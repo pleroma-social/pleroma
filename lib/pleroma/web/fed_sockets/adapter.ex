@@ -28,14 +28,17 @@ defmodule Pleroma.Web.FedSockets.Adapter do
           {:reply, term(), waiting_fetches()} | {:noreply, waiting_fetches()}
   def process_message(message, origin, waiting_fetches) when is_binary(message) do
     case Jason.decode(message) do
-      {:ok, message} -> process_message(message, origin, waiting_fetches)
+      {:ok, message} -> do_process_message(message, origin, waiting_fetches)
       # 1003 indicates that an endpoint is terminating the connection
       # because it has received a type of data it cannot accept. 
       {:error, decode_error} -> {:reply, {:close, 1003, Exception.message(decode_error)}}
     end
   end
 
-  def process_message(%{"action" => "publish", "data" => data}, origin, waiting_fetches) do
+  def process_message(message, origin, waiting_fetches),
+    do: do_process_message(message, origin, waiting_fetches)
+
+  defp do_process_message(%{"action" => "publish", "data" => data}, origin, waiting_fetches) do
     if Containment.contain_origin(origin, data) do
       Federator.incoming_ap_doc(data)
     end
@@ -43,7 +46,11 @@ defmodule Pleroma.Web.FedSockets.Adapter do
     {:noreply, waiting_fetches}
   end
 
-  def process_message(%{"action" => "fetch", "uuid" => uuid, "data" => ap_id}, _, waiting_fetches) do
+  defp do_process_message(
+         %{"action" => "fetch", "uuid" => uuid, "data" => ap_id},
+         _,
+         waiting_fetches
+       ) do
     data = %{
       "action" => "fetch_reply",
       "status" => "processed",
@@ -54,11 +61,11 @@ defmodule Pleroma.Web.FedSockets.Adapter do
     {:reply, {:text, Jason.encode!(data)}, waiting_fetches}
   end
 
-  def process_message(
-        %{"action" => "fetch_reply", "uuid" => uuid, "data" => data},
-        _,
-        waiting_fetches
-      ) do
+  defp do_process_message(
+         %{"action" => "fetch_reply", "uuid" => uuid, "data" => data},
+         _,
+         waiting_fetches
+       ) do
     with {pid, waiting_fetches} when is_pid(pid) <- Map.pop(waiting_fetches, uuid) do
       send(pid, {:fetch_reply, uuid, data})
       {:noreply, waiting_fetches}
@@ -68,7 +75,7 @@ defmodule Pleroma.Web.FedSockets.Adapter do
     end
   end
 
-  def process_message(_, _, waiting_fetches) do
+  defp do_process_message(_, _, waiting_fetches) do
     {:reply, {:close, 1003, "Unknown message type."}, waiting_fetches}
   end
 
