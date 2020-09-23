@@ -44,14 +44,21 @@ defmodule Pleroma.Web.ActivityPub.Publisher do
   parameters set:
 
   * `inbox`: the inbox to publish to
-  * `json`: the JSON message body representing the ActivityPub message
+  * `data`: the ActivityPub message
   * `actor`: the actor which is signing the message
   * `id`: the ActivityStreams URI of the message
   """
-  def publish_one(%{inbox: inbox, json: json, actor: %User{} = actor, id: id} = params) do
+  def publish_one(%{inbox: inbox, actor: %User{} = actor, id: id} = params) do
+    # Backwards compatibility for jobs that might have been left
+    # before updating.
+    data =
+      if params["data"],
+        do: params["data"],
+        else: Jason.decode!(params["json"])
+
     Logger.debug("Federating #{id} to #{inbox}")
 
-    case FedSockets.publish(inbox, json) do
+    case FedSockets.publish(inbox, data) do
       :ok ->
         Logger.debug("Published via FedSocket - #{inspect(inbox)}")
         :ok
@@ -59,7 +66,7 @@ defmodule Pleroma.Web.ActivityPub.Publisher do
       e ->
         Logger.debug("Shit broke - #{inspect(e)}")
         Logger.debug("publishing via http - #{inspect(inbox)}")
-        http_publish(inbox, actor, json, params)
+        http_publish(inbox, actor, Jason.encode!(data), params)
     end
   end
 
@@ -227,14 +234,13 @@ defmodule Pleroma.Web.ActivityPub.Publisher do
         # instance would only accept a first message for the first recipient and ignore the rest.
         cc = get_cc_ap_ids(ap_id, recipients)
 
-        json =
+        data =
           data
           |> Map.put("cc", cc)
-          |> Jason.encode!()
 
         Pleroma.Web.Federator.Publisher.enqueue_one(__MODULE__, %{
           inbox: inbox,
-          json: json,
+          data: data,
           actor_id: actor.id,
           id: activity.data["id"],
           unreachable_since: unreachable_since
