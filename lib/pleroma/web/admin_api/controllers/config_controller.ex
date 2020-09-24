@@ -110,7 +110,7 @@ defmodule Pleroma.Web.AdminAPI.ConfigController do
           path
         end
       end)
-      |> Enum.filter(& &1)
+      |> Enum.filter(&is_tuple/1)
       |> DependenciesSupervisor.put_paths()
 
       render(conn, "index.json", %{
