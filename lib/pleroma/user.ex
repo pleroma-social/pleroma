@@ -2284,7 +2284,7 @@ defmodule Pleroma.User do
     params = %{pinned_activities: List.delete(user.pinned_activities, id)}
 
     # if pinned activity was scheduled for deletion, we reschedule it for deletion
-    if data["expires_at"] do
+    if user.local && data["expires_at"] do
       {:ok, expires_at, _} = DateTime.from_iso8601(data["expires_at"])
 
       Pleroma.Workers.PurgeExpiredActivity.enqueue(%{
