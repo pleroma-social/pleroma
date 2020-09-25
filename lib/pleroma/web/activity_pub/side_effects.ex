@@ -238,10 +238,12 @@ defmodule Pleroma.Web.ActivityPub.SideEffects do
     {:ok, object, meta}
   end
 
-  def handle(%{data: %{"type" => "Undo", "object" => undone_object}} = object, meta) do
-    with undone_object <- Activity.get_by_ap_id(undone_object),
-         :ok <- handle_undoing(undone_object) do
+  def handle(%{data: %{"type" => "Undo", "object" => undone_activity}} = object, meta) do
+    with undone_activity <- Activity.get_by_ap_id(undone_activity),
+         :ok <- handle_undoing(undone_activity) do
       {:ok, object, meta}
+    else
+      e -> {:error, e}
     end
   end
 
@@ -380,35 +382,46 @@ defmodule Pleroma.Web.ActivityPub.SideEffects do
     end
   end
 
-  def handle_undoing(%{data: %{"type" => "Like"}} = object) do
-    object.data["object"]
+  def handle_undoing(%{data: %{"type" => "Like"}} = activity) do
+    activity.data["object"]
     |> Object.get_by_ap_id()
-    |> undo_like(object)
+    |> undo_like(activity)
   end
 
-  def handle_undoing(%{data: %{"type" => "EmojiReact"}} = object) do
-    with %Object{} = reacted_object <- Object.get_by_ap_id(object.data["object"]),
-         {:ok, _} <- Utils.remove_emoji_reaction_from_object(object, reacted_object),
-         {:ok, _} <- Repo.delete(object) do
+  def handle_undoing(%{data: %{"type" => "EmojiReact"}} = activity) do
+    with %Object{} = reacted_object <- Object.get_by_ap_id(activity.data["object"]),
+         {:ok, _} <- Utils.remove_emoji_reaction_from_object(activity, reacted_object),
+         {:ok, _} <- Repo.delete(activity) do
       :ok
     end
   end
 
-  def handle_undoing(%{data: %{"type" => "Announce"}} = object) do
-    with %Object{} = liked_object <- Object.get_by_ap_id(object.data["object"]),
-         {:ok, _} <- Utils.remove_announce_from_object(object, liked_object),
-         {:ok, _} <- Repo.delete(object) do
+  def handle_undoing(%{data: %{"type" => "Announce"}} = activity) do
+    with %Object{} = liked_object <- Object.get_by_ap_id(activity.data["object"]),
+         {:ok, _} <- Utils.remove_announce_from_object(activity, liked_object),
+         {:ok, _} <- Repo.delete(activity) do
       :ok
     end
   end
 
   def handle_undoing(
-        %{data: %{"type" => "Block", "actor" => blocker, "object" => blocked}} = object
+        %{data: %{"type" => "Block", "actor" => blocker, "object" => blocked}} = activity
       ) do
     with %User{} = blocker <- User.get_cached_by_ap_id(blocker),
          %User{} = blocked <- User.get_cached_by_ap_id(blocked),
          {:ok, _} <- User.unblock(blocker, blocked),
-         {:ok, _} <- Repo.delete(object) do
+         {:ok, _} <- Repo.delete(activity) do
+      :ok
+    end
+  end
+
+  def handle_undoing(
+        %{data: %{"type" => "Follow", "object" => followed, "actor" => follower}} = activity
+      ) do
+    with %User{} = follower <- User.get_cached_by_ap_id(follower),
+         %User{} = followed <- User.get_cached_by_ap_id(followed),
+         {:ok, _} <- User.unfollow(follower, followed),
+         {:ok, _} <- Utils.update_follow_state(activity, "cancelled") do
       :ok
     end
   end

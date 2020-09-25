@@ -33,19 +33,15 @@ defmodule Pleroma.Web.ActivityPub.Pipeline do
     end
   end
 
-  def do_common_pipeline(object, meta) do
-    with {_, {:ok, validated_object, meta}} <-
-           {:validate_object, ObjectValidator.validate(object, meta)},
-         {_, {:ok, mrfd_object, meta}} <-
-           {:mrf_object, MRF.pipeline_filter(validated_object, meta)},
-         {_, {:ok, activity, meta}} <-
-           {:persist_object, ActivityPub.persist(mrfd_object, meta)},
-         {_, {:ok, activity, meta}} <-
-           {:execute_side_effects, SideEffects.handle(activity, meta)},
+  def do_common_pipeline(activity, meta) do
+    with {_, {:ok, activity, meta}} <- {:validate, ObjectValidator.validate(activity, meta)},
+         {_, {:ok, activity, meta}} <- {:mrf, MRF.pipeline_filter(activity, meta)},
+         {_, {:ok, activity, meta}} <- {:persist, ActivityPub.persist(activity, meta)},
+         {_, {:ok, activity, meta}} <- {:side_effects, SideEffects.handle(activity, meta)},
          {_, {:ok, _}} <- {:federation, maybe_federate(activity, meta)} do
       {:ok, activity, meta}
     else
-      {:mrf_object, {:reject, message, _}} -> {:reject, message}
+      {:mrf, {:reject, reason, _meta}} -> {:reject, reason}
       e -> {:error, e}
     end
   end

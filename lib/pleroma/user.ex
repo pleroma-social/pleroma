@@ -917,7 +917,7 @@ defmodule Pleroma.User do
   end
 
   def unfollow(%User{ap_id: ap_id}, %User{ap_id: ap_id}) do
-    {:error, "Not subscribed!"}
+    {:error, "Can't unfollow yourself!"}
   end
 
   @spec unfollow(User.t(), User.t()) :: {:ok, User.t(), Activity.t()} | {:error, String.t()}
@@ -1683,17 +1683,11 @@ defmodule Pleroma.User do
     # Remove all relationships
     user
     |> get_followers()
-    |> Enum.each(fn follower ->
-      ActivityPub.unfollow(follower, user)
-      unfollow(follower, user)
-    end)
+    |> Enum.each(fn follower -> ActivityPub.unfollow(follower, user) end)
 
     user
     |> get_friends()
-    |> Enum.each(fn followed ->
-      ActivityPub.unfollow(user, followed)
-      unfollow(user, followed)
-    end)
+    |> Enum.each(fn followed -> ActivityPub.unfollow(user, followed) end)
 
     delete_user_activities(user)
     delete_notifications_from_user_activities(user)

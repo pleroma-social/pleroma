@@ -19,8 +19,11 @@ defmodule Pleroma.Web.ActivityPub.ActivityPub do
   alias Pleroma.Repo
   alias Pleroma.Upload
   alias Pleroma.User
+  alias Pleroma.Web.ActivityPub.Builder
   alias Pleroma.Web.ActivityPub.MRF
+  alias Pleroma.Web.ActivityPub.Pipeline
   alias Pleroma.Web.ActivityPub.Transmogrifier
+  alias Pleroma.Web.ActivityPub.Utils
   alias Pleroma.Web.Streamer
   alias Pleroma.Web.WebFinger
   alias Pleroma.Workers.BackgroundWorker
@@ -290,22 +293,16 @@ defmodule Pleroma.Web.ActivityPub.ActivityPub do
     end
   end
 
-  @spec unfollow(User.t(), User.t(), String.t() | nil, boolean()) ::
-          {:ok, Activity.t()} | nil | {:error, any()}
-  def unfollow(follower, followed, activity_id \\ nil, local \\ true) do
-    with {:ok, result} <-
-           Repo.transaction(fn -> do_unfollow(follower, followed, activity_id, local) end) do
+  def unfollow(follower, followed) do
+    with {:ok, result} <- Repo.transaction(fn -> do_unfollow(follower, followed) end) do
       result
     end
   end
 
-  defp do_unfollow(follower, followed, activity_id, local) do
-    with %Activity{} = follow_activity <- fetch_latest_follow(follower, followed),
-         {:ok, follow_activity} <- update_follow_state(follow_activity, "cancelled"),
-         unfollow_data <- make_unfollow_data(follower, followed, follow_activity, activity_id),
-         {:ok, activity} <- insert(unfollow_data, local),
-         _ <- notify_and_stream(activity),
-         :ok <- maybe_federate(activity) do
+  defp do_unfollow(follower, followed) do
+    with %Activity{} = follow_activity <- Utils.fetch_latest_follow(follower, followed),
+         {:ok, unfollow_data, _meta} <- Builder.undo(follower, follow_activity),
+         {:ok, activity, _meta} <- Pipeline.common_pipeline(unfollow_data, local: true) do
       {:ok, activity}
     else
       nil -> nil

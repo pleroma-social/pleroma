@@ -555,25 +555,6 @@ defmodule Pleroma.Web.ActivityPub.Utils do
     |> Maps.put_if_present("id", activity_id)
   end
 
-  def make_undo_data(
-        %User{ap_id: actor, follower_address: follower_address},
-        %Activity{
-          data: %{"id" => undone_activity_id, "context" => context},
-          actor: undone_activity_actor
-        },
-        activity_id \\ nil
-      ) do
-    %{
-      "type" => "Undo",
-      "actor" => actor,
-      "object" => undone_activity_id,
-      "to" => [follower_address, undone_activity_actor],
-      "cc" => [Pleroma.Constants.as_public()],
-      "context" => context
-    }
-    |> Maps.put_if_present("id", activity_id)
-  end
-
   @spec add_announce_to_object(Activity.t(), Object.t()) ::
           {:ok, Object.t()} | {:error, Ecto.Changeset.t()}
   def add_announce_to_object(
@@ -606,18 +587,6 @@ defmodule Pleroma.Web.ActivityPub.Utils do
        do: announcements
 
   defp take_announcements(_), do: []
-
-  #### Unfollow-related helpers
-
-  def make_unfollow_data(follower, followed, follow_activity, activity_id) do
-    %{
-      "type" => "Undo",
-      "actor" => follower.ap_id,
-      "to" => [followed.ap_id],
-      "object" => follow_activity.data
-    }
-    |> Maps.put_if_present("id", activity_id)
-  end
 
   #### Block-related helpers
   @spec fetch_latest_block(User.t(), User.t()) :: Activity.t() | nil
