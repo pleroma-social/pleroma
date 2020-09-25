@@ -274,20 +274,6 @@ defmodule Pleroma.Web.ActivityPub.TransmogrifierTest do
 
       assert is_nil(modified["bcc"])
     end
-
-    test "it can handle Listen activities" do
-      listen_activity = insert(:listen)
-
-      {:ok, modified} = Transmogrifier.prepare_outgoing(listen_activity.data)
-
-      assert modified["type"] == "Listen"
-
-      user = insert(:user)
-
-      {:ok, activity} = CommonAPI.listen(user, %{"title" => "lain radio episode 1"})
-
-      {:ok, _modified} = Transmogrifier.prepare_outgoing(activity.data)
-    end
   end
 
   describe "user upgrade" do
