@@ -48,7 +48,6 @@ defmodule Pleroma.Web.ActivityPub.ObjectValidators.DeleteValidator do
     ChatMessage
     Event
     Note
-    Page
     Question
     Tombstone
     Video

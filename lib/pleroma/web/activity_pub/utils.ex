@@ -29,7 +29,6 @@ defmodule Pleroma.Web.ActivityPub.Utils do
     "Note",
     "Event",
     "Video",
-    "Page",
     "Question",
     "Answer",
     "Audio"

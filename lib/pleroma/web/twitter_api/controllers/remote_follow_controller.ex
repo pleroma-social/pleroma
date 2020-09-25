@@ -15,7 +15,7 @@ defmodule Pleroma.Web.TwitterAPI.RemoteFollowController do
   alias Pleroma.Web.Auth.TOTPAuthenticator
   alias Pleroma.Web.CommonAPI
 
-  @status_types ["Article", "Event", "Note", "Video", "Page", "Question"]
+  @status_types ["Article", "Event", "Note", "Video", "Question"]
 
   plug(Pleroma.Web.Plugs.FederatingPlug)
 

@@ -397,43 +397,6 @@ defmodule Pleroma.Web.ActivityPub.Transmogrifier do
   def handle_incoming(%{"id" => id}, _options) when is_binary(id) and byte_size(id) < 8,
     do: :error
 
-  # TODO: validate those with a Ecto scheme
-  # - tags
-  # - emoji
-  def handle_incoming(
-        %{"type" => "Create", "object" => %{"type" => "Page"} = object} = data,
-        options
-      ) do
-    actor = Containment.get_actor(data)
-
-    with nil <- Activity.get_create_by_object_ap_id(object["id"]),
-         {:ok, %User{} = user} <- User.get_or_fetch_by_ap_id(actor) do
-      data =
-        data
-        |> Map.put("object", fix_object(object, options))
-        |> Map.put("actor", actor)
-        |> fix_addressing()
-
-      with {:ok, created_activity} <- handle_create(data, user) do
-        reply_depth = (options[:depth] || 0) + 1
-
-        if Federator.allowed_thread_distance?(reply_depth) do
-          for reply_id <- replies(object) do
-            Pleroma.Workers.RemoteFetcherWorker.enqueue("fetch_remote", %{
-              "id" => reply_id,
-              "depth" => reply_depth
-            })
-          end
-        end
-
-        {:ok, created_activity}
-      end
-    else
-      %Activity{} = activity -> {:ok, activity}
-      _e -> :error
-    end
-  end
-
   def handle_incoming(
         %{"type" => "Listen", "object" => %{"type" => "Audio"} = object} = data,
         options
