@@ -23,6 +23,7 @@ defmodule Pleroma.Web.ActivityPub.ObjectValidators.AnswerValidator do
     field(:name, :string)
     field(:inReplyTo, ObjectValidators.ObjectID)
     field(:attributedTo, ObjectValidators.ObjectID)
+    field(:context, :string)
 
     # TODO: Remove actor on objects
     field(:actor, ObjectValidators.ObjectID)
