@@ -25,6 +25,7 @@ defmodule Pleroma.Web.ActivityPub.ObjectValidators.EventValidator do
     field(:bcc, ObjectValidators.Recipients, default: [])
     # TODO: Write type
     field(:tag, {:array, :map}, default: [])
+    field(:hashtags, {:array, :string}, default: [])
     field(:type, :string)
 
     field(:name, :string)

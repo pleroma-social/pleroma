@@ -26,6 +26,7 @@ defmodule Pleroma.Web.ActivityPub.ObjectValidators.QuestionValidator do
     field(:bcc, ObjectValidators.Recipients, default: [])
     # TODO: Write type
     field(:tag, {:array, :map}, default: [])
+    field(:hashtags, {:array, :string}, default: [])
     field(:type, :string)
     field(:content, :string)
     field(:context, :string)
