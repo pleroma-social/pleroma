@@ -24,6 +24,7 @@ defmodule Pleroma.Web.ActivityPub.ObjectValidators.CommonFixes do
     |> Map.put("cc", cc)
     |> Transmogrifier.fix_explicit_addressing(follower_collection)
     |> Transmogrifier.fix_implicit_addressing(follower_collection)
+    |> Transmogrifier.fix_tag()
   end
 
   def fix_activity_defaults(data, meta) do
