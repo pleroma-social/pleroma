@@ -133,21 +133,23 @@ defmodule Mix.Tasks.Pleroma.Database do
       where: fragment("(?)->>'tag' != '[]'", o.data),
       select: %{id: o.id, tag: fragment("(?)->>'tag'", o.data)}
     )
-    |> Pleroma.RepoStreamer.chunk_stream(100)
+    |> Pleroma.Repo.chunk_stream(200, :batches)
     |> Stream.each(fn objects ->
-      objects
-      |> Enum.map(fn object ->
-        tags =
-          object.tag
-          |> Jason.decode!()
-          |> Enum.filter(&is_bitstring(&1))
+      Repo.transaction(fn ->
+        objects
+        |> Enum.map(fn object ->
+          tags =
+            object.tag
+            |> Jason.decode!()
+            |> Enum.filter(&is_bitstring(&1))
 
-        Object
-        |> where([o], o.id == ^object.id)
-        |> update([o],
-          set: [data: fragment("safe_jsonb_set(?, '{hashtags}', ?, true)", o.data, ^tags)]
-        )
-        |> Repo.update_all([], timeout: :infinity)
+          Object
+          |> where([o], o.id == ^object.id)
+          |> update([o],
+            set: [data: fragment("safe_jsonb_set(?, '{hashtags}', ?, true)", o.data, ^tags)]
+          )
+          |> Repo.update_all([], timeout: :infinity)
+        end)
       end)
     end)
     |> Stream.run()
