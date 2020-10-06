@@ -1546,5 +1546,133 @@ defmodule Pleroma.Web.ActivityPub.ActivityPubControllerTest do
       |> post("/api/ap/upload_media", %{"file" => image, "description" => desc})
       |> json_response(403)
     end
+
+    test "POST /api/ap/proxy_url, get actor", %{conn: conn} do
+      user = insert(:user)
+
+      expected = %{
+        "@context" => [
+          "https://www.w3.org/ns/activitystreams",
+          "http://localhost:4001/schemas/litepub-0.1.jsonld",
+          %{"@language" => "und"}
+        ],
+        "attachment" => [
+          %{"name" => "foo", "type" => "PropertyValue", "value" => "bar"},
+          %{"name" => "foo1", "type" => "PropertyValue", "value" => "bar1"}
+        ],
+        "capabilities" => %{"acceptsChatMessages" => true},
+        "discoverable" => true,
+        "endpoints" => %{"sharedInbox" => "http://mastodon.example.org/inbox"},
+        "followers" => "http://mastodon.example.org/users/admin/followers",
+        "following" => "http://mastodon.example.org/users/admin/following",
+        "icon" => %{
+          "type" => "Image",
+          "url" =>
+            "https://cdn.niu.moe/accounts/avatars/000/033/323/original/fd7f8ae0b3ffedc9.jpeg"
+        },
+        "id" => "http://mastodon.example.org/users/admin",
+        "image" => %{
+          "type" => "Image",
+          "url" =>
+            "https://cdn.niu.moe/accounts/headers/000/033/323/original/850b3448fa5fd477.png"
+        },
+        "inbox" => "http://mastodon.example.org/users/admin/inbox",
+        "manuallyApprovesFollowers" => false,
+        "name" => "admin@mastodon.example.org",
+        "outbox" => nil,
+        "preferredUsername" => "admin@mastodon.example.org",
+        "summary" => "<p></p>",
+        "tag" => [],
+        "type" => "Person",
+        "url" => "http://mastodon.example.org/users/admin"
+      }
+
+      assert conn
+             |> assign(:user, user)
+             |> post("/api/ap/proxy_url", %{"id" => "http://mastodon.example.org/users/admin"})
+             |> json_response(200) == expected
+
+      assert conn
+             |> post("/api/ap/proxy_url", %{"id" => "http://mastodon.example.org/users/admin"})
+             |> json_response(403) == %{"error" => "Invalid credentials."}
+    end
+
+    test "POST /api/ap/proxy_url, get object", %{conn: conn} do
+      user = insert(:user)
+
+      expected = %{
+        "@context" => [
+          "https://www.w3.org/ns/activitystreams",
+          "https://w3id.org/security/v1",
+          %{
+            "Emoji" => "toot:Emoji",
+            "Hashtag" => "as:Hashtag",
+            "atomUri" => "ostatus:atomUri",
+            "conversation" => "ostatus:conversation",
+            "inReplyToAtomUri" => "ostatus:inReplyToAtomUri",
+            "manuallyApprovesFollowers" => "as:manuallyApprovesFollowers",
+            "movedTo" => "as:movedTo",
+            "ostatus" => "http://ostatus.org#",
+            "sensitive" => "as:sensitive",
+            "toot" => "http://joinmastodon.org/ns#"
+          }
+        ],
+        "actor" => "http://mastodon.example.org/users/admin",
+        "atomUri" => "http://mastodon.example.org/users/admin/statuses/99541947525187367",
+        "attachment" => [
+          %{
+            "mediaType" => "image/jpeg",
+            "name" => nil,
+            "type" => "Document",
+            "url" =>
+              "http://mastodon.example.org/system/media_attachments/files/000/000/002/original/334ce029e7bfb920.jpg"
+          }
+        ],
+        "attributedTo" => "http://mastodon.example.org/users/admin",
+        "bcc" => [],
+        "bto" => [],
+        "cc" => ["http://mastodon.example.org/users/admin/followers"],
+        "content" => "<p>yeah.</p>",
+        "context" => "tag:mastodon.example.org,2018-02-17:objectId=59:objectType=Conversation",
+        "conversation" =>
+          "tag:mastodon.example.org,2018-02-17:objectId=59:objectType=Conversation",
+        "id" => "http://mastodon.example.org/users/admin/statuses/99541947525187367",
+        "inReplyTo" => nil,
+        "inReplyToAtomUri" => nil,
+        "published" => "2018-02-17T17:46:20Z",
+        "sensitive" => false,
+        "summary" => "",
+        "tag" => [],
+        "to" => ["https://www.w3.org/ns/activitystreams#Public"],
+        "type" => "Note",
+        "url" => "http://mastodon.example.org/@admin/99541947525187367"
+      }
+
+      assert conn
+             |> assign(:user, user)
+             |> post("/api/ap/proxy_url", %{
+               "id" => "http://mastodon.example.org/users/admin/statuses/99541947525187367"
+             })
+             |> json_response(200) == expected
+
+      assert conn
+             |> post("/api/ap/proxy_url", %{
+               "id" => "http://mastodon.example.org/users/admin/statuses/99541947525187367"
+             })
+             |> json_response(403) == %{"error" => "Invalid credentials."}
+
+      assert conn
+             |> assign(:user, user)
+             |> post("/api/ap/proxy_url", %{
+               "id" => "http://mastodon.example.org/@admin/99541947525187367"
+             })
+             |> json_response(200) == expected
+
+      assert conn
+             |> post("/api/ap/proxy_url", %{
+               "id" => "http://mastodon.example.org/@admin/99541947525187367"
+             })
+             |> json_response(403) == %{"error" => "Invalid credentials."}
+    end
   end
 end

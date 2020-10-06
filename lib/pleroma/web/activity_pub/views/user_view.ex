@@ -6,6 +6,7 @@ defmodule Pleroma.Web.ActivityPub.UserView do
   use Pleroma.Web, :view
 
   alias Pleroma.Keys
+  alias Pleroma.Maps
   alias Pleroma.Repo
   alias Pleroma.User
   alias Pleroma.Web.ActivityPub.Transmogrifier
@@ -15,21 +16,27 @@ defmodule Pleroma.Web.ActivityPub.UserView do
 
   import Ecto.Query
 
-  def render("endpoints.json", %{user: %User{nickname: nil, local: true} = _user}) do
+  def render("endpoints.json", %{user: %User{nickname: nil, local: true}}) do
     %{"sharedInbox" => Helpers.activity_pub_url(Endpoint, :inbox)}
   end
 
-  def render("endpoints.json", %{user: %User{local: true} = _user}) do
+  def render("endpoints.json", %{user: %User{local: true}}) do
     %{
       "oauthAuthorizationEndpoint" => Helpers.o_auth_url(Endpoint, :authorize),
       "oauthRegistrationEndpoint" => Helpers.app_url(Endpoint, :create),
       "oauthTokenEndpoint" => Helpers.o_auth_url(Endpoint, :token_exchange),
       "sharedInbox" => Helpers.activity_pub_url(Endpoint, :inbox),
-      "uploadMedia" => Helpers.activity_pub_url(Endpoint, :upload_media)
+      "uploadMedia" => Helpers.activity_pub_url(Endpoint, :upload_media),
+      "proxyUrl" => Helpers.activity_pub_url(Endpoint, :proxy_url)
     }
   end
 
-  def render("endpoints.json", _), do: %{}
+  def render("endpoints.json", %{user: %User{shared_inbox: shared_inbox}})
+      when is_binary(shared_inbox) do
+    %{"sharedInbox" => shared_inbox}
+  end
+
+  def render("endpoints.json", _), do: nil
 
   def render("service.json", %{user: user}) do
     {:ok, user} = User.ensure_keys_present(user)
@@ -59,6 +66,7 @@ defmodule Pleroma.Web.ActivityPub.UserView do
       "invisible" => User.invisible?(user)
     }
     |> Map.merge(Utils.make_json_ld_header())
+    |> Maps.put_if_present("endpoints", endpoints)
   end
 
   # the instance itself is not a Person, but instead an Application
@@ -68,11 +76,22 @@ defmodule Pleroma.Web.ActivityPub.UserView do
   def render("user.json", %{user: %User{nickname: "internal." <> _} = user}),
     do: render("service.json", %{user: user}) |> Map.put("preferredUsername", user.nickname)
 
-  def render("user.json", %{user: user}) do
-    {:ok, user} = User.ensure_keys_present(user)
-    {:ok, _, public_key} = Keys.keys_from_pem(user.keys)
-    public_key = :public_key.pem_entry_encode(:SubjectPublicKeyInfo, public_key)
-    public_key = :public_key.pem_encode([public_key])
+  def render("user.json", %{user: %User{} = user}) do
+    public_key =
+      with {:ok, user} <- User.ensure_keys_present(user) do
+        {:ok, _, public_key} = Keys.keys_from_pem(user.keys)
+        public_key = :public_key.pem_entry_encode(:SubjectPublicKeyInfo, public_key)
+        public_key = :public_key.pem_encode([public_key])
+
+        %{
+          "id" => "#{user.ap_id}#main-key",
+          "owner" => user.ap_id,
+          "publicKeyPem" => public_key
+        }
+      else
+        _ -> nil
+      end
+
     user = User.sanitize_html(user)
 
     endpoints = render("endpoints.json", %{user: user})
@@ -90,24 +109,22 @@ defmodule Pleroma.Web.ActivityPub.UserView do
         %{}
       end
 
+    # FIXME: user.outbox
+    inbox = if user.local, do: "#{user.ap_id}/inbox", else: user.inbox
+    outbox = if user.local, do: "#{user.ap_id}/outbox", else: nil
+
     %{
       "id" => user.ap_id,
       "type" => user.actor_type,
-      "following" => "#{user.ap_id}/following",
-      "followers" => "#{user.ap_id}/followers",
-      "inbox" => "#{user.ap_id}/inbox",
-      "outbox" => "#{user.ap_id}/outbox",
+      "following" => User.ap_following(user),
+      "followers" => User.ap_followers(user),
+      "inbox" => inbox,
+      "outbox" => outbox,
       "preferredUsername" => user.nickname,
       "name" => user.name,
       "summary" => user.bio,
       "url" => user.ap_id,
       "manuallyApprovesFollowers" => user.locked,
-      "publicKey" => %{
-        "id" => "#{user.ap_id}#main-key",
-        "owner" => user.ap_id,
-        "publicKeyPem" => public_key
-      },
-      "endpoints" => endpoints,
       "attachment" => fields,
       "tag" => emoji_tags,
       "discoverable" => user.discoverable,
@@ -116,6 +133,8 @@ defmodule Pleroma.Web.ActivityPub.UserView do
     |> Map.merge(maybe_make_image(&User.avatar_url/2, "icon", user))
     |> Map.merge(maybe_make_image(&User.banner_url/2, "image", user))
     |> Map.merge(Utils.make_json_ld_header())
+    |> Maps.put_if_present("endpoints", endpoints)
+    |> Maps.put_if_present("publicKey", public_key)
   end
 
   def render("following.json", %{user: user, page: page} = opts) do

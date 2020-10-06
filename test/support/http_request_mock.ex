@@ -534,12 +534,15 @@ defmodule HttpRequestMock do
      }}
   end
 
-  def get(
-        "http://mastodon.example.org/@admin/99541947525187367",
-        _,
-        _,
-        _
-      ) do
+  def get("http://mastodon.example.org/users/admin/statuses/99541947525187367", _, _, _) do
+    {:ok,
+     %Tesla.Env{
+       status: 200,
+       body: File.read!("test/fixtures/mastodon-note-object.json")
+     }}
+  end
+
+  def get("http://mastodon.example.org/@admin/99541947525187367", _, _, _) do
     {:ok,
      %Tesla.Env{
        status: 200,

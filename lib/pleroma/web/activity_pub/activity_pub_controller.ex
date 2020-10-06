@@ -42,7 +42,7 @@ defmodule Pleroma.Web.ActivityPub.ActivityPubController do
   # Note: :following and :followers must be served even without authentication (as via :api)
   plug(
     EnsureAuthenticatedPlug
-    when action in [:read_inbox, :update_outbox, :whoami, :upload_media]
+    when action in [:read_inbox, :update_outbox, :whoami, :upload_media, :proxy_url]
   )
 
   plug(
@@ -548,6 +548,35 @@ defmodule Pleroma.Web.ActivityPub.ActivityPubController do
       conn
       |> put_status(:created)
       |> json(object.data)
+    end
+  end
+
+  def proxy_url(%{assigns: %{user: %User{}}} = conn, %{"id" => id}) when is_binary(id) do
+    cond do
+      object = Object.normalize(id, true) ->
+        conn
+        |> maybe_set_tracking_data(object)
+        |> set_cache_ttl_for(object)
+        |> put_resp_content_type("application/activity+json")
+        |> put_view(ObjectView)
+        |> render("object.json", object: object)
+
+      object = Activity.get_by_ap_id_with_object(id) ->
+        conn
+        |> maybe_set_tracking_data(object)
+        |> set_cache_ttl_for(object)
+        |> put_resp_content_type("application/activity+json")
+        |> put_view(ObjectView)
+        |> render("object.json", object: object)
+
+      user = User.get_or_fetch_by_ap_id!(id) ->
+        conn
+        |> put_resp_content_type("application/activity+json")
+        |> put_view(UserView)
+        |> render("user.json", %{user: user})
+
+      true ->
+        {:error, :not_found}
     end
   end
 end

@@ -1770,7 +1770,7 @@ defmodule Pleroma.User do
 
   def fetch_by_ap_id(ap_id, opts \\ []), do: ActivityPub.make_user_from_ap_id(ap_id, opts)
 
-  def get_or_fetch_by_ap_id(ap_id, opts \\ []) do
+  def get_or_fetch_by_ap_id(ap_id, opts \\ []) when is_binary(ap_id) do
     cached_user = get_cached_by_ap_id(ap_id)
 
     maybe_fetched_user = needs_update?(cached_user) && fetch_by_ap_id(ap_id, opts)
@@ -1784,6 +1784,13 @@ defmodule Pleroma.User do
 
       _ ->
         {:error, :not_found}
+    end
+  end
+
+  def get_or_fetch_by_ap_id!(ap_id, opts \\ []) when is_binary(ap_id) do
+    case get_or_fetch_by_ap_id(ap_id, opts) do
+      {:ok, user} -> user
+      _ -> nil
     end
   end
 
@@ -2097,9 +2104,9 @@ defmodule Pleroma.User do
     }
   end
 
-  def ensure_keys_present(%{keys: keys} = user) when not is_nil(keys), do: {:ok, user}
+  def ensure_keys_present(%User{keys: keys} = user) when not is_nil(keys), do: {:ok, user}
 
-  def ensure_keys_present(%User{} = user) do
+  def ensure_keys_present(%User{local: true} = user) do
     with {:ok, pem} <- Keys.generate_rsa_pem() do
       user
       |> cast(%{keys: pem}, [:keys])
@@ -2107,6 +2114,8 @@ defmodule Pleroma.User do
       |> update_and_set_cache()
     end
   end
+
+  def ensure_keys_present(%User{local: false}), do: {:error, :none}
 
   def get_ap_ids_by_nicknames(nicknames) do
     from(u in User,

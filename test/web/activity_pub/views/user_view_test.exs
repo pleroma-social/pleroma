@@ -99,12 +99,12 @@ defmodule Pleroma.Web.ActivityPub.UserViewTest do
 
     test "remote users have an empty endpoints structure" do
       user = insert(:user, local: false)
-      {:ok, user} = User.ensure_keys_present(user)
+      {:error, :none} = User.ensure_keys_present(user)
 
       result = UserView.render("user.json", %{user: user})
 
       assert result["id"] == user.ap_id
-      assert result["endpoints"] == %{}
+      assert result["endpoints"] == nil
     end
 
     test "instance users do not expose oAuth endpoints" do
