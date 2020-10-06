@@ -90,7 +90,13 @@ defmodule Pleroma.Web.ApiSpec.MediaOperation do
         },
         description: %Schema{
           type: :string,
+          nullable: true,
           description: "A plain-text description of the media, for accessibility purposes."
+        },
+        filename: %Schema{
+          type: :string,
+          nullable: true,
+          description: "Filename of the media."
         },
         focus: %Schema{
           type: :string,

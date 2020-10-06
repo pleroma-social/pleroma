@@ -57,17 +57,20 @@ defmodule Pleroma.Web.MastodonAPI.MediaController do
   def create2(_conn, _data), do: {:error, :bad_request}
 
   @doc "PUT /api/v1/media/:id"
-  def update(%{assigns: %{user: user}, body_params: %{description: description}} = conn, %{id: id}) do
+  def update(
+        %{assigns: %{user: user}, body_params: body_params} = conn,
+        %{id: id}
+      ) do
     with %Object{} = object <- Object.get_by_id(id),
          :ok <- Object.authorize_access(object, user),
-         {:ok, %Object{data: data}} <- Object.update_data(object, %{"name" => description}) do
+         params <- prepare_update_params(body_params),
+         :ok <- validate_filename(params["filename"], hd(object.data["url"])),
+         {:ok, %Object{data: data}} <- Object.update_data(object, params) do
       attachment_data = Map.put(data, "id", object.id)
 
       render(conn, "attachment.json", %{attachment: attachment_data})
     end
   end
-
-  def update(conn, data), do: show(conn, data)
 
   @doc "GET /api/v1/media/:id"
   def show(%{assigns: %{user: user}} = conn, %{id: id}) do
@@ -80,4 +83,26 @@ defmodule Pleroma.Web.MastodonAPI.MediaController do
   end
 
   def show(_conn, _data), do: {:error, :bad_request}
+
+  defp prepare_update_params(body_params) do
+    body_params
+    |> Map.take([:description, :filename])
+    |> Enum.into(%{}, fn
+      {:description, description} ->
+        {"name", description}
+
+      {:filename, filename} ->
+        {"filename", filename}
+    end)
+  end
+
+  defp validate_filename(nil, _), do: :ok
+
+  defp validate_filename(filename, %{"href" => href}) do
+    if Path.extname(filename) == Path.extname(href) do
+      :ok
+    else
+      {:error, :invalid_filename_extension}
+    end
+  end
 end

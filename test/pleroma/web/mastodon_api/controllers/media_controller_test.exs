@@ -99,7 +99,7 @@ defmodule Pleroma.Web.MastodonAPI.MediaControllerTest do
     end
   end
 
-  describe "Update media description" do
+  describe "Update media" do
     setup do: oauth_access(["write:media"])
 
     setup %{user: actor} do
@@ -113,21 +113,69 @@ defmodule Pleroma.Web.MastodonAPI.MediaControllerTest do
         ActivityPub.upload(
           file,
           actor: User.ap_id(actor),
-          description: "test-m"
+          description: "test-m",
+          filename: "test_image.jpg"
         )
 
       [object: object]
     end
 
-    test "/api/v1/media/:id good request", %{conn: conn, object: object} do
+    test "/api/v1/media/:id update description", %{conn: conn, object: object} do
+      new_description = "test-media"
+
       media =
         conn
         |> put_req_header("content-type", "multipart/form-data")
-        |> put("/api/v1/media/#{object.id}", %{"description" => "test-media"})
+        |> put("/api/v1/media/#{object.id}", %{"description" => new_description})
         |> json_response_and_validate_schema(:ok)
 
-      assert media["description"] == "test-media"
-      assert refresh_record(object).data["name"] == "test-media"
+      assert media["description"] == new_description
+      assert refresh_record(object).data["name"] == new_description
+    end
+
+    test "/api/v1/media/:id update filename", %{conn: conn, object: object} do
+      new_filename = "media.jpg"
+
+      media =
+        conn
+        |> put_req_header("content-type", "multipart/form-data")
+        |> put("/api/v1/media/#{object.id}", %{"filename" => new_filename})
+        |> json_response_and_validate_schema(:ok)
+
+      assert media["pleroma"]["filename"] == new_filename
+      assert refresh_record(object).data["filename"] == new_filename
+    end
+
+    test "/api/v1/media/:id update description and filename", %{conn: conn, object: object} do
+      new_description = "test-media"
+      new_filename = "media.jpg"
+
+      media =
+        conn
+        |> put_req_header("content-type", "multipart/form-data")
+        |> put("/api/v1/media/#{object.id}", %{
+          "description" => new_description,
+          "filename" => new_filename,
+          "foo" => "bar"
+        })
+        |> json_response_and_validate_schema(:ok)
+
+      assert media["description"] == new_description
+      assert media["pleroma"]["filename"] == new_filename
+      assert refresh_record(object).data["name"] == new_description
+      assert refresh_record(object).data["filename"] == new_filename
+    end
+
+    test "/api/v1/media/:id filename with a wrong extension", %{conn: conn, object: object} do
+      new_filename = "media.exe"
+
+      response =
+        conn
+        |> put_req_header("content-type", "multipart/form-data")
+        |> put("/api/v1/media/#{object.id}", %{"filename" => new_filename})
+        |> json_response(400)
+
+      assert response["error"] == "invalid_filename_extension"
     end
   end
 

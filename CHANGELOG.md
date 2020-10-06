@@ -110,6 +110,8 @@ switched to a new configuration mechanism, however it was not officially removed
 - Admin API: Importing emoji from a zip file
 - Pleroma API: Importing the mutes users from CSV files.
 - Pleroma API: Pagination for remote/local packs and emoji.
+- Mastodon API: Add `filename` parameter to `POST /api/v1/media`, `POST /api/v2/media` and `PUT /api/v1/media/:id`
+- Mastodon API: Add account setting for providing filename to post attachments
 
 </details>
 
@@ -272,8 +274,6 @@ switched to a new configuration mechanism, however it was not officially removed
 - Mastodon API: Support for `bot` field in `/api/v1/accounts/update_credentials`.
 - Mastodon API: Support irreversible property for filters.
 - Mastodon API: Add pleroma.favicon field to accounts.
-- Mastodon API: Add `filename` parameter to `POST /api/v1/media` and `POST /api/v2/media`.
-- Mastodon API: Add account setting for providing filename to post attachments
 - Admin API: endpoints for create/update/delete OAuth Apps.
 - Admin API: endpoint for status view.
 - OTP: Add command to reload emoji packs
