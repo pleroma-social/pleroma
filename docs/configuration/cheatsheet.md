@@ -115,6 +115,7 @@ To add configuration to your config file, you can copy it from the base config. 
     * `Pleroma.Web.ActivityPub.MRF.ObjectAgePolicy`: Rejects or delists posts based on their age when received. (See [`:mrf_object_age`](#mrf_object_age)).
     * `Pleroma.Web.ActivityPub.MRF.ActivityExpirationPolicy`: Sets a default expiration on all posts made by users of the local instance. Requires `Pleroma.ActivityExpiration` to be enabled for processing the scheduled delections.
     * `Pleroma.Web.ActivityPub.MRF.ForceBotUnlistedPolicy`: Makes all bot posts to disappear from public timelines.
+    * `Pleroma.Web.ActivityPub.MRF.FollowBotPolicy`: Automatically follows newly discovered users from the specified bot account.
 * `transparency`: Make the content of your Message Rewrite Facility settings public (via nodeinfo).
 * `transparency_exclusions`: Exclude specific instance names from MRF transparency.  The use of the exclusions feature will be disclosed in nodeinfo as a boolean value.
 
@@ -200,6 +201,10 @@ config :pleroma, :mrf_user_allowlist, %{
 #### :mrf_activity_expiration
 
 * `days`: Default global expiration time for all local Create activities (in days)
+
+#### :mrf_follow_bot
+
+* `follower_nickname`: The name of the bot account to use for following newly discovered users.
 
 ### :activitypub
 * `unfollow_blocked`: Whether blocks result in people getting unfollowed
