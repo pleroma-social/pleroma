@@ -204,7 +204,7 @@ config :pleroma, :mrf_user_allowlist, %{
 
 #### :mrf_follow_bot
 
-* `follower_nickname`: The name of the bot account to use for following newly discovered users.
+* `follower_nickname`: The name of the bot account to use for following newly discovered users. Using `followbot` or similar is strongly suggested.
 
 ### :activitypub
 * `unfollow_blocked`: Whether blocks result in people getting unfollowed
