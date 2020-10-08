@@ -128,7 +128,7 @@ defmodule Pleroma.Web.OAuth.OAuthController do
       redirect_uri = redirect_uri(conn, redirect_uri)
       url_params = %{access_token: token.token}
       url_params = Maps.put_if_present(url_params, :state, params["state"])
-      url = UriHelper.append_uri_params(redirect_uri, url_params)
+      url = UriHelper.modify_uri_params(redirect_uri, url_params)
       redirect(conn, external: url)
     else
       conn
@@ -156,7 +156,10 @@ defmodule Pleroma.Web.OAuth.OAuthController do
   def after_create_authorization(%Plug.Conn{} = conn, %Authorization{} = auth, %{
         "authorization" => %{"redirect_uri" => @oob_token_redirect_uri}
       }) do
-    render(conn, "oob_authorization_created.html", %{auth: auth})
+    # Enforcing the view to reuse the template when calling from other controllers
+    conn
+    |> put_view(OAuthView)
+    |> render("oob_authorization_created.html", %{auth: auth})
   end
 
   def after_create_authorization(%Plug.Conn{} = conn, %Authorization{} = auth, %{
@@ -169,7 +172,7 @@ defmodule Pleroma.Web.OAuth.OAuthController do
       redirect_uri = redirect_uri(conn, redirect_uri)
       url_params = %{code: auth.token}
       url_params = Maps.put_if_present(url_params, :state, auth_attrs["state"])
-      url = UriHelper.append_uri_params(redirect_uri, url_params)
+      url = UriHelper.modify_uri_params(redirect_uri, url_params)
       redirect(conn, external: url)
     else
       conn
@@ -208,7 +211,7 @@ defmodule Pleroma.Web.OAuth.OAuthController do
          {:mfa_required, user, auth, _},
          params
        ) do
-    {:ok, token} = MFA.Token.create_token(user, auth)
+    {:ok, token} = MFA.Token.create(user, auth)
 
     data = %{
       "mfa_token" => token.token,
@@ -590,7 +593,7 @@ defmodule Pleroma.Web.OAuth.OAuthController do
     do: put_session(conn, :registration_id, registration_id)
 
   defp build_and_response_mfa_token(user, auth) do
-    with {:ok, token} <- MFA.Token.create_token(user, auth) do
+    with {:ok, token} <- MFA.Token.create(user, auth) do
       MFAView.render("mfa_response.json", %{token: token, user: user})
     end
   end
