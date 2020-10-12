@@ -238,6 +238,15 @@ defmodule Pleroma.Web.ActivityPub.SideEffectsTest do
                {:error, :no_object_actor} = SideEffects.handle(delete)
              end) =~ "object doesn't have an actor"
     end
+
+    test "it works with double deletions", %{
+      delete: delete,
+      object: object
+    } do
+      assert {:ok, activity, _} = SideEffects.handle(delete)
+      Object.invalid_object_cache(object)
+      assert {:ok, ^activity, _} = SideEffects.handle(delete)
+    end
   end
 
   describe "EmojiReact objects" do

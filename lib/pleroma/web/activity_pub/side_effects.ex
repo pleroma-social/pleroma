@@ -253,6 +253,9 @@ defmodule Pleroma.Web.ActivityPub.SideEffects do
 
     result =
       case deleted_object do
+        %Object{data: %{"type" => "Tombstone"}} ->
+          :ok
+
         %Object{} ->
           with {:ok, deleted_object, activity} <- Object.delete(deleted_object),
                {_, actor} when is_binary(actor) <- {:actor, deleted_object.data["actor"]},
