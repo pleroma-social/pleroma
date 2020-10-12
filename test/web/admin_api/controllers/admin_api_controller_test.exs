@@ -174,7 +174,7 @@ defmodule Pleroma.Web.AdminAPI.AdminAPIControllerTest do
       assert user.note_count == 1
       assert user.follower_count == 1
       assert user.following_count == 1
-      refute user.deactivated
+      assert user.is_active
 
       with_mock Pleroma.Web.Federator,
         publish: fn _ -> nil end,
@@ -186,7 +186,7 @@ defmodule Pleroma.Web.AdminAPI.AdminAPIControllerTest do
 
         ObanHelpers.perform_all()
 
-        assert User.get_by_nickname(user.nickname).deactivated
+        refute User.get_by_nickname(user.nickname).is_active
 
         log_entry = Repo.one(ModerationLog)
 
@@ -196,7 +196,7 @@ defmodule Pleroma.Web.AdminAPI.AdminAPIControllerTest do
         assert json_response(conn, 200) == [user.nickname]
 
         user = Repo.get(User, user.id)
-        assert user.deactivated
+        refute user.is_active
 
         assert user.avatar == %{}
         assert user.banner == %{}
@@ -370,7 +370,7 @@ defmodule Pleroma.Web.AdminAPI.AdminAPIControllerTest do
       conn = get(conn, "/api/pleroma/admin/users/#{user.nickname}")
 
       expected = %{
-        "deactivated" => false,
+        "is_active" => true,
         "id" => to_string(user.id),
         "local" => true,
         "nickname" => user.nickname,
@@ -653,7 +653,7 @@ defmodule Pleroma.Web.AdminAPI.AdminAPIControllerTest do
       users =
         [
           %{
-            "deactivated" => admin.deactivated,
+            "is_active" => admin.is_active,
             "id" => admin.id,
             "nickname" => admin.nickname,
             "roles" => %{"admin" => true, "moderator" => false},
@@ -668,7 +668,7 @@ defmodule Pleroma.Web.AdminAPI.AdminAPIControllerTest do
             "actor_type" => "Person"
           },
           %{
-            "deactivated" => user.deactivated,
+            "is_active" => user.is_active,
             "id" => user.id,
             "nickname" => user.nickname,
             "roles" => %{"admin" => false, "moderator" => false},
@@ -683,7 +683,7 @@ defmodule Pleroma.Web.AdminAPI.AdminAPIControllerTest do
             "actor_type" => "Person"
           },
           %{
-            "deactivated" => user2.deactivated,
+            "is_active" => user2.is_active,
             "id" => user2.id,
             "nickname" => user2.nickname,
             "roles" => %{"admin" => false, "moderator" => false},
@@ -759,7 +759,7 @@ defmodule Pleroma.Web.AdminAPI.AdminAPIControllerTest do
                "page_size" => 50,
                "users" => [
                  %{
-                   "deactivated" => user.deactivated,
+                   "is_active" => user.is_active,
                    "id" => user.id,
                    "nickname" => user.nickname,
                    "roles" => %{"admin" => false, "moderator" => false},
@@ -788,7 +788,7 @@ defmodule Pleroma.Web.AdminAPI.AdminAPIControllerTest do
                "page_size" => 50,
                "users" => [
                  %{
-                   "deactivated" => user.deactivated,
+                   "is_active" => user.is_active,
                    "id" => user.id,
                    "nickname" => user.nickname,
                    "roles" => %{"admin" => false, "moderator" => false},
@@ -817,7 +817,7 @@ defmodule Pleroma.Web.AdminAPI.AdminAPIControllerTest do
                "page_size" => 50,
                "users" => [
                  %{
-                   "deactivated" => user.deactivated,
+                   "is_active" => user.is_active,
                    "id" => user.id,
                    "nickname" => user.nickname,
                    "roles" => %{"admin" => false, "moderator" => false},
@@ -846,7 +846,7 @@ defmodule Pleroma.Web.AdminAPI.AdminAPIControllerTest do
                "page_size" => 50,
                "users" => [
                  %{
-                   "deactivated" => user.deactivated,
+                   "is_active" => user.is_active,
                    "id" => user.id,
                    "nickname" => user.nickname,
                    "roles" => %{"admin" => false, "moderator" => false},
@@ -875,7 +875,7 @@ defmodule Pleroma.Web.AdminAPI.AdminAPIControllerTest do
                "page_size" => 50,
                "users" => [
                  %{
-                   "deactivated" => user.deactivated,
+                   "is_active" => user.is_active,
                    "id" => user.id,
                    "nickname" => user.nickname,
                    "roles" => %{"admin" => false, "moderator" => false},
@@ -904,7 +904,7 @@ defmodule Pleroma.Web.AdminAPI.AdminAPIControllerTest do
                "page_size" => 1,
                "users" => [
                  %{
-                   "deactivated" => user.deactivated,
+                   "is_active" => user.is_active,
                    "id" => user.id,
                    "nickname" => user.nickname,
                    "roles" => %{"admin" => false, "moderator" => false},
@@ -928,7 +928,7 @@ defmodule Pleroma.Web.AdminAPI.AdminAPIControllerTest do
                "page_size" => 1,
                "users" => [
                  %{
-                   "deactivated" => user2.deactivated,
+                   "is_active" => user2.is_active,
                    "id" => user2.id,
                    "nickname" => user2.nickname,
                    "roles" => %{"admin" => false, "moderator" => false},
@@ -964,7 +964,7 @@ defmodule Pleroma.Web.AdminAPI.AdminAPIControllerTest do
                "page_size" => 50,
                "users" => [
                  %{
-                   "deactivated" => user.deactivated,
+                   "is_active" => user.is_active,
                    "id" => user.id,
                    "nickname" => user.nickname,
                    "roles" => %{"admin" => false, "moderator" => false},
@@ -993,7 +993,7 @@ defmodule Pleroma.Web.AdminAPI.AdminAPIControllerTest do
       users =
         [
           %{
-            "deactivated" => user.deactivated,
+            "is_active" => user.is_active,
             "id" => user.id,
             "nickname" => user.nickname,
             "roles" => %{"admin" => false, "moderator" => false},
@@ -1008,7 +1008,7 @@ defmodule Pleroma.Web.AdminAPI.AdminAPIControllerTest do
             "actor_type" => "Person"
           },
           %{
-            "deactivated" => admin.deactivated,
+            "is_active" => admin.is_active,
             "id" => admin.id,
             "nickname" => admin.nickname,
             "roles" => %{"admin" => true, "moderator" => false},
@@ -1023,7 +1023,7 @@ defmodule Pleroma.Web.AdminAPI.AdminAPIControllerTest do
             "actor_type" => "Person"
           },
           %{
-            "deactivated" => false,
+            "is_active" => true,
             "id" => old_admin.id,
             "local" => true,
             "nickname" => old_admin.nickname,
@@ -1062,7 +1062,7 @@ defmodule Pleroma.Web.AdminAPI.AdminAPIControllerTest do
       users =
         [
           %{
-            "deactivated" => user.deactivated,
+            "is_active" => user.is_active,
             "id" => user.id,
             "nickname" => user.nickname,
             "roles" => %{"admin" => false, "moderator" => false},
@@ -1096,7 +1096,7 @@ defmodule Pleroma.Web.AdminAPI.AdminAPIControllerTest do
       users =
         [
           %{
-            "deactivated" => false,
+            "is_active" => true,
             "id" => admin.id,
             "nickname" => admin.nickname,
             "roles" => %{"admin" => true, "moderator" => false},
@@ -1111,7 +1111,7 @@ defmodule Pleroma.Web.AdminAPI.AdminAPIControllerTest do
             "actor_type" => "Person"
           },
           %{
-            "deactivated" => false,
+            "is_active" => true,
             "id" => second_admin.id,
             "nickname" => second_admin.nickname,
             "roles" => %{"admin" => true, "moderator" => false},
@@ -1147,7 +1147,7 @@ defmodule Pleroma.Web.AdminAPI.AdminAPIControllerTest do
                "page_size" => 50,
                "users" => [
                  %{
-                   "deactivated" => false,
+                   "is_active" => true,
                    "id" => moderator.id,
                    "nickname" => moderator.nickname,
                    "roles" => %{"admin" => false, "moderator" => true},
@@ -1176,7 +1176,7 @@ defmodule Pleroma.Web.AdminAPI.AdminAPIControllerTest do
       users =
         [
           %{
-            "deactivated" => false,
+            "is_active" => true,
             "id" => user1.id,
             "nickname" => user1.nickname,
             "roles" => %{"admin" => false, "moderator" => false},
@@ -1191,7 +1191,7 @@ defmodule Pleroma.Web.AdminAPI.AdminAPIControllerTest do
             "actor_type" => "Person"
           },
           %{
-            "deactivated" => false,
+            "is_active" => true,
             "id" => user2.id,
             "nickname" => user2.nickname,
             "roles" => %{"admin" => false, "moderator" => false},
@@ -1239,10 +1239,10 @@ defmodule Pleroma.Web.AdminAPI.AdminAPIControllerTest do
     test "it works with multiple filters" do
       admin = insert(:user, nickname: "john", is_admin: true)
       token = insert(:oauth_admin_token, user: admin)
-      user = insert(:user, nickname: "bob", local: false, deactivated: true)
+      user = insert(:user, nickname: "bob", local: false, is_active: false)
 
-      insert(:user, nickname: "ken", local: true, deactivated: true)
-      insert(:user, nickname: "bobb", local: false, deactivated: false)
+      insert(:user, nickname: "ken", local: true, is_active: true)
+      insert(:user, nickname: "bobb", local: false, is_active: true)
 
       conn =
         build_conn()
@@ -1255,7 +1255,7 @@ defmodule Pleroma.Web.AdminAPI.AdminAPIControllerTest do
                "page_size" => 50,
                "users" => [
                  %{
-                   "deactivated" => user.deactivated,
+                   "is_active" => user.is_active,
                    "id" => user.id,
                    "nickname" => user.nickname,
                    "roles" => %{"admin" => false, "moderator" => false},
@@ -1283,7 +1283,7 @@ defmodule Pleroma.Web.AdminAPI.AdminAPIControllerTest do
                "page_size" => 50,
                "users" => [
                  %{
-                   "deactivated" => admin.deactivated,
+                   "is_active" => admin.is_active,
                    "id" => admin.id,
                    "nickname" => admin.nickname,
                    "roles" => %{"admin" => true, "moderator" => false},
@@ -1303,8 +1303,8 @@ defmodule Pleroma.Web.AdminAPI.AdminAPIControllerTest do
   end
 
   test "PATCH /api/pleroma/admin/users/activate", %{admin: admin, conn: conn} do
-    user_one = insert(:user, deactivated: true)
-    user_two = insert(:user, deactivated: true)
+    user_one = insert(:user, is_active: false)
+    user_two = insert(:user, is_active: false)
 
     conn =
       patch(
@@ -1314,7 +1314,7 @@ defmodule Pleroma.Web.AdminAPI.AdminAPIControllerTest do
       )
 
     response = json_response(conn, 200)
-    assert Enum.map(response["users"], & &1["deactivated"]) == [false, false]
+    assert Enum.map(response["users"], & &1["is_active"]) == [true, true]
 
     log_entry = Repo.one(ModerationLog)
 
@@ -1323,8 +1323,8 @@ defmodule Pleroma.Web.AdminAPI.AdminAPIControllerTest do
   end
 
   test "PATCH /api/pleroma/admin/users/deactivate", %{admin: admin, conn: conn} do
-    user_one = insert(:user, deactivated: false)
-    user_two = insert(:user, deactivated: false)
+    user_one = insert(:user, is_active: true)
+    user_two = insert(:user, is_active: true)
 
     conn =
       patch(
@@ -1334,7 +1334,7 @@ defmodule Pleroma.Web.AdminAPI.AdminAPIControllerTest do
       )
 
     response = json_response(conn, 200)
-    assert Enum.map(response["users"], & &1["deactivated"]) == [true, true]
+    assert Enum.map(response["users"], & &1["is_active"]) == [false, false]
 
     log_entry = Repo.one(ModerationLog)
 
@@ -1369,7 +1369,7 @@ defmodule Pleroma.Web.AdminAPI.AdminAPIControllerTest do
 
     assert json_response(conn, 200) ==
              %{
-               "deactivated" => !user.deactivated,
+               "is_active" => user.is_active,
                "id" => user.id,
                "nickname" => user.nickname,
                "roles" => %{"admin" => false, "moderator" => false},

@@ -491,7 +491,7 @@ defmodule Pleroma.Web.CommonAPITest do
 
   describe "posting" do
     test "deactivated users can't post" do
-      user = insert(:user, deactivated: true)
+      user = insert(:user, is_active: false)
       assert {:error, _} = CommonAPI.post(user, %{status: "ye"})
     end
 
