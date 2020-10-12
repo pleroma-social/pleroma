@@ -499,6 +499,7 @@ defmodule Pleroma.Web.ActivityPub.Transmogrifier do
       data["object"]
       |> strip_internal_fields()
       |> fix_type(fetch_options)
+      |> fix_in_reply_to(fetch_options)
 
     data = Map.put(data, "object", object)
     options = Keyword.put(options, :local, false)
