@@ -149,7 +149,7 @@ defmodule Pleroma.User.Query do
   end
 
   defp compose_query({:confirmation_pending, bool}, query) do
-    where(query, [u], u.confirmation_pending == ^bool)
+    where(query, [u], u.is_confirmed != ^bool)
   end
 
   defp compose_query({:need_approval, _}, query) do

@@ -238,7 +238,7 @@ defmodule Mix.Tasks.Pleroma.UserTest do
       assert message =~ ~r/Admin status .* true/
 
       assert_received {:mix_shell, :info, [message]}
-      assert message =~ ~r/Confirmation pending .* false/
+      assert message =~ ~r/Confirmation status.* true/
 
       assert_received {:mix_shell, :info, [message]}
       assert message =~ ~r/Locked status .* true/
@@ -250,12 +250,12 @@ defmodule Mix.Tasks.Pleroma.UserTest do
       assert user.is_moderator
       assert user.locked
       assert user.is_admin
-      refute user.confirmation_pending
+      assert user.is_confirmed
     end
 
     test "All statuses unset" do
       user =
-        insert(:user, locked: true, is_moderator: true, is_admin: true, confirmation_pending: true)
+        insert(:user, locked: true, is_moderator: true, is_admin: true, is_confirmed: false)
 
       Mix.Tasks.Pleroma.User.run([
         "set",
@@ -270,7 +270,7 @@ defmodule Mix.Tasks.Pleroma.UserTest do
       assert message =~ ~r/Admin status .* false/
 
       assert_received {:mix_shell, :info, [message]}
-      assert message =~ ~r/Confirmation pending .* true/
+      assert message =~ ~r/Confirmation status.* false/
 
       assert_received {:mix_shell, :info, [message]}
       assert message =~ ~r/Locked status .* false/
@@ -282,7 +282,7 @@ defmodule Mix.Tasks.Pleroma.UserTest do
       refute user.is_moderator
       refute user.locked
       refute user.is_admin
-      assert user.confirmation_pending
+      refute user.is_confirmed
     end
 
     test "no user to set status" do
@@ -459,27 +459,27 @@ defmodule Mix.Tasks.Pleroma.UserTest do
 
   describe "running toggle_confirmed" do
     test "user is confirmed" do
-      %{id: id, nickname: nickname} = insert(:user, confirmation_pending: false)
+      %{id: id, nickname: nickname} = insert(:user, is_confirmed: true)
 
       assert :ok = Mix.Tasks.Pleroma.User.run(["toggle_confirmed", nickname])
       assert_received {:mix_shell, :info, [message]}
       assert message == "#{nickname} needs confirmation."
 
       user = Repo.get(User, id)
-      assert user.confirmation_pending
+      refute user.is_confirmed
       assert user.confirmation_token
     end
 
     test "user is not confirmed" do
       %{id: id, nickname: nickname} =
-        insert(:user, confirmation_pending: true, confirmation_token: "some token")
+        insert(:user, is_confirmed: false, confirmation_token: "some token")
 
       assert :ok = Mix.Tasks.Pleroma.User.run(["toggle_confirmed", nickname])
       assert_received {:mix_shell, :info, [message]}
       assert message == "#{nickname} doesn't need confirmation."
 
       user = Repo.get(User, id)
-      refute user.confirmation_pending
+      assert user.is_confirmed
       refute user.confirmation_token
     end
 
@@ -574,29 +574,29 @@ defmodule Mix.Tasks.Pleroma.UserTest do
 
   describe "bulk confirm and unconfirm" do
     test "confirm all" do
-      user1 = insert(:user, confirmation_pending: true)
-      user2 = insert(:user, confirmation_pending: true)
+      user1 = insert(:user, is_confirmed: false)
+      user2 = insert(:user, is_confirmed: false)
 
-      assert user1.confirmation_pending
-      assert user2.confirmation_pending
+      refute user1.is_confirmed
+      refute user2.is_confirmed
 
       Mix.Tasks.Pleroma.User.run(["confirm_all"])
 
       user1 = User.get_cached_by_nickname(user1.nickname)
       user2 = User.get_cached_by_nickname(user2.nickname)
 
-      refute user1.confirmation_pending
-      refute user2.confirmation_pending
+      assert user1.is_confirmed
+      assert user2.is_confirmed
     end
 
     test "unconfirm all" do
-      user1 = insert(:user, confirmation_pending: false)
-      user2 = insert(:user, confirmation_pending: false)
-      admin = insert(:user, is_admin: true, confirmation_pending: false)
-      mod = insert(:user, is_moderator: true, confirmation_pending: false)
+      user1 = insert(:user, is_confirmed: true)
+      user2 = insert(:user, is_confirmed: true)
+      admin = insert(:user, is_admin: true, is_confirmed: true)
+      mod = insert(:user, is_moderator: true, is_confirmed: true)
 
-      refute user1.confirmation_pending
-      refute user2.confirmation_pending
+      assert user1.is_confirmed
+      assert user2.is_confirmed
 
       Mix.Tasks.Pleroma.User.run(["unconfirm_all"])
 
@@ -605,10 +605,10 @@ defmodule Mix.Tasks.Pleroma.UserTest do
       admin = User.get_cached_by_nickname(admin.nickname)
       mod = User.get_cached_by_nickname(mod.nickname)
 
-      assert user1.confirmation_pending
-      assert user2.confirmation_pending
-      refute admin.confirmation_pending
-      refute mod.confirmation_pending
+      refute user1.is_confirmed
+      refute user2.is_confirmed
+      assert admin.is_confirmed
+      assert mod.is_confirmed
     end
   end
 end
