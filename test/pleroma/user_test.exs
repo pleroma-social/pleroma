@@ -632,7 +632,7 @@ defmodule Pleroma.UserTest do
     end
 
     test "it creates confirmed user if :confirmed option is given" do
-      changeset = User.register_changeset(%User{}, @full_user_data, need_confirmation: false)
+      changeset = User.register_changeset(%User{}, @full_user_data, confirmed: true)
       assert changeset.valid?
 
       {:ok, user} = Repo.insert(changeset)
@@ -1829,24 +1829,6 @@ defmodule Pleroma.UserTest do
       Enum.each(inactive, fn user ->
         assert user.id in inactive_users_ids
       end)
-    end
-  end
-
-  describe "toggle_confirmation/1" do
-    test "if user is confirmed" do
-      user = insert(:user, is_confirmed: true)
-      {:ok, user} = User.toggle_confirmation(user)
-
-      refute user.is_confirmed
-      assert user.confirmation_token
-    end
-
-    test "if user is unconfirmed" do
-      user = insert(:user, is_confirmed: false, confirmation_token: "some token")
-      {:ok, user} = User.toggle_confirmation(user)
-
-      assert user.is_confirmed
-      refute user.confirmation_token
     end
   end
 

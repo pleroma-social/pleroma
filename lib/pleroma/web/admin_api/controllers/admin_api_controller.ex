@@ -169,7 +169,7 @@ defmodule Pleroma.Web.AdminAPI.AdminAPIController do
           bio: "."
         }
 
-        User.register_changeset(%User{}, user_data, need_confirmation: false)
+        User.register_changeset(%User{}, user_data, confirmed: true)
       end)
       |> Enum.reduce(Ecto.Multi.new(), fn changeset, multi ->
         Ecto.Multi.insert(multi, Ecto.UUID.generate(), changeset)
@@ -655,7 +655,7 @@ defmodule Pleroma.Web.AdminAPI.AdminAPIController do
   def confirm_email(%{assigns: %{user: admin}} = conn, %{"nicknames" => nicknames}) do
     users = Enum.map(nicknames, &User.get_cached_by_nickname/1)
 
-    User.toggle_confirmation(users)
+    Enum.map(users, fn user -> User.set_confirmation(user, true) end)
 
     ModerationLog.insert_log(%{actor: admin, subject: users, action: "confirm_email"})
 

@@ -33,7 +33,7 @@ defmodule Pleroma.Web.TwitterAPI.Controller do
          true <- user.local and !user.is_confirmed and user.confirmation_token == token,
          {:ok, _} <-
            user
-           |> User.confirmation_changeset(need_confirmation: false)
+           |> User.confirmation_changeset(set_confirmation: true)
            |> User.update_and_set_cache() do
       redirect(conn, to: "/")
     end

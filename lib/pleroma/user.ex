@@ -678,11 +678,11 @@ defmodule Pleroma.User do
     reason_limit = Config.get([:instance, :registration_reason_length], 500)
     params = Map.put_new(params, :accepts_chat_messages, true)
 
-    need_confirmation? =
-      if is_nil(opts[:need_confirmation]) do
-        Config.get([:instance, :account_activation_required])
+    confirmed? =
+      if is_nil(opts[:confirmed]) do
+        !Config.get([:instance, :account_activation_required])
       else
-        opts[:need_confirmation]
+        opts[:confirmed]
       end
 
     need_approval? =
@@ -693,7 +693,7 @@ defmodule Pleroma.User do
       end
 
     struct
-    |> confirmation_changeset(need_confirmation: need_confirmation?)
+    |> confirmation_changeset(set_confirmation: confirmed?)
     |> approval_changeset(need_approval: need_approval?)
     |> cast(params, [
       :bio,
@@ -2058,22 +2058,10 @@ defmodule Pleroma.User do
     updated_user
   end
 
-  @spec toggle_confirmation(User.t()) :: {:ok, User.t()} | {:error, Changeset.t()}
-  def toggle_confirmation(%User{} = user) do
+  @spec set_confirmation(User.t(), boolean()) :: {:ok, User.t()} | {:error, Changeset.t()}
+  def set_confirmation(%User{} = user, bool) do
     user
-    |> confirmation_changeset(need_confirmation: user.is_confirmed)
-    |> update_and_set_cache()
-  end
-
-  @spec toggle_confirmation([User.t()]) :: [{:ok, User.t()} | {:error, Changeset.t()}]
-  def toggle_confirmation(users) do
-    Enum.map(users, &toggle_confirmation/1)
-  end
-
-  @spec need_confirmation(User.t(), boolean()) :: {:ok, User.t()} | {:error, Changeset.t()}
-  def need_confirmation(%User{} = user, bool) do
-    user
-    |> confirmation_changeset(need_confirmation: bool)
+    |> confirmation_changeset(set_confirmation: bool)
     |> update_and_set_cache()
   end
 
@@ -2241,17 +2229,17 @@ defmodule Pleroma.User do
   end
 
   @spec confirmation_changeset(User.t(), keyword()) :: Changeset.t()
-  def confirmation_changeset(user, need_confirmation: need_confirmation?) do
+  def confirmation_changeset(user, set_confirmation: confirmed?) do
     params =
-      if need_confirmation? do
-        %{
-          is_confirmed: false,
-          confirmation_token: :crypto.strong_rand_bytes(32) |> Base.url_encode64()
-        }
-      else
+      if confirmed? do
         %{
           is_confirmed: true,
           confirmation_token: nil
+        }
+      else
+        %{
+          is_confirmed: false,
+          confirmation_token: :crypto.strong_rand_bytes(32) |> Base.url_encode64()
         }
       end
 

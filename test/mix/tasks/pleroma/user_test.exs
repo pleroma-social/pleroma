@@ -254,8 +254,7 @@ defmodule Mix.Tasks.Pleroma.UserTest do
     end
 
     test "All statuses unset" do
-      user =
-        insert(:user, locked: true, is_moderator: true, is_admin: true, is_confirmed: false)
+      user = insert(:user, locked: true, is_moderator: true, is_admin: true, is_confirmed: false)
 
       Mix.Tasks.Pleroma.User.run([
         "set",
@@ -431,13 +430,6 @@ defmodule Mix.Tasks.Pleroma.UserTest do
       assert_received {:mix_shell, :info, [message]}
       assert message =~ "Invite for token #{invite.token} was revoked."
     end
-
-    test "it prints an error message when invite is not exist" do
-      Mix.Tasks.Pleroma.User.run(["revoke_invite", "foo"])
-
-      assert_received {:mix_shell, :error, [message]}
-      assert message =~ "No invite found"
-    end
   end
 
   describe "running delete_activities" do
@@ -451,40 +443,6 @@ defmodule Mix.Tasks.Pleroma.UserTest do
 
     test "it prints an error message when user is not exist" do
       Mix.Tasks.Pleroma.User.run(["delete_activities", "foo"])
-
-      assert_received {:mix_shell, :error, [message]}
-      assert message =~ "No local user"
-    end
-  end
-
-  describe "running toggle_confirmed" do
-    test "user is confirmed" do
-      %{id: id, nickname: nickname} = insert(:user, is_confirmed: true)
-
-      assert :ok = Mix.Tasks.Pleroma.User.run(["toggle_confirmed", nickname])
-      assert_received {:mix_shell, :info, [message]}
-      assert message == "#{nickname} needs confirmation."
-
-      user = Repo.get(User, id)
-      refute user.is_confirmed
-      assert user.confirmation_token
-    end
-
-    test "user is not confirmed" do
-      %{id: id, nickname: nickname} =
-        insert(:user, is_confirmed: false, confirmation_token: "some token")
-
-      assert :ok = Mix.Tasks.Pleroma.User.run(["toggle_confirmed", nickname])
-      assert_received {:mix_shell, :info, [message]}
-      assert message == "#{nickname} doesn't need confirmation."
-
-      user = Repo.get(User, id)
-      assert user.is_confirmed
-      refute user.confirmation_token
-    end
-
-    test "it prints an error message when user is not exist" do
-      Mix.Tasks.Pleroma.User.run(["toggle_confirmed", "foo"])
 
       assert_received {:mix_shell, :error, [message]}
       assert message =~ "No local user"

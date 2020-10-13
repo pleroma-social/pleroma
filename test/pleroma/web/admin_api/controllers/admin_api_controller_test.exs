@@ -1943,6 +1943,9 @@ defmodule Pleroma.Web.AdminAPI.AdminAPIControllerTest do
 
       assert ret_conn.status == 200
 
+      first_user = User.get_by_id(first_user.id)
+      second_user = User.get_by_id(second_user.id)
+
       assert first_user.is_confirmed
       assert second_user.is_confirmed
 
