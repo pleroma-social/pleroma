@@ -258,21 +258,6 @@
     mix pleroma.user untag <nickname> <tags>
     ```
 
-
-## Toggle confirmation status of the user
-
-=== "OTP"
-
-    ```sh
-     ./bin/pleroma_ctl user toggle_confirmed <nickname>
-    ```
-
-=== "From Source"
-
-    ```sh
-    mix pleroma.user toggle_confirmed <nickname>
-    ```
-
 ## Set confirmation status for all regular active users
 *Admins and moderators are excluded*
 
