@@ -1369,7 +1369,7 @@ defmodule Pleroma.Web.AdminAPI.AdminAPIControllerTest do
 
     assert json_response(conn, 200) ==
              %{
-               "is_active" => user.is_active,
+               "is_active" => false,
                "id" => user.id,
                "nickname" => user.nickname,
                "roles" => %{"admin" => false, "moderator" => false},
