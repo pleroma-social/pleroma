@@ -442,4 +442,13 @@ defmodule Pleroma.Factory do
       phrase: "cofe"
     }
   end
+
+  def user_invite_token_factory do
+    %Pleroma.UserInviteToken{
+      token: Base.url_encode64(:crypto.strong_rand_bytes(32)),
+      used: false,
+      invite_type: "one_time",
+      uses: 0
+    }
+  end
 end

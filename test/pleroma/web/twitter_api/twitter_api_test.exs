@@ -183,7 +183,7 @@ defmodule Pleroma.Web.TwitterAPI.TwitterAPITest do
 
       {:error, msg} = TwitterAPI.register_user(data)
 
-      assert msg == "Invalid token"
+      assert msg == %{invite: ["Invalid token"]}
       refute User.get_cached_by_nickname("GrimReaper")
     end
 
@@ -203,7 +203,7 @@ defmodule Pleroma.Web.TwitterAPI.TwitterAPITest do
 
       {:error, msg} = TwitterAPI.register_user(data)
 
-      assert msg == "Expired token"
+      assert msg == %{invite: ["Expired token"]}
       refute User.get_cached_by_nickname("GrimReaper")
     end
   end
@@ -258,7 +258,7 @@ defmodule Pleroma.Web.TwitterAPI.TwitterAPITest do
 
       {:error, msg} = TwitterAPI.register_user(data)
 
-      assert msg == "Expired token"
+      assert msg == %{invite: ["Expired token"]}
       refute User.get_cached_by_nickname("vinny")
       invite = Repo.get_by(UserInviteToken, token: invite.token)
 
@@ -302,7 +302,7 @@ defmodule Pleroma.Web.TwitterAPI.TwitterAPITest do
 
       {:error, msg} = TwitterAPI.register_user(data)
 
-      assert msg == "Expired token"
+      assert msg == %{invite: ["Expired token"]}
       refute User.get_cached_by_nickname("GrimReaper")
     end
   end
@@ -363,7 +363,7 @@ defmodule Pleroma.Web.TwitterAPI.TwitterAPITest do
 
       {:error, msg} = TwitterAPI.register_user(data)
 
-      assert msg == "Expired token"
+      assert msg == %{invite: ["Expired token"]}
       refute User.get_cached_by_nickname("GrimReaper")
     end
 
@@ -383,7 +383,7 @@ defmodule Pleroma.Web.TwitterAPI.TwitterAPITest do
 
       {:error, msg} = TwitterAPI.register_user(data)
 
-      assert msg == "Expired token"
+      assert msg == %{invite: ["Expired token"]}
       refute User.get_cached_by_nickname("GrimReaper")
     end
 
@@ -405,7 +405,7 @@ defmodule Pleroma.Web.TwitterAPI.TwitterAPITest do
 
       {:error, msg} = TwitterAPI.register_user(data)
 
-      assert msg == "Expired token"
+      assert msg == %{invite: ["Expired token"]}
       refute User.get_cached_by_nickname("GrimReaper")
     end
   end
@@ -420,7 +420,11 @@ defmodule Pleroma.Web.TwitterAPI.TwitterAPITest do
 
     {:error, error} = TwitterAPI.register_user(data)
 
-    assert is_binary(error)
+    assert error == %{
+             password: ["can't be blank"],
+             password_confirmation: ["can't be blank"]
+           }
+
     refute User.get_cached_by_nickname("lain")
   end
 

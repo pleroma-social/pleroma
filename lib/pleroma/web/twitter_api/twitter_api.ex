@@ -3,14 +3,12 @@
 # SPDX-License-Identifier: AGPL-3.0-only
 
 defmodule Pleroma.Web.TwitterAPI.TwitterAPI do
-  import Pleroma.Web.Gettext
-
   alias Pleroma.Emails.Mailer
   alias Pleroma.Emails.UserEmail
-  alias Pleroma.Repo
   alias Pleroma.User
   alias Pleroma.UserInviteToken
 
+  @spec register_user(map(), keyword()) :: {:ok, User.t()} | {:error, map()}
   def register_user(params, opts \\ []) do
     params =
       params
@@ -28,18 +26,20 @@ defmodule Pleroma.Web.TwitterAPI.TwitterAPI do
     end
   end
 
+  @spec create_user_with_invite(map(), keyword()) :: {:ok, User.t()} | {:error, map()}
   defp create_user_with_invite(params, opts) do
     with %{token: token} when is_binary(token) <- params,
-         %UserInviteToken{} = invite <- Repo.get_by(UserInviteToken, %{token: token}),
+         {:ok, invite} <- UserInviteToken.find_by_token(token),
          true <- UserInviteToken.valid_invite?(invite) do
       UserInviteToken.update_usage!(invite)
       create_user(params, opts)
     else
-      nil -> {:error, "Invalid token"}
-      _ -> {:error, "Expired token"}
+      nil -> {:error, %{invite: ["Invalid token"]}}
+      _ -> {:error, %{invite: ["Expired token"]}}
     end
   end
 
+  @spec create_user(map(), keyword()) :: {:ok, User.t()} | {:error, map()}
   defp create_user(params, opts) do
     changeset = User.register_changeset(%User{}, params, opts)
 
@@ -52,7 +52,6 @@ defmodule Pleroma.Web.TwitterAPI.TwitterAPI do
         errors =
           changeset
           |> Ecto.Changeset.traverse_errors(fn {msg, _opts} -> msg end)
-          |> Jason.encode!()
 
         {:error, errors}
     end
@@ -104,26 +103,8 @@ defmodule Pleroma.Web.TwitterAPI.TwitterAPI do
            ) do
       :ok
     else
-      {:error, :captcha_error} ->
-        captcha_error(dgettext("errors", "CAPTCHA Error"))
-
-      {:error, :invalid} ->
-        captcha_error(dgettext("errors", "Invalid CAPTCHA"))
-
-      {:error, :kocaptcha_service_unavailable} ->
-        captcha_error(dgettext("errors", "Kocaptcha service unavailable"))
-
-      {:error, :expired} ->
-        captcha_error(dgettext("errors", "CAPTCHA expired"))
-
-      {:error, :already_used} ->
-        captcha_error(dgettext("errors", "CAPTCHA already used"))
-
-      {:error, :invalid_answer_data} ->
-        captcha_error(dgettext("errors", "Invalid answer data"))
-
       {:error, error} ->
-        captcha_error(error)
+        {:error, %{captcha: [Pleroma.Captcha.Error.message(error)]}}
     end
   end
 
@@ -131,12 +112,8 @@ defmodule Pleroma.Web.TwitterAPI.TwitterAPI do
     [:captcha_solution, :captcha_token, :captcha_answer_data]
     |> Enum.find_value(:ok, fn key ->
       unless is_binary(params[key]) do
-        error = dgettext("errors", "Invalid CAPTCHA (Missing parameter: %{name})", name: key)
-        {:error, error}
+        {:error, Pleroma.Captcha.Error.message(:missing_field, %{name: key})}
       end
     end)
   end
-
-  # For some reason FE expects error message to be a serialized JSON
-  defp captcha_error(error), do: {:error, Jason.encode!(%{captcha: [error]})}
 end

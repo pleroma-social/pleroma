@@ -19,6 +19,7 @@ defmodule Pleroma.Web.MastodonAPI.AccountController do
   alias Pleroma.Web.ActivityPub.ActivityPub
   alias Pleroma.Web.ActivityPub.Builder
   alias Pleroma.Web.ActivityPub.Pipeline
+  alias Pleroma.Web.ApiSpec.Errors.RegistrationUserError
   alias Pleroma.Web.CommonAPI
   alias Pleroma.Web.MastodonAPI.ListView
   alias Pleroma.Web.MastodonAPI.MastodonAPI
@@ -31,7 +32,12 @@ defmodule Pleroma.Web.MastodonAPI.AccountController do
   alias Pleroma.Web.Plugs.RateLimiter
   alias Pleroma.Web.TwitterAPI.TwitterAPI
 
-  plug(Pleroma.Web.ApiSpec.CastAndValidate)
+  plug(
+    Pleroma.Web.ApiSpec.CastAndValidate,
+    [render_error: RegistrationUserError] when action in [:create]
+  )
+
+  plug(Pleroma.Web.ApiSpec.CastAndValidate when action not in [:create])
 
   plug(:skip_plug, [OAuthScopesPlug, EnsurePublicOrAuthenticatedPlug] when action == :create)
 
@@ -101,8 +107,7 @@ defmodule Pleroma.Web.MastodonAPI.AccountController do
     with :ok <- validate_email_param(params),
          :ok <- TwitterAPI.validate_captcha(app, params),
          {:ok, user} <- TwitterAPI.register_user(params),
-         {_, {:ok, token}} <-
-           {:login, OAuthController.login(user, app, app.scopes)} do
+         {_, {:ok, token}} <- {:login, OAuthController.login(user, app, app.scopes)} do
       json(conn, OAuthView.render("token.json", %{user: user, token: token}))
     else
       {:login, {:account_status, :confirmation_pending}} ->
@@ -126,8 +131,12 @@ defmodule Pleroma.Web.MastodonAPI.AccountController do
           identifier: "manual_login_required"
         })
 
-      {:error, error} ->
-        json_response(conn, :bad_request, %{error: error})
+      {:error, errors} ->
+        json_response(conn, :bad_request, %{
+          identifier: "review_submission",
+          error: "Please review the submission",
+          fields: errors
+        })
     end
   end
 
@@ -143,8 +152,14 @@ defmodule Pleroma.Web.MastodonAPI.AccountController do
 
   defp validate_email_param(_) do
     case Pleroma.Config.get([:instance, :account_activation_required]) do
-      true -> {:error, dgettext("errors", "Missing parameter: %{name}", name: "email")}
-      _ -> :ok
+      true ->
+        {:error,
+         %{
+           email: [dgettext("errors", "Missing parameter: %{name}", name: "email")]
+         }}
+
+      _ ->
+        :ok
     end
   end
 

@@ -34,7 +34,7 @@ defmodule Pleroma.Web.ApiSpec.AccountOperation do
       requestBody: request_body("Parameters", create_request(), required: true),
       responses: %{
         200 => Operation.response("Account", "application/json", create_response()),
-        400 => Operation.response("Error", "application/json", ApiError),
+        400 => Operation.response("Error", "application/json", error_response()),
         403 => Operation.response("Error", "application/json", ApiError),
         429 => Operation.response("Error", "application/json", ApiError)
       }
@@ -449,6 +449,35 @@ defmodule Pleroma.Web.ApiSpec.AccountOperation do
         "password" => "secret",
         "agreement" => "true",
         "bio" => "☕️"
+      }
+    }
+  end
+
+  defp error_response do
+    %Schema{
+      title: "AccountCreateErrorResponse",
+      description: "Response schema for errors",
+      type: :object,
+      properties: %{
+        identifier: %Schema{type: :string},
+        message: %Schema{type: :string},
+        fields: %Schema{
+          type: :object,
+          properties: %{
+            captcha: %Schema{type: :array, items: %Schema{type: :string}},
+            email: %Schema{type: :array, items: %Schema{type: :string}},
+            invite: %Schema{type: :array, items: %Schema{type: :string}},
+            password: %Schema{type: :array, items: %Schema{type: :string}},
+            username: %Schema{type: :array, items: %Schema{type: :string}}
+          }
+        }
+      },
+      example: %{
+        "error" => "Please review the submission",
+        "identifier" => "review_submission",
+        "fields" => %{
+          "captcha" => ["Invalid CAPTCHA"]
+        }
       }
     }
   end
