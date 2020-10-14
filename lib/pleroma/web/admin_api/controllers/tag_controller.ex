@@ -25,11 +25,7 @@ defmodule Pleroma.Web.AdminAPI.TagController do
   action_fallback(AdminAPI.FallbackController)
 
   def list(%{assigns: %{user: _admin}} = conn, _) do
-    tags =
-      Pleroma.User.list_tags()
-      |> Kernel.++(Pleroma.Web.ActivityPub.MRF.TagPolicy.policy_tags())
-      |> Enum.uniq()
-      |> Enum.sort()
+    tags = Pleroma.Tag.list_tags()
 
     json(conn, tags)
   end

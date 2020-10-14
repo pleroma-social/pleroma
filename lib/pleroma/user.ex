@@ -1249,15 +1249,6 @@ defmodule Pleroma.User do
     |> Repo.all()
   end
 
-  @spec list_tags() :: list(String.t())
-  def list_tags do
-    from(
-      u in __MODULE__,
-      select: type(fragment("DISTINCT unnest(?)", u.tags), :string)
-    )
-    |> Repo.all()
-  end
-
   def increase_note_count(%User{} = user) do
     User
     |> where(id: ^user.id)

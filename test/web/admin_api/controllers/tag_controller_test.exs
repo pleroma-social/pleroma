@@ -32,9 +32,9 @@ defmodule Pleroma.Web.AdminAPI.TagControllerTest do
 
   describe "GET /api/pleroma/admin/users/tag" do
     test "it returns user tags and mrf policy tags", %{conn: conn} do
-      insert(:user, %{tags: ["x"]})
-      insert(:user, %{tags: ["y"]})
-      insert(:user, %{tags: ["unchanged"]})
+      insert(:tag, name: "x")
+      insert(:tag, name: "y")
+      insert(:tag, name: "unchanged")
 
       response =
         conn
