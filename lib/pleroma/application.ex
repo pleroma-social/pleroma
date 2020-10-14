@@ -135,23 +135,25 @@ defmodule Pleroma.Application do
   end
 
   defp setup_instrumenters do
-    require Prometheus.Registry
+    if Application.get_env(:prometheus, Pleroma.Web.Endpoint.MetricsExporter)[:enabled] do
+      require Prometheus.Registry
 
-    if Application.get_env(:prometheus, Pleroma.Repo.Instrumenter) do
-      :ok =
-        :telemetry.attach(
-          "prometheus-ecto",
-          [:pleroma, :repo, :query],
-          &Pleroma.Repo.Instrumenter.handle_event/4,
-          %{}
-        )
+      if Application.get_env(:prometheus, Pleroma.Repo.Instrumenter) do
+        :ok =
+          :telemetry.attach(
+            "prometheus-ecto",
+            [:pleroma, :repo, :query],
+            &Pleroma.Repo.Instrumenter.handle_event/4,
+            %{}
+          )
 
-      Pleroma.Repo.Instrumenter.setup()
+        Pleroma.Repo.Instrumenter.setup()
+      end
+
+      Pleroma.Web.Endpoint.MetricsExporter.setup()
+      Pleroma.Web.Endpoint.PipelineInstrumenter.setup()
+      Pleroma.Web.Endpoint.Instrumenter.setup()
     end
-
-    Pleroma.Web.Endpoint.MetricsExporter.setup()
-    Pleroma.Web.Endpoint.PipelineInstrumenter.setup()
-    Pleroma.Web.Endpoint.Instrumenter.setup()
   end
 
   defp cachex_children do

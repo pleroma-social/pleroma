@@ -636,7 +636,9 @@ config :pleroma, Pleroma.Emails.UserEmail,
 
 config :pleroma, Pleroma.Emails.NewUsersDigestEmail, enabled: false
 
-config :prometheus, Pleroma.Web.Endpoint.MetricsExporter, path: "/api/pleroma/app_metrics"
+config :prometheus, Pleroma.Web.Endpoint.MetricsExporter,
+  enabled: false,
+  path: "/api/pleroma/app_metrics"
 
 config :pleroma, Pleroma.ScheduledActivity,
   daily_user_limit: 25,
