@@ -35,8 +35,6 @@ defmodule Pleroma.Web.AdminAPI.AdminAPIController do
     when action in [
            :get_password_reset,
            :force_password_reset,
-           :tag_users,
-           :untag_users,
            :right_add,
            :right_add_multiple,
            :right_delete,
@@ -133,32 +131,6 @@ defmodule Pleroma.Web.AdminAPI.AdminAPIController do
       |> render("index.json", chats: chats)
     else
       _ -> {:error, :not_found}
-    end
-  end
-
-  def tag_users(%{assigns: %{user: admin}} = conn, %{"nicknames" => nicknames, "tags" => tags}) do
-    with {:ok, _} <- User.tag(nicknames, tags) do
-      ModerationLog.insert_log(%{
-        actor: admin,
-        nicknames: nicknames,
-        tags: tags,
-        action: "tag"
-      })
-
-      json_response(conn, :no_content, "")
-    end
-  end
-
-  def untag_users(%{assigns: %{user: admin}} = conn, %{"nicknames" => nicknames, "tags" => tags}) do
-    with {:ok, _} <- User.untag(nicknames, tags) do
-      ModerationLog.insert_log(%{
-        actor: admin,
-        nicknames: nicknames,
-        tags: tags,
-        action: "untag"
-      })
-
-      json_response(conn, :no_content, "")
     end
   end
 

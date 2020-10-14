@@ -124,6 +124,19 @@ Configuration options:
 }
 ```
 
+## `GET /api/pleroma/admin/users/tag`
+
+### List a tags
+
+- Params: None
+
+- Response:
+
+``` json
+["verify", "mrf_tag:media-force-nsfw"]
+
+```
+
 ## `PUT /api/pleroma/admin/users/tag`
 
 ### Tag a list of users
