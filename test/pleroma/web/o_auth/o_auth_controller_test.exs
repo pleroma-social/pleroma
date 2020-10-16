@@ -1001,7 +1001,7 @@ defmodule Pleroma.Web.OAuth.OAuthControllerTest do
     test "rejects token exchange for valid credentials belonging to an unapproved user" do
       password = "testpassword"
 
-      user = insert(:user, password_hash: Pbkdf2.hash_pwd_salt(password), approval_pending: true)
+      user = insert(:user, password_hash: Pbkdf2.hash_pwd_salt(password), is_approved: false)
 
       refute Pleroma.User.account_status(user) == :active
 
