@@ -14,6 +14,7 @@ defmodule Pleroma.Tag do
 
   schema "tags" do
     field(:name, :string)
+    many_to_many(:users, Pleroma.User, join_through: "users_tags", on_replace: :delete)
 
     timestamps()
   end

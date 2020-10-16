@@ -101,7 +101,6 @@ defmodule Pleroma.User do
     field(:following_address, :string)
     field(:search_rank, :float, virtual: true)
     field(:search_type, :integer, virtual: true)
-    field(:tags, {:array, :string}, default: [])
     field(:last_refreshed_at, :naive_datetime_usec)
     field(:last_digest_emailed_at, :naive_datetime)
     field(:banner, :map, default: %{})
@@ -159,6 +158,7 @@ defmodule Pleroma.User do
 
     has_many(:outgoing_relationships, UserRelationship, foreign_key: :source_id)
     has_many(:incoming_relationships, UserRelationship, foreign_key: :target_id)
+    many_to_many(:tags, Pleroma.Tag, join_through: "users_tags", on_replace: :delete)
 
     for {relationship_type,
          [
