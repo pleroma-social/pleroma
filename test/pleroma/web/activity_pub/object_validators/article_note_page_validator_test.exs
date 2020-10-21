@@ -2,12 +2,12 @@
 # Copyright © 2017-2020 Pleroma Authors <https://pleroma.social/>
 # SPDX-License-Identifier: AGPL-3.0-only
 
-defmodule Pleroma.Web.ActivityPub.ObjectValidators.ArticleNoteValidatorTest do
+defmodule Pleroma.Web.ActivityPub.ObjectValidators.ArticleNotePageValidatorTest do
   use Pleroma.DataCase
 
   alias Pleroma.User
   alias Pleroma.Web.ActivityPub.ObjectValidator
-  alias Pleroma.Web.ActivityPub.ObjectValidators.ArticleNoteValidator
+  alias Pleroma.Web.ActivityPub.ObjectValidators.ArticleNotePageValidator
   alias Pleroma.Web.ActivityPub.Utils
 
   import Pleroma.Factory
@@ -31,7 +31,7 @@ defmodule Pleroma.Web.ActivityPub.ObjectValidators.ArticleNoteValidatorTest do
       "summary" => "a post"
     }
 
-    %{valid?: true} = ArticleNoteValidator.cast_and_validate(note)
+    %{valid?: true} = ArticleNotePageValidator.cast_and_validate(note)
   end
 
   test "Mastodon Note" do
@@ -42,7 +42,7 @@ defmodule Pleroma.Web.ActivityPub.ObjectValidators.ArticleNoteValidatorTest do
     {:ok, %User{}} = ObjectValidator.fetch_actor(data)
 
     assert %{changes: changes, valid?: true} =
-             ArticleNoteValidator.cast_and_validate(data["object"])
+             ArticleNotePageValidator.cast_and_validate(data["object"])
 
     assert %{
              actor: "http://mastodon.example.org/users/admin",
