@@ -109,7 +109,9 @@ defmodule Pleroma.User.Query do
   end
 
   defp compose_query({:tags, tags}, query) when is_list(tags) and length(tags) > 0 do
-    where(query, [u], fragment("? && ?", u.tags, ^tags))
+    query
+    |> join(:inner, [u], t in assoc(u, :tags), as: :tags)
+    |> where([tags: t], t.name in ^tags)
   end
 
   defp compose_query({:is_admin, bool}, query) do

@@ -32,7 +32,11 @@ defmodule Pleroma.Web.ActivityPub.MRF.TagPolicy do
     ]
   end
 
-  defp get_tags(%User{tags: tags}) when is_list(tags), do: tags
+  defp get_tags(%User{} = user) do
+    {:ok, tags} = Pleroma.Repo.get_assoc(user, :tags)
+    Enum.map(tags, & &1.name)
+  end
+
   defp get_tags(_), do: []
 
   defp process_tag(

@@ -1664,43 +1664,51 @@ defmodule Pleroma.User do
   def purge_user_changeset(user) do
     # "Right to be forgotten"
     # https://gdpr.eu/right-to-be-forgotten/
-    change(user, %{
-      bio: "",
-      raw_bio: nil,
-      email: nil,
-      name: nil,
-      password_hash: nil,
-      keys: nil,
-      public_key: nil,
-      avatar: %{},
-      tags: [],
-      last_refreshed_at: nil,
-      last_digest_emailed_at: nil,
-      banner: %{},
-      background: %{},
-      note_count: 0,
-      follower_count: 0,
-      following_count: 0,
-      is_locked: false,
-      confirmation_pending: false,
-      password_reset_pending: false,
-      approval_pending: false,
-      registration_reason: nil,
-      confirmation_token: nil,
-      domain_blocks: [],
-      deactivated: true,
-      ap_enabled: false,
-      is_moderator: false,
-      is_admin: false,
-      mastofe_settings: nil,
-      mascot: nil,
-      emoji: %{},
-      pleroma_settings_store: %{},
-      fields: [],
-      raw_fields: [],
-      is_discoverable: false,
-      also_known_as: []
-    })
+
+    default_user_attrs =
+      Map.take(
+        %__MODULE__{},
+        [
+          :registration_reason,
+          :is_discoverable,
+          :mastofe_settings,
+          :email,
+          :background,
+          :approval_pending,
+          :avatar,
+          :password_hash,
+          :public_key,
+          :mascot,
+          :confirmation_pending,
+          :is_locked,
+          :ap_enabled,
+          :note_count,
+          :pleroma_settings_store,
+          :follower_count,
+          :bio,
+          :name,
+          :is_admin,
+          :is_moderator,
+          :also_known_as,
+          :keys,
+          :confirmation_token,
+          :banner,
+          :raw_fields,
+          :fields,
+          :password_reset_pending,
+          :domain_blocks,
+          :last_digest_emailed_at,
+          :raw_bio,
+          :last_refreshed_at,
+          :emoji,
+          :following_count
+        ]
+      )
+
+    user
+    |> Repo.preload([:tags])
+    |> change(Map.merge(default_user_attrs, %{deactivated: true}))
+    |> put_assoc(:tags, [])
   end
 
   def delete(users) when is_list(users) do
@@ -1997,8 +2005,11 @@ defmodule Pleroma.User do
   def tag(nickname, tags) when is_binary(nickname),
     do: tag(get_by_nickname(nickname), tags)
 
-  def tag(%User{} = user, tags),
-    do: update_tags(user, Enum.uniq((user.tags || []) ++ normalize_tags(tags)))
+  def tag(%User{} = user, tags) do
+    tag_names = Pleroma.Tag.normalize_tags(tags)
+    Pleroma.Tag.upsert_tags(tag_names)
+    update_tags(user, tag_names)
+  end
 
   def untag(user_identifiers, tags) when is_list(user_identifiers) do
     Repo.transaction(fn ->
@@ -2009,22 +2020,40 @@ defmodule Pleroma.User do
   def untag(nickname, tags) when is_binary(nickname),
     do: untag(get_by_nickname(nickname), tags)
 
-  def untag(%User{} = user, tags),
-    do: update_tags(user, (user.tags || []) -- normalize_tags(tags))
+  def untag(%User{} = user, remove_tags) do
+    tag_ids = Pleroma.Tag.get_tag_ids(remove_tags)
+    {:ok, user_id} = FlakeId.Ecto.Type.dump(user.id)
 
-  defp update_tags(%User{} = user, new_tags) do
-    {:ok, updated_user} =
-      user
-      |> change(%{tags: new_tags})
-      |> update_and_set_cache()
+    from(
+      ut in "users_tags",
+      where: ut.user_id == ^user_id,
+      where: ut.tag_id in ^tag_ids
+    )
+    |> Repo.delete_all()
 
-    updated_user
+    preload_tags_and_set_cache(user)
   end
 
-  defp normalize_tags(tags) do
-    [tags]
-    |> List.flatten()
-    |> Enum.map(&String.downcase/1)
+  defp update_tags(%User{} = user, new_tags) do
+    {:ok, user_id} = FlakeId.Ecto.Type.dump(user.id)
+
+    tags =
+      new_tags
+      |> Pleroma.Tag.normalize_tags()
+      |> Pleroma.Tag.get_tag_ids()
+      |> Enum.map(&%{user_id: user_id, tag_id: &1})
+
+    Repo.insert_all("users_tags", tags, on_conflict: :nothing)
+    preload_tags_and_set_cache(user)
+  end
+
+  defp preload_tags_and_set_cache(user) do
+    {:ok, updated_user} =
+      user
+      |> Repo.preload([:tags], force: true)
+      |> set_cache()
+
+    updated_user
   end
 
   defp local_nickname_regex do

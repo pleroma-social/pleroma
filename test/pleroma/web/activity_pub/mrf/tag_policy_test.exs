@@ -11,7 +11,7 @@ defmodule Pleroma.Web.ActivityPub.MRF.TagPolicyTest do
 
   describe "mrf_tag:disable-any-subscription" do
     test "rejects message" do
-      actor = insert(:user, tags: ["mrf_tag:disable-any-subscription"])
+      actor = insert(:user, tags: [build(:tag, name: "mrf_tag:disable-any-subscription")])
       message = %{"object" => actor.ap_id, "type" => "Follow", "actor" => actor.ap_id}
       assert {:reject, _} = TagPolicy.filter(message)
     end
@@ -19,15 +19,17 @@ defmodule Pleroma.Web.ActivityPub.MRF.TagPolicyTest do
 
   describe "mrf_tag:disable-remote-subscription" do
     test "rejects non-local follow requests" do
-      actor = insert(:user, tags: ["mrf_tag:disable-remote-subscription"])
-      follower = insert(:user, tags: ["mrf_tag:disable-remote-subscription"], local: false)
+      tag = insert(:tag, name: "mrf_tag:disable-remote-subscription")
+      actor = insert(:user, tags: [tag])
+      follower = insert(:user, tags: [tag], local: false)
       message = %{"object" => actor.ap_id, "type" => "Follow", "actor" => follower.ap_id}
       assert {:reject, _} = TagPolicy.filter(message)
     end
 
     test "allows non-local follow requests" do
-      actor = insert(:user, tags: ["mrf_tag:disable-remote-subscription"])
-      follower = insert(:user, tags: ["mrf_tag:disable-remote-subscription"], local: true)
+      tag = insert(:tag, name: "mrf_tag:disable-remote-subscription")
+      actor = insert(:user, tags: [tag])
+      follower = insert(:user, tags: [tag], local: true)
       message = %{"object" => actor.ap_id, "type" => "Follow", "actor" => follower.ap_id}
       assert {:ok, _message} = TagPolicy.filter(message)
     end
@@ -35,7 +37,7 @@ defmodule Pleroma.Web.ActivityPub.MRF.TagPolicyTest do
 
   describe "mrf_tag:sandbox" do
     test "removes from public timelines" do
-      actor = insert(:user, tags: ["mrf_tag:sandbox"])
+      actor = insert(:user, tags: [build(:tag, name: "mrf_tag:sandbox")])
 
       message = %{
         "actor" => actor.ap_id,
@@ -59,7 +61,7 @@ defmodule Pleroma.Web.ActivityPub.MRF.TagPolicyTest do
 
   describe "mrf_tag:force-unlisted" do
     test "removes from the federated timeline" do
-      actor = insert(:user, tags: ["mrf_tag:force-unlisted"])
+      actor = insert(:user, tags: [build(:tag, name: "mrf_tag:force-unlisted")])
 
       message = %{
         "actor" => actor.ap_id,
@@ -83,7 +85,7 @@ defmodule Pleroma.Web.ActivityPub.MRF.TagPolicyTest do
 
   describe "mrf_tag:media-strip" do
     test "removes attachments" do
-      actor = insert(:user, tags: ["mrf_tag:media-strip"])
+      actor = insert(:user, tags: [build(:tag, name: "mrf_tag:media-strip")])
 
       message = %{
         "actor" => actor.ap_id,
@@ -103,7 +105,7 @@ defmodule Pleroma.Web.ActivityPub.MRF.TagPolicyTest do
 
   describe "mrf_tag:media-force-nsfw" do
     test "Mark as sensitive on presence of attachments" do
-      actor = insert(:user, tags: ["mrf_tag:media-force-nsfw"])
+      actor = insert(:user, tags: [build(:tag, name: "mrf_tag:media-force-nsfw")])
 
       message = %{
         "actor" => actor.ap_id,

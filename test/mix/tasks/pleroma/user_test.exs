@@ -547,7 +547,7 @@ defmodule Mix.Tasks.Pleroma.UserTest do
       :ok = Mix.Tasks.Pleroma.User.run(["tag", user.nickname, "pleroma"])
 
       user = User.get_cached_by_nickname(user.nickname)
-      assert "pleroma" in user.tags
+      assert "pleroma" in Enum.map(user.tags, & &1.name)
     end
 
     test "it prints an error message when user is not exist" do
@@ -560,8 +560,8 @@ defmodule Mix.Tasks.Pleroma.UserTest do
 
   describe "untagging" do
     test "it deletes tags from a user" do
-      user = insert(:user, tags: ["pleroma"])
-      assert "pleroma" in user.tags
+      user = insert(:user, tags: [build(:tag, name: "pleroma")])
+      assert "pleroma" in Enum.map(user.tags, & &1.name)
 
       :ok = Mix.Tasks.Pleroma.User.run(["untag", user.nickname, "pleroma"])
 

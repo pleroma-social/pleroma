@@ -133,15 +133,19 @@ defmodule Pleroma.UserTest do
 
   describe "when tags are nil" do
     test "tagging a user" do
-      user = insert(:user, %{tags: nil})
-      user = User.tag(user, ["cool", "dude"])
+      insert(:tag, name: "cool")
+      insert(:tag, name: "dude")
+      user = insert(:user, %{tags: []})
 
-      assert "cool" in user.tags
-      assert "dude" in user.tags
+      user = User.tag(user, ["cool", "dude"])
+      user_tags = Enum.map(user.tags, & &1.name)
+
+      assert "cool" in user_tags
+      assert "dude" in user_tags
     end
 
     test "untagging a user" do
-      user = insert(:user, %{tags: nil})
+      user = insert(:user, %{tags: []})
       user = User.untag(user, ["cool", "dude"])
 
       assert user.tags == []
@@ -1601,6 +1605,8 @@ defmodule Pleroma.UserTest do
   end
 
   test "delete/1 purges a user when they wouldn't be fully deleted" do
+    _tag = insert(:tag, name: "verify")
+
     user =
       insert(:user, %{
         bio: "eyy lmao",
@@ -1609,7 +1615,7 @@ defmodule Pleroma.UserTest do
         keys: "RSA begin buplic key",
         public_key: "--PRIVATE KEYE--",
         avatar: %{"a" => "b"},
-        tags: ["qqqqq"],
+        # tags: ["qqqqq"],
         banner: %{"a" => "b"},
         background: %{"a" => "b"},
         note_count: 9,
@@ -1636,9 +1642,17 @@ defmodule Pleroma.UserTest do
         also_known_as: ["https://lol.olo/users/loll"]
       })
 
+    user = User.tag(user, "verify")
+    assert Enum.map(user.tags, & &1.name) == ["verify"]
+    assert Repo.aggregate(from(ut in "users_tags"), :count, :user_id) == 1
     {:ok, job} = User.delete(user)
     {:ok, _} = ObanHelpers.perform(job)
-    user = User.get_by_id(user.id)
+
+    user =
+      User.get_by_id(user.id)
+      |> Repo.preload([:tags])
+
+    assert Repo.aggregate(from(ut in "users_tags"), :count, :user_id) == 0
 
     assert %User{
              bio: "",

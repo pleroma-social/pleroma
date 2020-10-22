@@ -58,9 +58,9 @@ defmodule Pleroma.Web.AdminAPI.TagControllerTest do
 
   describe "PUT /api/pleroma/admin/users/tag" do
     setup %{conn: conn} do
-      user1 = insert(:user, %{tags: ["x"]})
-      user2 = insert(:user, %{tags: ["y"]})
-      user3 = insert(:user, %{tags: ["unchanged"]})
+      user1 = insert(:user, %{tags: [build(:tag, name: "x")]})
+      user2 = insert(:user, %{tags: [build(:tag, name: "y")]})
+      user3 = insert(:user, %{tags: [build(:tag, name: "unchanged")]})
 
       conn =
         conn
@@ -80,8 +80,10 @@ defmodule Pleroma.Web.AdminAPI.TagControllerTest do
       user2: user2
     } do
       assert empty_json_response(conn)
-      assert User.get_cached_by_id(user1.id).tags == ["x", "foo", "bar"]
-      assert User.get_cached_by_id(user2.id).tags == ["y", "foo", "bar"]
+      {:ok, tags} = Repo.get_assoc(User.get_cached_by_id(user1.id), :tags)
+      assert Enum.map(tags, & &1.name) == ["x", "foo", "bar"]
+      {:ok, tags} = Repo.get_assoc(User.get_cached_by_id(user2.id), :tags)
+      assert Enum.map(tags, & &1.name) == ["y", "foo", "bar"]
 
       log_entry = Repo.one(ModerationLog)
 
@@ -98,15 +100,16 @@ defmodule Pleroma.Web.AdminAPI.TagControllerTest do
 
     test "it does not modify tags of not specified users", %{conn: conn, user3: user3} do
       assert empty_json_response(conn)
-      assert User.get_cached_by_id(user3.id).tags == ["unchanged"]
+      {:ok, tags} = Repo.get_assoc(User.get_cached_by_id(user3.id), :tags)
+      assert Enum.map(tags, & &1.name) == ["unchanged"]
     end
   end
 
   describe "DELETE /api/pleroma/admin/users/tag" do
     setup %{conn: conn} do
-      user1 = insert(:user, %{tags: ["x"]})
-      user2 = insert(:user, %{tags: ["y", "z"]})
-      user3 = insert(:user, %{tags: ["unchanged"]})
+      user1 = insert(:user, %{tags: [build(:tag, name: "x")]})
+      user2 = insert(:user, %{tags: [build(:tag, name: "y"), build(:tag, name: "z")]})
+      user3 = insert(:user, %{tags: [build(:tag, name: "unchanged")]})
 
       conn =
         conn
@@ -126,8 +129,10 @@ defmodule Pleroma.Web.AdminAPI.TagControllerTest do
       user2: user2
     } do
       assert empty_json_response(conn)
-      assert User.get_cached_by_id(user1.id).tags == []
-      assert User.get_cached_by_id(user2.id).tags == ["y"]
+      {:ok, tags} = Repo.get_assoc(User.get_cached_by_id(user1.id), :tags)
+      assert tags == []
+      {:ok, tags} = Repo.get_assoc(User.get_cached_by_id(user2.id), :tags)
+      assert Enum.map(tags, & &1.name) == ["y"]
 
       log_entry = Repo.one(ModerationLog)
 
@@ -144,7 +149,8 @@ defmodule Pleroma.Web.AdminAPI.TagControllerTest do
 
     test "it does not modify tags of not specified users", %{conn: conn, user3: user3} do
       assert empty_json_response(conn)
-      assert User.get_cached_by_id(user3.id).tags == ["unchanged"]
+      {:ok, tags} = Repo.get_assoc(User.get_cached_by_id(user3.id), :tags)
+      assert Enum.map(tags, & &1.name) == ["unchanged"]
     end
   end
 end

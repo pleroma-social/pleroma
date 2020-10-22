@@ -130,17 +130,18 @@ defmodule Pleroma.Web.AdminAPI.SearchTest do
     end
 
     test "it returns users with tags" do
-      user1 = insert(:user, tags: ["first"])
-      user2 = insert(:user, tags: ["second"])
+      user1 = insert(:user, tags: [build(:tag, name: "first")])
+      user2 = insert(:user, tags: [build(:tag, name: "second")])
       insert(:user)
       insert(:user)
 
       {:ok, _results, total} = Search.user()
       {:ok, users, count} = Search.user(%{tags: ["first", "second"]})
+
       assert total == 4
       assert count == 2
-      assert user1 in users
-      assert user2 in users
+      assert user1.id in collect_ids(users)
+      assert user2.id in collect_ids(users)
     end
 
     test "it returns users by actor_types" do
