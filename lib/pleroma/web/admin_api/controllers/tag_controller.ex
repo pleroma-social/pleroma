@@ -10,6 +10,7 @@ defmodule Pleroma.Web.AdminAPI.TagController do
   alias Pleroma.ModerationLog
   alias Pleroma.User
   alias Pleroma.Web.AdminAPI
+  alias Pleroma.Web.ApiSpec
   alias Pleroma.Web.Plugs.OAuthScopesPlug
 
   plug(
@@ -22,7 +23,11 @@ defmodule Pleroma.Web.AdminAPI.TagController do
     %{scopes: ["read:accounts"], admin: true} when action in [:list]
   )
 
+  plug(ApiSpec.CastAndValidate)
+
   action_fallback(AdminAPI.FallbackController)
+
+  defdelegate open_api_operation(action), to: ApiSpec.Admin.TagOperation
 
   def list(%{assigns: %{user: _admin}} = conn, _) do
     tags = Pleroma.Tag.list_tags()
@@ -30,7 +35,7 @@ defmodule Pleroma.Web.AdminAPI.TagController do
     json(conn, tags)
   end
 
-  def tag(%{assigns: %{user: admin}} = conn, %{"nicknames" => nicknames, "tags" => tags}) do
+  def tag(%{assigns: %{user: admin}} = conn, %{nicknames: nicknames, tags: tags}) do
     with {:ok, _} <- User.tag(nicknames, tags) do
       ModerationLog.insert_log(%{
         actor: admin,
@@ -43,7 +48,7 @@ defmodule Pleroma.Web.AdminAPI.TagController do
     end
   end
 
-  def untag(%{assigns: %{user: admin}} = conn, %{"nicknames" => nicknames, "tags" => tags}) do
+  def untag(%{assigns: %{user: admin}} = conn, %{nicknames: nicknames, tags: tags}) do
     with {:ok, _} <- User.untag(nicknames, tags) do
       ModerationLog.insert_log(%{
         actor: admin,

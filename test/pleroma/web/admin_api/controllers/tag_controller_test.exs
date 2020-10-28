@@ -40,7 +40,7 @@ defmodule Pleroma.Web.AdminAPI.TagControllerTest do
         conn
         |> put_req_header("accept", "application/json")
         |> get("/api/pleroma/admin/users/tag")
-        |> json_response(200)
+        |> json_response_and_validate_schema(200)
 
       assert [
                "mrf_tag:disable-any-subscription",
