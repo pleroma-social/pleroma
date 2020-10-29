@@ -14,7 +14,6 @@
       </a>
     </div>
     <div class="container">
-      <h1><%= Pleroma.Config.get([:instance, :name]) %></h1>
       <%= @inner_content %>
     </div>
   </body>
