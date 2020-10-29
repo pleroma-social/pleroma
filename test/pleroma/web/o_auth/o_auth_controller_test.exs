@@ -1256,6 +1256,44 @@ defmodule Pleroma.Web.OAuth.OAuthControllerTest do
     end
   end
 
+  describe "POST /oauth/revoke" do
+    test "deletes a token" do
+      app = insert(:oauth_app, scopes: ["read"])
+      token = insert(:oauth_token, app: app)
+
+      result =
+        build_conn()
+        |> post("/oauth/revoke", %{
+          "client_id" => app.client_id,
+          "client_secret" => app.client_secret,
+          "token" => token.token
+        })
+        |> json_response(200)
+
+      assert result == %{}
+      assert {:error, :not_found} = Pleroma.Web.OAuth.Token.get_by_token(app, token.token)
+    end
+
+    test "clears the session_id from user cookies" do
+      user = insert(:user)
+      app = insert(:oauth_app, scopes: ["read"])
+      token = insert(:oauth_token, app: app, user: user)
+
+      conn =
+        build_conn()
+        |> Plug.Session.call(Plug.Session.init(@session_opts))
+        |> fetch_session()
+        |> put_session(:user_id, user.id)
+        |> post("/oauth/revoke", %{
+          "client_id" => app.client_id,
+          "client_secret" => app.client_secret,
+          "token" => token.token
+        })
+
+      refute get_session(conn, :user_id)
+    end
+  end
+
   describe "POST /oauth/revoke - bad request" do
     test "returns 500" do
       response =

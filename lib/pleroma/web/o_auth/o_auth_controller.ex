@@ -375,7 +375,9 @@ defmodule Pleroma.Web.OAuth.OAuthController do
   def token_revoke(%Plug.Conn{} = conn, %{"token" => _token} = params) do
     with {:ok, app} <- Token.Utils.fetch_app(conn),
          {:ok, _token} <- RevokeToken.revoke(app, params) do
-      json(conn, %{})
+      conn
+      |> Plug.Conn.delete_session(:user_id)
+      |> json(%{})
     else
       _error ->
         # RFC 7009: invalid tokens [in the request] do not cause an error response
