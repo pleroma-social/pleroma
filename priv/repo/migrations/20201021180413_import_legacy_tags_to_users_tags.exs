@@ -2,7 +2,12 @@ defmodule Pleroma.Repo.Migrations.ImportLegacyTagsToUsersTags do
   use Ecto.Migration
 
   def up do
-    execute(import_user_tags())
+    Ecto.Adapters.SQL.query(
+      Pleroma.Repo,
+      import_user_tags(),
+      [],
+      timeout: :infinity
+    )
 
     alter table(:users) do
       remove_if_exists(:tags, {:array, :string})
@@ -20,7 +25,12 @@ defmodule Pleroma.Repo.Migrations.ImportLegacyTagsToUsersTags do
 
     flush()
 
-    execute(restore_tags_column())
+    Ecto.Adapters.SQL.query(
+      Pleroma.Repo,
+      restore_tags_column(),
+      [],
+      timeout: :infinity
+    )
   end
 
   defp import_user_tags do

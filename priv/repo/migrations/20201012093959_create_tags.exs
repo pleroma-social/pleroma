@@ -10,7 +10,12 @@ defmodule Pleroma.Repo.Migrations.CreateTags do
     create_if_not_exists(unique_index(:tags, :name))
     flush()
 
-    execute(collect_user_tags_query())
+    Ecto.Adapters.SQL.query(
+      Pleroma.Repo,
+      collect_user_tags_query(),
+      [],
+      timeout: :infinity
+    )
   end
 
   def down do
