@@ -1414,11 +1414,6 @@ defmodule Pleroma.Web.ActivityPub.ActivityPubControllerTest do
 
   describe "Additional ActivityPub C2S endpoints" do
     test "GET /api/ap/whoami", %{conn: conn} do
-      # Test the 403 first because a user cookie gets set below
-      conn
-      |> get("/api/ap/whoami")
-      |> json_response(403)
-
       user = insert(:user)
 
       conn =
@@ -1429,6 +1424,10 @@ defmodule Pleroma.Web.ActivityPub.ActivityPubControllerTest do
       user = User.get_cached_by_id(user.id)
 
       assert UserView.render("user.json", %{user: user}) == json_response(conn, 200)
+
+      conn
+      |> get("/api/ap/whoami")
+      |> json_response(403)
     end
 
     setup do: clear_config([:media_proxy])

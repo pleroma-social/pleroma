@@ -33,7 +33,9 @@ defmodule Pleroma.Web.Router do
   pipeline :oauth do
     plug(:fetch_session)
     plug(Pleroma.Web.Plugs.OAuthPlug)
+    plug(Pleroma.Web.Plugs.CookieAuthPlug)
     plug(Pleroma.Web.Plugs.UserEnabledPlug)
+    plug(Pleroma.Web.Plugs.EnsureUserKeyPlug)
   end
 
   pipeline :expect_authentication do
@@ -317,7 +319,7 @@ defmodule Pleroma.Web.Router do
 
   scope "/oauth", Pleroma.Web.OAuth do
     scope [] do
-      pipe_through([:oauth, :after_auth])
+      pipe_through(:oauth)
       get("/authorize", OAuthController, :authorize)
       post("/authorize", OAuthController, :create_authorization)
     end
