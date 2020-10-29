@@ -107,7 +107,7 @@ defmodule Pleroma.User do
     field(:note_count, :integer, default: 0)
     field(:follower_count, :integer, default: 0)
     field(:following_count, :integer, default: 0)
-    field(:locked, :boolean, default: false)
+    field(:is_locked, :boolean, default: false)
     field(:confirmation_pending, :boolean, default: false)
     field(:password_reset_pending, :boolean, default: false)
     field(:approval_pending, :boolean, default: false)
@@ -136,7 +136,7 @@ defmodule Pleroma.User do
     field(:pleroma_settings_store, :map, default: %{})
     field(:fields, {:array, :map}, default: [])
     field(:raw_fields, {:array, :map}, default: [])
-    field(:discoverable, :boolean, default: false)
+    field(:is_discoverable, :boolean, default: false)
     field(:invisible, :boolean, default: false)
     field(:allow_following_move, :boolean, default: true)
     field(:skip_thread_containment, :boolean, default: false)
@@ -426,7 +426,6 @@ defmodule Pleroma.User do
       params,
       [
         :bio,
-        :name,
         :emoji,
         :ap_id,
         :inbox,
@@ -436,7 +435,7 @@ defmodule Pleroma.User do
         :avatar,
         :ap_enabled,
         :banner,
-        :locked,
+        :is_locked,
         :last_refreshed_at,
         :uri,
         :follower_address,
@@ -448,14 +447,16 @@ defmodule Pleroma.User do
         :follower_count,
         :fields,
         :following_count,
-        :discoverable,
+        :is_discoverable,
         :invisible,
         :actor_type,
         :also_known_as,
         :accepts_chat_messages
       ]
     )
-    |> validate_required([:name, :ap_id])
+    |> cast(params, [:name], empty_values: [])
+    |> validate_required([:ap_id])
+    |> validate_required([:name], trim: false)
     |> unique_constraint(:nickname)
     |> validate_format(:nickname, @email_regex)
     |> validate_length(:bio, max: bio_limit)
@@ -479,7 +480,7 @@ defmodule Pleroma.User do
         :public_key,
         :inbox,
         :shared_inbox,
-        :locked,
+        :is_locked,
         :no_rich_text,
         :default_scope,
         :banner,
@@ -495,7 +496,7 @@ defmodule Pleroma.User do
         :fields,
         :raw_fields,
         :pleroma_settings_store,
-        :discoverable,
+        :is_discoverable,
         :actor_type,
         :also_known_as,
         :accepts_chat_messages
@@ -765,6 +766,16 @@ defmodule Pleroma.User do
     follow_all(user, autofollowed_users)
   end
 
+  defp autofollowing_users(user) do
+    candidates = Config.get([:instance, :autofollowing_nicknames])
+
+    User.Query.build(%{nickname: candidates, local: true, deactivated: false})
+    |> Repo.all()
+    |> Enum.each(&follow(&1, user, :follow_accept))
+
+    {:ok, :success}
+  end
+
   @doc "Inserts provided changeset, performs post-registration actions (confirmation email sending etc.)"
   def register(%Ecto.Changeset{} = changeset) do
     with {:ok, user} <- Repo.insert(changeset) do
@@ -774,6 +785,7 @@ defmodule Pleroma.User do
 
   def post_register_action(%User{} = user) do
     with {:ok, user} <- autofollow_users(user),
+         {:ok, _} <- autofollowing_users(user),
          {:ok, user} <- set_cache(user),
          {:ok, _} <- send_welcome_email(user),
          {:ok, _} <- send_welcome_message(user),
@@ -847,7 +859,7 @@ defmodule Pleroma.User do
   @spec maybe_direct_follow(User.t(), User.t()) :: {:ok, User.t()} | {:error, String.t()}
 
   # "Locked" (self-locked) users demand explicit authorization of follow requests
-  def maybe_direct_follow(%User{} = follower, %User{local: true, locked: true} = followed) do
+  def maybe_direct_follow(%User{} = follower, %User{local: true, is_locked: true} = followed) do
     follow(follower, followed, :follow_pending)
   end
 
@@ -954,7 +966,7 @@ defmodule Pleroma.User do
   end
 
   def locked?(%User{} = user) do
-    user.locked || false
+    user.is_locked || false
   end
 
   def get_by_id(id) do
@@ -1601,7 +1613,7 @@ defmodule Pleroma.User do
       note_count: 0,
       follower_count: 0,
       following_count: 0,
-      locked: false,
+      is_locked: false,
       confirmation_pending: false,
       password_reset_pending: false,
       approval_pending: false,
@@ -1618,7 +1630,7 @@ defmodule Pleroma.User do
       pleroma_settings_store: %{},
       fields: [],
       raw_fields: [],
-      discoverable: false,
+      is_discoverable: false,
       also_known_as: []
     })
   end
