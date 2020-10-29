@@ -11,14 +11,13 @@ defmodule Pleroma.Web.Plugs.CookieAuthPlug do
   end
 
   # If the user is already assigned (by a bearer token, probably), skip ahead.
-  def call(%{assigns: %{user: _}} = conn, _), do: conn
+  def call(%{assigns: %{user: %User{}}} = conn, _), do: conn
 
   # Authenticate with a session cookie, if available.
   # For staticly-rendered pages (like the OAuth form)
   # this is the only way it can authenticate.
   def call(conn, _) do
-    with user_id <- get_session(conn, :user_id),
-         true <- is_binary(user_id),
+    with user_id when is_binary(user_id) <- get_session(conn, :user_id),
          %User{} = user <- User.get_by_id(user_id) do
       assign(conn, :user, user)
     else
