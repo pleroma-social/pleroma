@@ -38,7 +38,7 @@ defmodule Pleroma.Web.AdminAPI.TagControllerTest do
 
       response =
         conn
-        |> put_req_header("accept", "application/json")
+        |> put_req_header("content-type", "application/json")
         |> get("/api/pleroma/admin/users/tag")
         |> json_response_and_validate_schema(200)
 
@@ -62,24 +62,22 @@ defmodule Pleroma.Web.AdminAPI.TagControllerTest do
       user2 = insert(:user, %{tags: [build(:tag, name: "y")]})
       user3 = insert(:user, %{tags: [build(:tag, name: "unchanged")]})
 
-      conn =
-        conn
-        |> put_req_header("accept", "application/json")
-        |> put(
-          "/api/pleroma/admin/users/tag?nicknames[]=#{user1.nickname}&nicknames[]=" <>
-            "#{user2.nickname}&tags[]=foo&tags[]=bar"
-        )
+      assert conn
+             |> put_req_header("content-type", "application/json")
+             |> put("/api/pleroma/admin/users/tag", %{
+               nicknames: [user1.nickname, user2.nickname],
+               tags: ["foo", "bar"]
+             })
+             |> json_response_and_validate_schema(204)
 
-      %{conn: conn, user1: user1, user2: user2, user3: user3}
+      %{user1: user1, user2: user2, user3: user3}
     end
 
     test "it appends specified tags to users with specified nicknames", %{
-      conn: conn,
       admin: admin,
       user1: user1,
       user2: user2
     } do
-      assert empty_json_response(conn)
       {:ok, tags} = Repo.get_assoc(User.get_cached_by_id(user1.id), :tags)
       assert Enum.map(tags, & &1.name) == ["x", "foo", "bar"]
       {:ok, tags} = Repo.get_assoc(User.get_cached_by_id(user2.id), :tags)
@@ -98,8 +96,7 @@ defmodule Pleroma.Web.AdminAPI.TagControllerTest do
                "@#{admin.nickname} added tags: #{tags} to users: #{users}"
     end
 
-    test "it does not modify tags of not specified users", %{conn: conn, user3: user3} do
-      assert empty_json_response(conn)
+    test "it does not modify tags of not specified users", %{user3: user3} do
       {:ok, tags} = Repo.get_assoc(User.get_cached_by_id(user3.id), :tags)
       assert Enum.map(tags, & &1.name) == ["unchanged"]
     end
@@ -111,24 +108,22 @@ defmodule Pleroma.Web.AdminAPI.TagControllerTest do
       user2 = insert(:user, %{tags: [build(:tag, name: "y"), build(:tag, name: "z")]})
       user3 = insert(:user, %{tags: [build(:tag, name: "unchanged")]})
 
-      conn =
-        conn
-        |> put_req_header("accept", "application/json")
-        |> delete(
-          "/api/pleroma/admin/users/tag?nicknames[]=#{user1.nickname}&nicknames[]=" <>
-            "#{user2.nickname}&tags[]=x&tags[]=z"
-        )
+      assert conn
+             |> put_req_header("content-type", "application/json")
+             |> delete(
+               "/api/pleroma/admin/users/tag",
+               %{nicknames: [user1.nickname, user2.nickname], tags: ["x", "z"]}
+             )
+             |> json_response_and_validate_schema(204)
 
-      %{conn: conn, user1: user1, user2: user2, user3: user3}
+      %{user1: user1, user2: user2, user3: user3}
     end
 
     test "it removes specified tags from users with specified nicknames", %{
-      conn: conn,
       admin: admin,
       user1: user1,
       user2: user2
     } do
-      assert empty_json_response(conn)
       {:ok, tags} = Repo.get_assoc(User.get_cached_by_id(user1.id), :tags)
       assert tags == []
       {:ok, tags} = Repo.get_assoc(User.get_cached_by_id(user2.id), :tags)
@@ -147,8 +142,7 @@ defmodule Pleroma.Web.AdminAPI.TagControllerTest do
                "@#{admin.nickname} removed tags: #{tags} from users: #{users}"
     end
 
-    test "it does not modify tags of not specified users", %{conn: conn, user3: user3} do
-      assert empty_json_response(conn)
+    test "it does not modify tags of not specified users", %{user3: user3} do
       {:ok, tags} = Repo.get_assoc(User.get_cached_by_id(user3.id), :tags)
       assert Enum.map(tags, & &1.name) == ["unchanged"]
     end

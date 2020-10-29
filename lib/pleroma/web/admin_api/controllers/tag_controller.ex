@@ -35,7 +35,7 @@ defmodule Pleroma.Web.AdminAPI.TagController do
     json(conn, tags)
   end
 
-  def tag(%{assigns: %{user: admin}} = conn, %{nicknames: nicknames, tags: tags}) do
+  def tag(%{assigns: %{user: admin}, body_params: %{nicknames: nicknames, tags: tags}} = conn, _) do
     with {:ok, _} <- User.tag(nicknames, tags) do
       ModerationLog.insert_log(%{
         actor: admin,
@@ -48,7 +48,10 @@ defmodule Pleroma.Web.AdminAPI.TagController do
     end
   end
 
-  def untag(%{assigns: %{user: admin}} = conn, %{nicknames: nicknames, tags: tags}) do
+  def untag(
+        %{assigns: %{user: admin}, body_params: %{nicknames: nicknames, tags: tags}} = conn,
+        _
+      ) do
     with {:ok, _} <- User.untag(nicknames, tags) do
       ModerationLog.insert_log(%{
         actor: admin,

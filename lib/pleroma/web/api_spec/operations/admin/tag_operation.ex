@@ -5,6 +5,7 @@
 defmodule Pleroma.Web.ApiSpec.Admin.TagOperation do
   alias OpenApiSpex.Operation
   alias OpenApiSpex.Schema
+  alias Pleroma.Web.ApiSpec.Schemas.ApiError
 
   import Pleroma.Web.ApiSpec.Helpers
 
@@ -18,6 +19,7 @@ defmodule Pleroma.Web.ApiSpec.Admin.TagOperation do
       tags: ["Admin", "Tags"],
       summary: "List available tags.",
       operationId: "AdminAPI.TagController.list",
+      parameters: admin_api_params(),
       responses: %{
         200 =>
           Operation.response("Array of tags", "application/json", %Schema{
@@ -34,22 +36,22 @@ defmodule Pleroma.Web.ApiSpec.Admin.TagOperation do
       tags: ["Admin", "Tags"],
       summary: "Adds tags to users.",
       operationId: "AdminAPI.TagController.tag",
-      parameters: [
-        Operation.parameter(
-          :nicknames,
-          :query,
-          %Schema{type: :array, items: %Schema{type: :string}},
-          "User's nicknames"
+      parameters: admin_api_params(),
+      requestBody:
+        request_body(
+          "Parameters",
+          %Schema{
+            type: :object,
+            properties: %{
+              nicknames: %Schema{type: :array, items: %Schema{type: :string}},
+              tags: %Schema{type: :array, items: %Schema{type: :string}}
+            }
+          },
+          required: true
         ),
-        Operation.parameter(
-          :tags,
-          :query,
-          %Schema{type: :array, items: %Schema{type: :string}},
-          "tags"
-        )
-      ],
       responses: %{
-        200 => empty_object_response()
+        204 => no_content_response(),
+        400 => Operation.response("Bad request", "application/json", ApiError)
       },
       security: [%{"oAuth" => ["write:accounts"]}]
     }
@@ -60,22 +62,22 @@ defmodule Pleroma.Web.ApiSpec.Admin.TagOperation do
       tags: ["Admin", "Tags"],
       summary: "Remove tags from users.",
       operationId: "AdminAPI.TagController.untag",
-      parameters: [
-        Operation.parameter(
-          :nicknames,
-          :query,
-          %Schema{type: :array, items: %Schema{type: :string}},
-          "User's nicknames"
+      parameters: admin_api_params(),
+      requestBody:
+        request_body(
+          "Parameters",
+          %Schema{
+            type: :object,
+            properties: %{
+              nicknames: %Schema{type: :array, items: %Schema{type: :string}},
+              tags: %Schema{type: :array, items: %Schema{type: :string}}
+            }
+          },
+          required: true
         ),
-        Operation.parameter(
-          :tags,
-          :query,
-          %Schema{type: :array, items: %Schema{type: :string}},
-          "tags"
-        )
-      ],
       responses: %{
-        200 => empty_object_response()
+        204 => no_content_response(),
+        400 => Operation.response("Bad request", "application/json", ApiError)
       },
       security: [%{"oAuth" => ["write:accounts"]}]
     }
