@@ -428,7 +428,9 @@ defmodule Pleroma.Web.AdminAPI.UserControllerTest do
 
   describe "GET /api/pleroma/admin/users" do
     test "renders users array for the first page", %{conn: conn, admin: admin} do
-      user = insert(:user, local: false, tags: ["foo", "bar"])
+      user =
+        insert(:user, local: false, tags: [build(:tag, name: "foo"), build(:tag, name: "bar")])
+
       user2 = insert(:user, approval_pending: true, registration_reason: "I'm a chill dude")
 
       conn = get(conn, "/api/pleroma/admin/users?page=1")
@@ -794,8 +796,8 @@ defmodule Pleroma.Web.AdminAPI.UserControllerTest do
     end
 
     test "load users with tags list", %{conn: conn} do
-      user1 = insert(:user, tags: ["first"])
-      user2 = insert(:user, tags: ["second"])
+      user1 = insert(:user, tags: [build(:tag, name: "first")])
+      user2 = insert(:user, tags: [build(:tag, name: "second")])
       insert(:user)
       insert(:user)
 
