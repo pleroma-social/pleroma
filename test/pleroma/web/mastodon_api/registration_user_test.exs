@@ -653,10 +653,9 @@ defmodule Pleroma.Web.MastodonAPI.RegistrationUserTest do
                |> json_response_and_validate_schema(:bad_request)
     end
 
-    test "returns an error if captcha is invalid and invite token invalid", %{conn: conn} do
+    test "returns an error if captcha is valid and invite token invalid", %{conn: conn} do
       clear_config([:instance, :registrations_open], false)
-
-      # invite = insert(:user_invite_token, %{invite_type: "one_time"})
+      %{token: token, answer_data: answer_data} = Pleroma.Captcha.new()
 
       params = %{
         username: "lain",
@@ -664,19 +663,21 @@ defmodule Pleroma.Web.MastodonAPI.RegistrationUserTest do
         password: "PlzDontHackLain",
         agreement: true,
         token: "invite.token",
-        captcha_solution: "cofe",
-        captcha_token: "cofe",
-        captcha_answer_data: "cofe"
+        captcha_solution: Pleroma.Captcha.Mock.solution(),
+        captcha_token: token,
+        captcha_answer_data: answer_data
       }
 
       assert %{
                "error" => "Please review the submission",
-               "fields" => %{"captcha" => ["Invalid answer data"]},
+               "fields" => %{"invite" => ["Invalid token"]},
                "identifier" => "review_submission"
              } ==
                conn
                |> post("/api/v1/accounts", params)
                |> json_response_and_validate_schema(:bad_request)
+
+      Cachex.del(:used_captcha_cache, token)
     end
   end
 
