@@ -421,8 +421,8 @@ defmodule Pleroma.Web.TwitterAPI.TwitterAPITest do
     {:error, error} = TwitterAPI.register_user(data)
 
     assert error == %{
-             password: ["can't be blank"],
-             password_confirmation: ["can't be blank"]
+             password: ["Password can't be blank"],
+             password_confirmation: ["Password confirmation can't be blank"]
            }
 
     refute User.get_cached_by_nickname("lain")

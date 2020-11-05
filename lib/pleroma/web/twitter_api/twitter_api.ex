@@ -49,11 +49,7 @@ defmodule Pleroma.Web.TwitterAPI.TwitterAPI do
         {:ok, user}
 
       {:error, changeset} ->
-        errors =
-          changeset
-          |> Ecto.Changeset.traverse_errors(fn {msg, _opts} -> msg end)
-
-        {:error, errors}
+        {:error, Pleroma.EctoHelper.pretty_errors(changeset.errors)}
     end
   end
 

@@ -83,7 +83,7 @@ defmodule Pleroma.Web.MastodonAPI.RegistrationUserTest do
 
       assert response == %{
                "error" => "Please review the submission",
-               "fields" => %{"email" => ["Invalid email"]},
+               "fields" => %{"email" => ["Email Invalid email"]},
                "identifier" => "review_submission"
              }
 
@@ -247,7 +247,7 @@ defmodule Pleroma.Web.MastodonAPI.RegistrationUserTest do
 
       assert res == %{
                "error" => "Please review the submission",
-               "fields" => %{"email" => ["has already been taken"]},
+               "fields" => %{"email" => ["Email has already been taken"]},
                "identifier" => "review_submission"
              }
     end
@@ -314,7 +314,7 @@ defmodule Pleroma.Web.MastodonAPI.RegistrationUserTest do
 
       assert res == %{
                "error" => "Please review the submission",
-               "fields" => %{"email" => ["can't be blank"]},
+               "fields" => %{"email" => ["Email can't be blank"]},
                "identifier" => "review_submission"
              }
     end
@@ -638,6 +638,32 @@ defmodule Pleroma.Web.MastodonAPI.RegistrationUserTest do
         email: "lain@example.org",
         password: "PlzDontHackLain",
         agreement: true,
+        captcha_solution: "cofe",
+        captcha_token: "cofe",
+        captcha_answer_data: "cofe"
+      }
+
+      assert %{
+               "error" => "Please review the submission",
+               "fields" => %{"captcha" => ["Invalid answer data"]},
+               "identifier" => "review_submission"
+             } ==
+               conn
+               |> post("/api/v1/accounts", params)
+               |> json_response_and_validate_schema(:bad_request)
+    end
+
+    test "returns an error if captcha is invalid and invite token invalid", %{conn: conn} do
+      clear_config([:instance, :registrations_open], false)
+
+      # invite = insert(:user_invite_token, %{invite_type: "one_time"})
+
+      params = %{
+        username: "lain",
+        email: "lain@example.org",
+        password: "PlzDontHackLain",
+        agreement: true,
+        token: "invite.token",
         captcha_solution: "cofe",
         captcha_token: "cofe",
         captcha_answer_data: "cofe"
