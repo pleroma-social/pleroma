@@ -18,11 +18,8 @@ defmodule Pleroma.Web.ActivityPub.MRF.AutoSubjectPolicy do
   end
 
   defp string_matches?(string, pattern) when is_binary(pattern) do
-    String.contains?(string, pattern)
-  end
-
-  defp string_matches?(string, pattern) do
-    String.match?(string, pattern)
+    wordlist = string |> String.split(" ", trim: true)
+    pattern in wordlist
   end
 
   defp check_subject(%{"object" => %{} = object} = message) do
