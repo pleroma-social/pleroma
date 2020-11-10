@@ -18,7 +18,7 @@ defmodule Pleroma.Web.ActivityPub.MRF.AutoSubjectPolicy do
   end
 
   defp string_matches?(string, pattern) when is_binary(pattern) do
-    wordlist = string |> String.split(" ", trim: true)
+    wordlist = string |> String.split(" ", trim: true) |> Enum.uniq()
     pattern in wordlist
   end
 
