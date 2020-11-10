@@ -35,17 +35,15 @@ defmodule Pleroma.Web.ActivityPub.MRF.AutoSubjectPolicy do
 
   defp check_match(%{"object" => %{} = object} = message) do
     auto_summary =
-      Enum.reduce(
+      Enum.map(
         Pleroma.Config.get([:mrf_auto_subject, :match]),
-        [],
-        fn {pat, key}, acc ->
-          if string_matches?(object["content"], pat) do
-            [key | acc]
-          else
-            acc
+        fn {pat, key} ->
+          if string_matches?(String.downcase(object["content"]), String.downcase(pat)) do
+            key
           end
         end
       )
+      |> Enum.filter(& &1)
       |> Enum.join(", ")
 
     object = Map.put(object, "summary", auto_summary)
