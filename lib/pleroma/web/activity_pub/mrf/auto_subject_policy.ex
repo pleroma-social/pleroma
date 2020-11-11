@@ -17,9 +17,9 @@ defmodule Pleroma.Web.ActivityPub.MRF.AutoSubjectPolicy do
     false
   end
 
-  defp string_matches?(content, keyword) when is_list(keyword) do
+  defp string_matches?(content, keywords) when is_list(keywords) do
     wordlist = content |> String.downcase() |> String.split(" ", trim: true) |> Enum.uniq()
-    Enum.any?(keyword, fn match -> String.downcase(match) in wordlist end)
+    Enum.any?(keywords, fn match -> String.downcase(match) in wordlist end)
   end
 
   defp string_matches?(content, keyword) when is_binary(keyword) do
