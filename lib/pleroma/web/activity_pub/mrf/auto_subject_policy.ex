@@ -118,15 +118,15 @@ defmodule Pleroma.Web.ActivityPub.MRF.AutoSubjectPolicy do
       related_policy: "Pleroma.Web.ActivityPub.MRF.AutoSubjectPolicy",
       label: "MRF AutoSubject",
       description:
-        "Adds subject to messages matching a keyword or [Regex](https://hexdocs.pm/elixir/Regex.html).",
+        "Adds subject to messages matching a keyword or list of keywords.",
       children: [
         %{
           key: :match,
           type: {:list, :tuple},
           description: """
-            **Pattern**: a string or [Regex](https://hexdocs.pm/elixir/Regex.html) in the format of `~r/PATTERN/`.
+            **Keyword**: a string or list of keywords. E.g., to  in the form of ["", "
 
-            **Keyword**: a keyword to apply to the subject field.
+            **Subject**: a string to insert into the subject field.
           """
         }
       ]
