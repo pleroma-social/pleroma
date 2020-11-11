@@ -124,9 +124,11 @@ defmodule Pleroma.Web.ActivityPub.MRF.AutoSubjectPolicy do
           key: :match,
           type: {:list, :tuple},
           description: """
-            **Keyword**: a string or list of keywords. E.g., to  in the form of ["", "
+            **Keyword**: a string or list of keywords. E.g., ["cat", "dog"] to match on both "cat" and "dog".
 
             **Subject**: a string to insert into the subject field.
+
+            Note: the keyword matching is case-insensitive and matches only the whole word.
           """
         }
       ]
