@@ -118,7 +118,7 @@ defmodule Pleroma.Web.ActivityPub.MRF.AutoSubjectPolicy do
       related_policy: "Pleroma.Web.ActivityPub.MRF.AutoSubjectPolicy",
       label: "MRF AutoSubject",
       description:
-        "Adds subject to messages matching a keyword or list of keywords.",
+        "Adds subject to messages matching a keyword or list of keywords if no subject is defined.",
       children: [
         %{
           key: :match,
