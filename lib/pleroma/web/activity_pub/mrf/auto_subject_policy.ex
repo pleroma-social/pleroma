@@ -13,13 +13,18 @@ defmodule Pleroma.Web.ActivityPub.MRF.AutoSubjectPolicy do
 
   @behaviour Pleroma.Web.ActivityPub.MRF
 
-  defp string_matches?(string, _) when not is_binary(string) do
+  defp string_matches?(content, _) when not is_binary(content) do
     false
   end
 
-  defp string_matches?(string, pattern) when is_binary(pattern) do
-    wordlist = string |> String.split(" ", trim: true) |> Enum.uniq()
-    pattern in wordlist
+  defp string_matches?(content, keyword) when is_list(keyword) do
+    wordlist = content |> String.downcase() |> String.split(" ", trim: true) |> Enum.uniq()
+    Enum.any?(keyword, fn match -> String.downcase(match) in wordlist end)
+  end
+
+  defp string_matches?(content, keyword) when is_binary(keyword) do
+    wordlist = content |> String.downcase() |> String.split(" ", trim: true) |> Enum.uniq()
+    String.downcase(keyword) in wordlist
   end
 
   defp check_subject(%{"object" => %{} = object} = message) do
@@ -34,9 +39,9 @@ defmodule Pleroma.Web.ActivityPub.MRF.AutoSubjectPolicy do
     auto_summary =
       Enum.map(
         Pleroma.Config.get([:mrf_auto_subject, :match]),
-        fn {pat, key} ->
-          if string_matches?(String.downcase(object["content"]), String.downcase(pat)) do
-            key
+        fn {keyword, subject} ->
+          if string_matches?(object["content"], keyword) do
+            subject
           end
         end
       )
