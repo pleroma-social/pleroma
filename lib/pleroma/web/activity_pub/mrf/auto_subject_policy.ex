@@ -3,57 +3,14 @@
 # SPDX-License-Identifier: AGPL-3.0-only
 
 defmodule Pleroma.Web.ActivityPub.MRF.AutoSubjectPolicy do
-  alias Pleroma.User
-
-  require Pleroma.Constants
-
-  require Logger
-
   @moduledoc "Apply Subject to local posts matching certain keywords."
 
   @behaviour Pleroma.Web.ActivityPub.MRF
 
-  defp string_matches?(content, _) when not is_binary(content) do
-    false
-  end
+  alias Pleroma.User
 
-  defp string_matches?(content, keywords) when is_list(keywords) do
-    wordlist = content |> String.downcase() |> String.split(" ", trim: true) |> Enum.uniq()
-    Enum.any?(keywords, fn match -> String.downcase(match) in wordlist end)
-  end
-
-  defp string_matches?(content, keyword) when is_binary(keyword) do
-    wordlist = content |> String.downcase() |> String.split(" ", trim: true) |> Enum.uniq()
-    String.downcase(keyword) in wordlist
-  end
-
-  defp check_subject(%{"object" => %{} = object} = message) do
-    if String.length(object["summary"] |> String.trim()) == 0 do
-      {:ok, message}
-    else
-      {:error, :has_subject}
-    end
-  end
-
-  defp check_match(%{"object" => %{} = object} = message) do
-    auto_summary =
-      Enum.map(
-        Pleroma.Config.get([:mrf_auto_subject, :match]),
-        fn {keyword, subject} ->
-          if string_matches?(object["content"], keyword) do
-            subject
-          end
-        end
-      )
-      |> Enum.filter(& &1)
-      |> Enum.join(", ")
-
-    object = Map.put(object, "summary", auto_summary)
-
-    message = Map.put(message, "object", object)
-
-    {:ok, message}
-  end
+  require Pleroma.Constants
+  require Logger
 
   @impl true
   def filter(%{"type" => "Create", "actor" => actor, "object" => _object} = message) do
@@ -79,42 +36,54 @@ defmodule Pleroma.Web.ActivityPub.MRF.AutoSubjectPolicy do
   @impl true
   def filter(message), do: {:ok, message}
 
+  defp check_subject(%{"object" => %{"summary" => subject}} = message) do
+    subject = String.trim(subject)
+
+    if String.length(subject) == 0 do
+      {:ok, message}
+    else
+      {:error, :has_subject}
+    end
+  end
+
+  defp check_subject(message), do: {:ok, message}
+
+  defp string_matches?(content, pattern) when is_binary(content) do
+    String.contains?(content, pattern)
+  end
+
+  defp check_match(%{"object" => %{} = object} = message) do
+    match_settings = Pleroma.Config.get([:mrf_auto_subject, :match])
+
+    auto_summary =
+      Enum.reduce(match_settings, [], fn {keywords, subject}, acc ->
+        if string_matches?(object["content"], keywords) do
+          [subject | acc]
+        else
+          acc
+        end
+      end)
+      |> Enum.join(", ")
+
+    message = put_in(message["object"]["summary"], auto_summary)
+
+    {:ok, message}
+  end
+
   @impl true
   def describe do
-    # This horror is needed to convert regex sigils to strings
     mrf_autosubject =
-      Pleroma.Config.get(:mrf_autosubject, [])
-      |> Enum.map(fn {key, value} ->
-        {key,
-         Enum.map(value, fn
-           {pattern, keyword} ->
-             %{
-               "pattern" =>
-                 if not is_binary(pattern) do
-                   inspect(pattern)
-                 else
-                   pattern
-                 end,
-               "keyword" => keyword
-             }
-
-           pattern ->
-             if not is_binary(pattern) do
-               inspect(pattern)
-             else
-               pattern
-             end
-         end)}
-      end)
+      :mrf_auto_subject
+      |> Pleroma.Config.get()
       |> Enum.into(%{})
 
-    {:ok, %{mrf_autosubject: mrf_autosubject}}
+    {:ok, %{mrf_auto_subject: mrf_autosubject}}
   end
 
   @impl true
   def config_description do
     %{
-      key: :mrf_autosubject,
+      key: :mrf_auto_subject,
       related_policy: "Pleroma.Web.ActivityPub.MRF.AutoSubjectPolicy",
       label: "MRF AutoSubject",
       description:
