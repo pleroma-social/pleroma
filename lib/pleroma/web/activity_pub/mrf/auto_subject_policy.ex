@@ -49,13 +49,12 @@ defmodule Pleroma.Web.ActivityPub.MRF.AutoSubjectPolicy do
   defp check_subject(message), do: {:ok, message}
 
   defp string_matches?(content, keywords) when is_list(keywords) do
-    wordlist = content |> String.downcase() |> String.split(" ", trim: true) |> Enum.uniq()
-
+    wordlist = content |> make_wordlist |> trim_punct
     Enum.any?(keywords, fn match -> String.downcase(match) in wordlist end)
   end
 
   defp string_matches?(content, keyword) when is_binary(keyword) do
-    wordlist = content |> String.downcase() |> String.split(" ", trim: true) |> Enum.uniq()
+    wordlist = content |> make_wordlist |> trim_punct
     String.downcase(keyword) in wordlist
   end
 
@@ -76,6 +75,16 @@ defmodule Pleroma.Web.ActivityPub.MRF.AutoSubjectPolicy do
 
     {:ok, message}
   end
+
+  defp make_wordlist(content),
+    do:
+      content
+      |> String.downcase()
+      |> String.split(" ", trim: true)
+      |> Enum.uniq()
+
+  defp trim_punct(wordlist) when is_list(wordlist),
+    do: wordlist |> Enum.map(fn word -> String.replace(word, ~r/[.?!:;]+$/, "") end)
 
   @impl true
   def describe do
