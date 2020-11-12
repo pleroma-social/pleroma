@@ -48,8 +48,15 @@ defmodule Pleroma.Web.ActivityPub.MRF.AutoSubjectPolicy do
 
   defp check_subject(message), do: {:ok, message}
 
-  defp string_matches?(content, pattern) when is_binary(content) do
-    String.contains?(content, pattern)
+  defp string_matches?(content, keywords) when is_list(keywords) do
+    wordlist = content |> String.downcase() |> String.split(" ", trim: true) |> Enum.uniq()
+
+    Enum.any?(keywords, fn match -> String.downcase(match) in wordlist end)
+  end
+
+  defp string_matches?(content, keyword) when is_binary(keyword) do
+    wordlist = content |> String.downcase() |> String.split(" ", trim: true) |> Enum.uniq()
+    String.downcase(keyword) in wordlist
   end
 
   defp check_match(%{"object" => %{} = object} = message) do
