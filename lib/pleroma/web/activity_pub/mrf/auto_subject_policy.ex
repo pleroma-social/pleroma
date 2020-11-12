@@ -12,6 +12,8 @@ defmodule Pleroma.Web.ActivityPub.MRF.AutoSubjectPolicy do
   require Pleroma.Constants
   require Logger
 
+  @trim_regex Regex.compile!("[.?!:;]+$")
+
   @impl true
   def filter(%{"type" => "Create", "actor" => actor, "object" => _object} = message) do
     with {:ok, %User{local: true}} <- User.get_or_fetch_by_ap_id(actor),
@@ -84,7 +86,7 @@ defmodule Pleroma.Web.ActivityPub.MRF.AutoSubjectPolicy do
       |> Enum.uniq()
 
   defp trim_punct(wordlist) when is_list(wordlist),
-    do: wordlist |> Enum.map(fn word -> String.replace(word, ~r/[.?!:;]+$/, "") end)
+    do: wordlist |> Enum.map(fn word -> String.replace(word, @trim_regex, "") end)
 
   @impl true
   def describe do
