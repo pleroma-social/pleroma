@@ -1605,8 +1605,6 @@ defmodule Pleroma.UserTest do
   end
 
   test "delete/1 purges a user when they wouldn't be fully deleted" do
-    _tag = insert(:tag, name: "verify")
-
     user =
       insert(:user, %{
         bio: "eyy lmao",
@@ -1615,7 +1613,7 @@ defmodule Pleroma.UserTest do
         keys: "RSA begin buplic key",
         public_key: "--PRIVATE KEYE--",
         avatar: %{"a" => "b"},
-        # tags: ["qqqqq"],
+        tags: [build(:tag, name: "verify")],
         banner: %{"a" => "b"},
         background: %{"a" => "b"},
         note_count: 9,
@@ -1642,7 +1640,6 @@ defmodule Pleroma.UserTest do
         also_known_as: ["https://lol.olo/users/loll"]
       })
 
-    user = User.tag(user, "verify")
     assert Enum.map(user.tags, & &1.name) == ["verify"]
     assert Repo.aggregate(from(ut in "users_tags"), :count, :user_id) == 1
     {:ok, job} = User.delete(user)
