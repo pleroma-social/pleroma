@@ -1996,6 +1996,13 @@ defmodule Pleroma.User do
 
   def parse_bio(_, _), do: ""
 
+  def tag_names(%__MODULE__{} = user) do
+    {:ok, tags} = Repo.get_assoc(user, :tags)
+    Enum.map(tags, & &1.name)
+  end
+
+  def tag_names(_), do: []
+
   def tag(user_identifiers, tags) when is_list(user_identifiers) do
     Repo.transaction(fn ->
       for user_identifier <- user_identifiers, do: tag(user_identifier, tags)

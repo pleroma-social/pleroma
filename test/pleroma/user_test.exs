@@ -152,6 +152,20 @@ defmodule Pleroma.UserTest do
     end
   end
 
+  describe "tag_names/1" do
+    test "returns tag names of user" do
+      user =
+        insert(:user, %{
+          tags: [
+            build(:tag, name: "verify"),
+            build(:tag, name: "spam")
+          ]
+        })
+
+      assert User.tag_names(user) == ["verify", "spam"]
+    end
+  end
+
   test "ap_id returns the activity pub id for the user" do
     user = UserBuilder.build()
 

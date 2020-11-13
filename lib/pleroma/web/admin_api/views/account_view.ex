@@ -66,7 +66,6 @@ defmodule Pleroma.Web.AdminAPI.AccountView do
     avatar = User.avatar_url(user) |> MediaProxy.url()
     display_name = Pleroma.HTML.strip_tags(user.name || user.nickname)
     user = User.sanitize_html(user, FastSanitize.Sanitizer.StripTags)
-    {:ok, user_tags} = Pleroma.Repo.get_assoc(user, :tags)
 
     %{
       "id" => user.id,
@@ -77,7 +76,7 @@ defmodule Pleroma.Web.AdminAPI.AccountView do
       "deactivated" => user.deactivated,
       "local" => user.local,
       "roles" => User.roles(user),
-      "tags" => Enum.map(user_tags, & &1.name),
+      "tags" => User.tag_names(user),
       "confirmation_pending" => user.confirmation_pending,
       "approval_pending" => user.approval_pending,
       "url" => user.uri || user.ap_id,

@@ -32,13 +32,6 @@ defmodule Pleroma.Web.ActivityPub.MRF.TagPolicy do
     ]
   end
 
-  defp get_tags(%User{} = user) do
-    {:ok, tags} = Pleroma.Repo.get_assoc(user, :tags)
-    Enum.map(tags, & &1.name)
-  end
-
-  defp get_tags(_), do: []
-
   defp process_tag(
          "mrf_tag:media-force-nsfw",
          %{
@@ -160,8 +153,9 @@ defmodule Pleroma.Web.ActivityPub.MRF.TagPolicy do
   defp process_tag(_, message), do: {:ok, message}
 
   def filter_message(actor, message) do
-    User.get_cached_by_ap_id(actor)
-    |> get_tags()
+    actor
+    |> User.get_cached_by_ap_id()
+    |> User.tag_names()
     |> Enum.reduce({:ok, message}, fn
       tag, {:ok, message} ->
         process_tag(tag, message)
