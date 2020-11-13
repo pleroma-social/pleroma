@@ -20,7 +20,6 @@ defmodule Pleroma.Repo.Migrations.CreateTags do
 
   def down do
     drop_if_exists(table(:tags))
-    drop_if_exists(unique_index(:tags, :name))
   end
 
   defp collect_user_tags_query do
