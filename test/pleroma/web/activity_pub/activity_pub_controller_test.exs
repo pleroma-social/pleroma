@@ -551,6 +551,41 @@ defmodule Pleroma.Web.ActivityPub.ActivityPubControllerTest do
       assert Activity.get_by_ap_id(data["id"])
     end
 
+    test "it works with this thing", %{conn: conn} do
+      user = insert(:user)
+
+      data = %{
+        "@context": "https://www.w3.org/ns/activitystreams",
+        id: "https://p.farhan.codes/activities/4367d2a7-b6ed-424e-8bd1-e7f053af4f5c",
+        object: user.ap_id,
+        type: "Follow",
+        actor: "https://p.farhan.codes/users/farhan"
+      }
+
+      remote_user = File.read!("test/fixtures/farhan.json")
+
+      Tesla.Mock.mock(fn
+        %{method: :get, url: "https://p.farhan.codes/users/farhan"} ->
+          %Tesla.Env{
+            status: 200,
+            body: remote_user,
+            headers: [{"content-type", "application/activity+json"}]
+          }
+      end)
+
+      conn =
+        conn
+        |> assign(:valid_signature, true)
+        |> put_req_header("content-type", "application/activity+json")
+        |> post("/users/#{user.nickname}/inbox", data)
+
+      assert "ok" == json_response(conn, 200)
+
+      ObanHelpers.perform(all_enqueued(worker: ReceiverWorker))
+
+      assert Activity.get_by_ap_id(data[:id])
+    end
+
     test "it accepts messages with to as string instead of array", %{conn: conn, data: data} do
       user = insert(:user)
 
