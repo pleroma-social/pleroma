@@ -109,7 +109,7 @@ defmodule Pleroma.Web.ActivityPub.MRF.AutoSubjectPolicy do
       children: [
         %{
           key: :match,
-          type: {:list, :tuple},
+          type: {:keyword, :string},
           description: """
             **Keyword**: a string or list of keywords. E.g., ["cat", "dog"] to match on both "cat" and "dog".
 
