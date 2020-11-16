@@ -522,7 +522,7 @@ defmodule Pleroma.Web.ActivityPub.Transmogrifier do
         %{"type" => "Create", "object" => %{"type" => objtype, "id" => obj_id}} = data,
         _options
       )
-      when objtype in ~w{Question Answer ChatMessage Audio Video Event Article} do
+      when objtype in ~w{Question Answer ChatMessage Audio Video Event Article Image} do
     data = Map.put(data, "object", strip_internal_fields(data["object"]))
 
     with {:ok, %User{}} <- ObjectValidator.fetch_actor(data),
