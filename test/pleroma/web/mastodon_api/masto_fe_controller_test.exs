@@ -25,7 +25,6 @@ defmodule Pleroma.Web.MastodonAPI.MastoFEControllerTest do
 
       user = User.get_cached_by_ap_id(user.ap_id)
       assert user.mastofe_settings == %{"programming" => "socks"}
-    end
   end
 
   describe "index/2 redirections" do

@@ -46,7 +46,7 @@ defmodule Pleroma.Web.MastodonAPI.NotificationController do
     params =
       params
       |> Map.new(fn {k, v} -> {to_string(k), v} end)
-      |> Map.put_new("include_types", Pleroma.Notification.types_excluding_chat())
+      |> Map.put_new("include_types", Pleroma.Notification.types_excluding_chat_and_report())
 
     notifications = MastodonAPI.get_notifications(user, params)
 

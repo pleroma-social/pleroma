@@ -5,6 +5,9 @@
 defmodule Pleroma.Notification do
   use Ecto.Schema
 
+  import Ecto.Query
+  import Ecto.Changeset
+
   alias Ecto.Multi
   alias Pleroma.Activity
   alias Pleroma.FollowingRelationship
@@ -20,14 +23,25 @@ defmodule Pleroma.Notification do
   alias Pleroma.Web.Push
   alias Pleroma.Web.Streamer
 
-  import Ecto.Query
-  import Ecto.Changeset
-
   require Logger
 
-  @type t :: %__MODULE__{}
-
   @include_muted_option :with_muted
+
+  @types ~w{
+    favourite
+    follow
+    follow_request
+    mention
+    move
+    pleroma:chat_mention
+    pleroma:emoji_reaction
+    pleroma:report
+    reblog
+  }
+
+  @types_excluding_chat_and_report @types -- ~w(pleroma:chat_mention pleroma:report)
+
+  @type t :: %__MODULE__{}
 
   schema "notifications" do
     field(:seen, :boolean, default: false)
@@ -62,28 +76,16 @@ defmodule Pleroma.Notification do
     |> Repo.aggregate(:count, :id)
   end
 
-  @notification_types ~w{
-    favourite
-    follow
-    follow_request
-    mention
-    move
-    pleroma:chat_mention
-    pleroma:emoji_reaction
-    pleroma:report
-    reblog
-  }
+  @spec types() :: [String.t()]
+  def types, do: @types
 
-  @notification_types_excluding_chat List.delete(@notification_types, "pleroma:chat_mention")
-
-  def types, do: @notification_types
-
-  def types_excluding_chat, do: @notification_types_excluding_chat
+  @spec types_excluding_chat_and_report() :: [String.t()]
+  def types_excluding_chat_and_report, do: @types_excluding_chat_and_report
 
   def changeset(%Notification{} = notification, attrs) do
     notification
     |> cast(attrs, [:seen, :type])
-    |> validate_inclusion(:type, @notification_types)
+    |> validate_inclusion(:type, @types)
   end
 
   @spec last_read_query(User.t()) :: Ecto.Queryable.t()
