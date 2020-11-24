@@ -10,6 +10,7 @@ defmodule Pleroma.Web.ActivityPub.Transmogrifier.NoteHandlingTest do
   alias Pleroma.Object
   alias Pleroma.User
   alias Pleroma.Web.ActivityPub.Transmogrifier
+  alias Pleroma.Web.ActivityPub.Utils
   alias Pleroma.Web.CommonAPI
 
   import Mock
@@ -278,9 +279,11 @@ defmodule Pleroma.Web.ActivityPub.Transmogrifier.NoteHandlingTest do
       object = Map.put(data["object"], "likes", likes)
       data = Map.put(data, "object", object)
 
-      {:ok, %Activity{object: object}} = Transmogrifier.handle_incoming(data)
+      {:ok, %Activity{} = activity} = Transmogrifier.handle_incoming(data)
 
-      refute Map.has_key?(object.data, "likes")
+      object = Object.normalize(activity)
+
+      assert object.data["likes"] == []
     end
 
     test "it strips internal reactions" do
@@ -392,10 +395,7 @@ defmodule Pleroma.Web.ActivityPub.Transmogrifier.NoteHandlingTest do
     setup do
       replies = %{
         "type" => "Collection",
-        "items" => [
-          Pleroma.Web.ActivityPub.Utils.generate_object_id(),
-          Pleroma.Web.ActivityPub.Utils.generate_object_id()
-        ]
+        "items" => [Utils.generate_object_id(), Utils.generate_object_id()]
       }
 
       activity =
