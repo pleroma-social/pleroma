@@ -35,6 +35,7 @@ defmodule Pleroma.Web.ActivityPub.ObjectValidators.CommonFixes do
     |> cast_and_filter_recipients("bcc", follower_collection)
     |> Transmogrifier.fix_implicit_addressing(follower_collection)
     |> Transmogrifier.fix_tag()
+    |> Transmogrifier.set_sensitive()
   end
 
   def fix_activity_addressing(activity, _meta) do
