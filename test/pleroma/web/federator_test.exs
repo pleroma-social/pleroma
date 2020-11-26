@@ -166,7 +166,7 @@ defmodule Pleroma.Web.FederatorTest do
 
       params =
         File.read!("test/fixtures/mastodon-post-activity.json")
-        |> Poison.decode!()
+        |> Jason.decode!()
 
       assert {:ok, job} = Federator.incoming_ap_doc(params)
       assert {:error, _} = ObanHelpers.perform(job)
