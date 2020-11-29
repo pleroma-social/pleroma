@@ -427,6 +427,35 @@ defmodule Mix.Tasks.Pleroma.User do
     |> Stream.run()
   end
 
+  def run(["email_notifications", nickname | options]) do
+    start_pleroma()
+
+    {opts, _} =
+      OptionParser.parse!(options,
+        strict: [digest: :boolean, notifications: :string],
+        aliases: [n: :notifications]
+      )
+
+    params =
+      Map.new(opts, fn
+        {:digest, v} ->
+          {"digest", v}
+
+        {:notifications, v} ->
+          types = if v == "off", do: [], else: String.split(v, ",", trim: true)
+          {"notifications", types}
+      end)
+
+    with keys when keys != [] <- Map.keys(params),
+         %User{local: true} = user <- User.get_cached_by_nickname(nickname) do
+      {:ok, user} = User.update_email_notifications(user, params)
+      shell_info("Email notifications for user #{user.nickname} were successfully updated.")
+    else
+      [] -> shell_error("No changes passed")
+      _ -> shell_error("No local user #{nickname}")
+    end
+  end
+
   defp set_moderator(user, value) do
     {:ok, user} =
       user

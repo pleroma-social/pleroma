@@ -11,9 +11,11 @@ defmodule Pleroma.MigrationHelper.NotificationBackfill do
 
   def fill_in_notification_types do
     query =
-      from(n in Pleroma.Notification,
+      from(n in "notifications",
         where: is_nil(n.type),
-        preload: :activity
+        join: a in "activities",
+        on: n.activity_id == a.id,
+        select: %{id: n.id, activity: %{id: a.id, data: a.data}}
       )
 
     query
@@ -22,9 +24,8 @@ defmodule Pleroma.MigrationHelper.NotificationBackfill do
       if notification.activity do
         type = type_from_activity(notification.activity)
 
-        notification
-        |> Ecto.Changeset.change(%{type: type})
-        |> Repo.update()
+        from(n in "notifications", where: n.id == ^notification.id)
+        |> Repo.update_all(set: [type: type])
       end
     end)
   end

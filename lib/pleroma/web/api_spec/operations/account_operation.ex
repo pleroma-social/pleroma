@@ -632,7 +632,8 @@ defmodule Pleroma.Web.ApiSpec.AccountOperation do
           description:
             "Discovery (listing, indexing) of this account by external services (search bots etc.) is allowed."
         },
-        actor_type: ActorType
+        actor_type: ActorType,
+        email_notifications: email_notifications()
       },
       example: %{
         bot: false,
@@ -753,6 +754,31 @@ defmodule Pleroma.Web.ApiSpec.AccountOperation do
       example: %{
         "notifications" => true,
         "expires_in" => 86_400
+      }
+    }
+  end
+
+  defp email_notifications do
+    %Schema{
+      title: "EmailNotificationsObject",
+      description: "User Email notification settings",
+      type: :object,
+      properties: %{
+        digest: %Schema{
+          allOf: [BooleanLike],
+          nullable: true,
+          description: "Whether the account receives digest email"
+        },
+        notifications: %Schema{
+          type: :array,
+          nullable: true,
+          description: "List of notification types to receive by Email",
+          items: %Schema{type: :string}
+        }
+      },
+      example: %{
+        "digest" => true,
+        "notifications" => ["mention", "pleroma:chat_mention"]
       }
     }
   end

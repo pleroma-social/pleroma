@@ -37,6 +37,7 @@ defmodule Pleroma.Notification do
     field(:type, :string)
     belongs_to(:user, User, type: FlakeId.Ecto.CompatType)
     belongs_to(:activity, Activity, type: FlakeId.Ecto.CompatType)
+    field(:notified_at, :naive_datetime)
 
     timestamps()
   end
@@ -253,7 +254,7 @@ defmodule Pleroma.Notification do
       iex> Pleroma.Notification.for_user_since(%Pleroma.User{}, ~N[2019-04-15 11:22:33])
       []
   """
-  @spec for_user_since(Pleroma.User.t(), NaiveDateTime.t()) :: [t()]
+  @spec for_user_since(User.t(), NaiveDateTime.t()) :: [t()]
   def for_user_since(user, date) do
     from(n in for_user_query(user),
       where: n.updated_at > ^date
@@ -667,5 +668,49 @@ defmodule Pleroma.Notification do
       where: fragment("?->>'context'", a.data) == ^context
     )
     |> Repo.update_all(set: [seen: true])
+  end
+
+  defp unread_mentions_in_timeframe_query(query \\ __MODULE__, args) do
+    types = args[:types] || ["mention", "pleroma:chat_mention"]
+    max_at = args[:max_at]
+
+    from(n in query,
+      where: n.seen == false,
+      where: is_nil(n.notified_at),
+      where: n.type in ^types,
+      where: n.inserted_at <= ^max_at
+    )
+  end
+
+  @spec users_ids_with_unread_mentions(NaiveDateTime.t()) :: [String.t()]
+  def users_ids_with_unread_mentions(max_at) do
+    from(n in unread_mentions_in_timeframe_query(%{max_at: max_at}),
+      join: u in assoc(n, :user),
+      where: not is_nil(u.email),
+      distinct: n.user_id,
+      select: n.user_id
+    )
+    |> Repo.all()
+  end
+
+  @spec for_user_unread_mentions(User.t(), NaiveDateTime.t()) :: [t()]
+  def for_user_unread_mentions(%User{} = user, max_at) do
+    args = %{
+      max_at: max_at,
+      types: user.email_notifications["notifications"]
+    }
+
+    user
+    |> for_user_query()
+    |> unread_mentions_in_timeframe_query(args)
+    |> Repo.all()
+  end
+
+  @spec update_notified_at([pos_integer()]) :: {non_neg_integer(), nil}
+  def update_notified_at(ids \\ []) do
+    from(n in __MODULE__,
+      where: n.id in ^ids
+    )
+    |> Repo.update_all(set: [notified_at: NaiveDateTime.utc_now()])
   end
 end

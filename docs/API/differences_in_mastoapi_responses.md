@@ -77,6 +77,7 @@ Has these additional fields under the `pleroma` object:
 - `notification_settings`: object, can be absent. See `/api/pleroma/notification_settings` for the parameters/keys returned.
 - `accepts_chat_messages`: boolean, but can be null if we don't have that information about a user
 - `favicon`: nullable URL string, Favicon image of the user's instance
+- `email_notifications`: map with settings for `digest` emails (boolean) and `notifications` setting (list with notification types).
 
 ### Source
 

@@ -90,7 +90,11 @@ defmodule Pleroma.Web.MastodonAPI.AccountViewTest do
         hide_follows_count: false,
         relationship: %{},
         skip_thread_containment: false,
-        accepts_chat_messages: nil
+        accepts_chat_messages: nil,
+        email_notifications: %{
+          "digest" => false,
+          "notifications" => ["mention", "pleroma:chat_mention"]
+        }
       }
     }
 
@@ -189,7 +193,11 @@ defmodule Pleroma.Web.MastodonAPI.AccountViewTest do
         hide_follows_count: false,
         relationship: %{},
         skip_thread_containment: false,
-        accepts_chat_messages: nil
+        accepts_chat_messages: nil,
+        email_notifications: %{
+          "digest" => false,
+          "notifications" => ["mention", "pleroma:chat_mention"]
+        }
       }
     }
 

@@ -392,7 +392,8 @@ defmodule Pleroma.Factory do
 
   def notification_factory do
     %Pleroma.Notification{
-      user: build(:user)
+      user: build(:user),
+      activity: build(:note_activity)
     }
   end
 

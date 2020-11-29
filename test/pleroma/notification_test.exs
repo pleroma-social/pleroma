@@ -1154,4 +1154,94 @@ defmodule Pleroma.NotificationTest do
       assert length(Notification.for_user(user)) == 1
     end
   end
+
+  describe "users_ids_with_unread_mentions/0" do
+    setup do
+      now = NaiveDateTime.utc_now()
+      inserted_at = NaiveDateTime.add(now, -61)
+
+      insert(:notification, seen: true, type: "mention", inserted_at: inserted_at)
+      insert(:notification, type: "follow", inserted_at: inserted_at)
+      insert(:notification, type: "mention")
+      mention = insert(:notification, type: "mention", inserted_at: inserted_at)
+      chat_mention = insert(:notification, type: "pleroma:chat_mention", inserted_at: inserted_at)
+
+      insert(:notification,
+        type: "mention",
+        notified_at: now,
+        inserted_at: inserted_at
+      )
+
+      [
+        mention: mention,
+        chat_mention: chat_mention,
+        now: now
+      ]
+    end
+
+    test "when mentions are in the timeframe", %{
+      mention: mention,
+      chat_mention: chat_mention,
+      now: now
+    } do
+      assert Notification.users_ids_with_unread_mentions(NaiveDateTime.add(now, -60)) == [
+               mention.user_id,
+               chat_mention.user_id
+             ]
+    end
+
+    test "when mentions are out of the timeframe", %{now: now} do
+      assert Notification.users_ids_with_unread_mentions(NaiveDateTime.add(now, -62)) == []
+    end
+  end
+
+  describe "for_user_unread_mentions/1" do
+    setup do
+      [user, muted, blocked] = insert_list(3, :user)
+      {:ok, _} = User.mute(user, muted)
+      {:ok, _} = CommonAPI.post(muted, %{status: "hey @#{user.nickname}"})
+      {:ok, _} = User.block(user, blocked)
+      {:ok, _} = CommonAPI.post(blocked, %{status: "hey @#{user.nickname}"})
+
+      insert(:notification, type: "mention", user: user)
+      insert(:notification, type: "pleroma:chat_mention", user: user)
+
+      inserted_at = NaiveDateTime.add(NaiveDateTime.utc_now(), -61)
+      Repo.update_all(Notification, set: [inserted_at: inserted_at])
+      [user: user, max: NaiveDateTime.add(NaiveDateTime.utc_now(), -60)]
+    end
+
+    test "when mentions are in timeframe, exclude blocks and mutes", %{user: user, max: max} do
+      assert Repo.aggregate(Notification, :count, :id) == 4
+      assert user |> Notification.for_user_unread_mentions(max) |> length() == 2
+    end
+
+    test "when mentions are out of the timeframe, exclude blocks and mutes", %{
+      user: user,
+      max: max
+    } do
+      assert Notification.for_user_unread_mentions(user, NaiveDateTime.add(max, -2)) == []
+    end
+
+    test "respect user notification types", %{user: user, max: max} do
+      user =
+        Map.update!(
+          user,
+          :email_notifications,
+          &Map.put(&1, "notifications", ["pleroma:chat_mention"])
+        )
+
+      [mention] = Notification.for_user_unread_mentions(user, max)
+      assert mention.type == "pleroma:chat_mention"
+    end
+  end
+
+  test "update_notified_at/1" do
+    notifs = insert_list(2, :notification)
+
+    assert {2, nil} =
+             notifs
+             |> Enum.map(& &1.id)
+             |> Notification.update_notified_at()
+  end
 end

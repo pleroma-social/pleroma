@@ -21,7 +21,7 @@ defmodule Mix.Tasks.Pleroma.App do
 
     scopes =
       if opts[:scopes] do
-        String.split(opts[:scopes], ",")
+        String.split(opts[:scopes], ",", trim: true)
       else
         ["read", "write", "follow", "push"]
       end

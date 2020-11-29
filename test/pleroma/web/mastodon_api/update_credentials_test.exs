@@ -206,6 +206,38 @@ defmodule Pleroma.Web.MastodonAPI.UpdateCredentialsTest do
       assert user_data["source"]["pleroma"]["no_rich_text"] == true
     end
 
+    test "updates the user's email_notifications setting", %{conn: conn} do
+      resp =
+        patch(conn, "/api/v1/accounts/update_credentials", %{
+          email_notifications: %{
+            "digest" => true,
+            "notifications" => []
+          }
+        })
+
+      assert user_data = json_response_and_validate_schema(resp, 200)
+
+      assert user_data["pleroma"]["email_notifications"] == %{
+               "digest" => true,
+               "notifications" => []
+             }
+
+      resp =
+        patch(conn, "/api/v1/accounts/update_credentials", %{
+          email_notifications: %{
+            "digest" => false,
+            "notifications" => ["mention", "pleroma:chat_mention"]
+          }
+        })
+
+      assert user_data = json_response_and_validate_schema(resp, 200)
+
+      assert user_data["pleroma"]["email_notifications"] == %{
+               "digest" => false,
+               "notifications" => ["mention", "pleroma:chat_mention"]
+             }
+    end
+
     test "updates the user's name", %{conn: conn} do
       conn =
         patch(conn, "/api/v1/accounts/update_credentials", %{"display_name" => "markorepairs"})

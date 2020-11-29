@@ -2241,18 +2241,19 @@ defmodule Pleroma.UserTest do
     end
   end
 
-  describe "update_email_notifications/2" do
-    setup do
-      user = insert(:user, email_notifications: %{"digest" => true})
+  test "update_email_notifications/2" do
+    user = insert(:user, email_notifications: %{"digest" => false, "notifications" => []})
+    assert user.email_notifications["digest"] == false
+    assert user.email_notifications["notifications"] == []
 
-      {:ok, user: user}
-    end
+    assert {:ok, result} =
+             User.update_email_notifications(user, %{
+               "digest" => true,
+               "notifications" => ["mention", "pleroma:chat_mention"]
+             })
 
-    test "Notifications are updated", %{user: user} do
-      true = user.email_notifications["digest"]
-      assert {:ok, result} = User.update_email_notifications(user, %{"digest" => false})
-      assert result.email_notifications["digest"] == false
-    end
+    assert result.email_notifications["digest"]
+    assert result.email_notifications["notifications"] == ["mention", "pleroma:chat_mention"]
   end
 
   test "avatar fallback" do

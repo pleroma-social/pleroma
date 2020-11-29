@@ -131,7 +131,11 @@ defmodule Pleroma.User do
     field(:hide_follows, :boolean, default: false)
     field(:hide_favorites, :boolean, default: true)
     field(:pinned_activities, {:array, :string}, default: [])
-    field(:email_notifications, :map, default: %{"digest" => false})
+
+    field(:email_notifications, :map,
+      default: %{"digest" => false, "notifications" => ["mention", "pleroma:chat_mention"]}
+    )
+
     field(:mascot, :map, default: nil)
     field(:emoji, :map, default: %{})
     field(:pleroma_settings_store, :map, default: %{})
@@ -524,7 +528,8 @@ defmodule Pleroma.User do
         :pleroma_settings_store,
         :is_discoverable,
         :actor_type,
-        :accepts_chat_messages
+        :accepts_chat_messages,
+        :email_notifications
       ]
     )
     |> unique_constraint(:nickname)
@@ -2374,17 +2379,14 @@ defmodule Pleroma.User do
     |> update_and_set_cache()
   end
 
+  @spec update_email_notifications(t(), map()) :: {:ok, t()} | {:error, Ecto.Changeset.t()}
   def update_email_notifications(user, settings) do
-    email_notifications =
-      user.email_notifications
-      |> Map.merge(settings)
-      |> Map.take(["digest"])
+    email_notifications = Map.merge(user.email_notifications, settings)
 
-    params = %{email_notifications: email_notifications}
     fields = [:email_notifications]
 
     user
-    |> cast(params, fields)
+    |> cast(%{email_notifications: email_notifications}, fields)
     |> validate_required(fields)
     |> update_and_set_cache()
   end
@@ -2415,8 +2417,8 @@ defmodule Pleroma.User do
     end
   end
 
-  @spec add_to_block(User.t(), User.t()) ::
-          {:ok, UserRelationship.t()} | {:ok, nil} | {:error, Ecto.Changeset.t()}
+  @spec remove_from_block(User.t(), User.t()) ::
+          {:ok, UserRelationship.t() | nil} | {:error, Ecto.Changeset.t()}
   defp remove_from_block(%User{} = user, %User{} = blocked) do
     with {:ok, relationship} <- UserRelationship.delete_block(user, blocked) do
       @cachex.del(:user_cache, "blocked_users_ap_ids:#{user.ap_id}")

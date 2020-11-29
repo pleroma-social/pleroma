@@ -302,3 +302,36 @@
     ```sh
     mix pleroma.user unconfirm_all
     ```
+
+## Update email notifications settings for user
+
+=== "OTP"
+
+    ```sh
+    ./bin/pleroma_ctl user email_notifications <nickname> [option ...]
+    ```
+
+=== "From Source"
+
+    ```sh
+    mix pleroma.user email_notifications <nickname> [option ...]
+    ```
+
+### Options
+
+- `--digest`/`--no-digest` - whether the user should receive digest emails
+- `--notifications` - what types of email notifications user should receive (can be aliased with `-n`). To disable all types pass `off` value.
+
+Example:
+
+=== "OTP"
+
+    ```sh
+    ./bin/pleroma_ctl user email_notifications lain --digest -n mention
+    ```
+
+=== "From Source"
+
+    ```sh
+    mix pleroma.user email_notifications lain --digest -n mention
+    ```

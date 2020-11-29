@@ -616,4 +616,93 @@ defmodule Mix.Tasks.Pleroma.UserTest do
       refute mod.confirmation_pending
     end
   end
+
+  describe "email_notifications" do
+    setup do
+      user = insert(:user, email_notifications: %{"digest" => false, "notifications" => []})
+      [user: user]
+    end
+
+    test "no changes error", %{user: user} do
+      Mix.Tasks.Pleroma.User.run(["email_notifications", user.nickname])
+
+      assert_received {:mix_shell, :error, ["No changes passed"]}
+    end
+
+    test "user not found" do
+      Mix.Tasks.Pleroma.User.run(["email_notifications", "nickname", "--digest"])
+
+      assert_received {:mix_shell, :error, ["No local user nickname"]}
+    end
+
+    test "all settings", %{user: user} do
+      assert user.email_notifications == %{"digest" => false, "notifications" => []}
+
+      Mix.Tasks.Pleroma.User.run([
+        "email_notifications",
+        user.nickname,
+        "--digest",
+        "-n",
+        "mention,pleroma:chat_mention,"
+      ])
+
+      from_db = User.get_cached_by_nickname(user.nickname)
+
+      assert from_db.email_notifications == %{
+               "digest" => true,
+               "notifications" => ["mention", "pleroma:chat_mention"]
+             }
+
+      Mix.Tasks.Pleroma.User.run([
+        "email_notifications",
+        user.nickname,
+        "--no-digest",
+        "-n",
+        "off"
+      ])
+
+      from_db = User.get_cached_by_nickname(user.nickname)
+      assert from_db.email_notifications == %{"digest" => false, "notifications" => []}
+    end
+
+    test "partial update", %{user: user} do
+      Mix.Tasks.Pleroma.User.run([
+        "email_notifications",
+        user.nickname,
+        "--digest"
+      ])
+
+      from_db = User.get_cached_by_nickname(user.nickname)
+      assert from_db.email_notifications == %{"digest" => true, "notifications" => []}
+
+      Mix.Tasks.Pleroma.User.run([
+        "email_notifications",
+        user.nickname,
+        "--no-digest"
+      ])
+
+      from_db = User.get_cached_by_nickname(user.nickname)
+      assert from_db.email_notifications == %{"digest" => false, "notifications" => []}
+
+      Mix.Tasks.Pleroma.User.run([
+        "email_notifications",
+        user.nickname,
+        "-n",
+        "mention"
+      ])
+
+      from_db = User.get_cached_by_nickname(user.nickname)
+      assert from_db.email_notifications == %{"digest" => false, "notifications" => ["mention"]}
+
+      Mix.Tasks.Pleroma.User.run([
+        "email_notifications",
+        user.nickname,
+        "-n",
+        "off"
+      ])
+
+      from_db = User.get_cached_by_nickname(user.nickname)
+      assert from_db.email_notifications == %{"digest" => false, "notifications" => []}
+    end
+  end
 end

@@ -8,6 +8,7 @@ defmodule Pleroma.Emails.UserEmail do
   use Phoenix.Swoosh, view: Pleroma.Web.EmailView, layout: {Pleroma.Web.LayoutView, :email}
 
   alias Pleroma.Config
+  alias Pleroma.Notification
   alias Pleroma.User
   alias Pleroma.Web.Endpoint
   alias Pleroma.Web.Router
@@ -106,6 +107,27 @@ defmodule Pleroma.Emails.UserEmail do
     |> html_body(html_body)
   end
 
+  defp prepare_mention(%Notification{type: type} = notification, acc)
+       when type in ["mention", "pleroma:chat_mention"] do
+    object = Pleroma.Object.normalize(notification.activity, fetch: false)
+
+    if object do
+      object = update_in(object.data["content"], &format_links/1)
+
+      mention = %{
+        data: notification,
+        object: object,
+        from: User.get_by_ap_id(notification.activity.actor)
+      }
+
+      [mention | acc]
+    else
+      acc
+    end
+  end
+
+  defp prepare_mention(_, acc), do: acc
+
   @doc """
   Email used in digest email notifications
   Includes Mentions and New Followers data
@@ -113,25 +135,12 @@ defmodule Pleroma.Emails.UserEmail do
   """
   @spec digest_email(User.t()) :: Swoosh.Email.t() | nil
   def digest_email(user) do
-    notifications = Pleroma.Notification.for_user_since(user, user.last_digest_emailed_at)
+    notifications = Notification.for_user_since(user, user.last_digest_emailed_at)
 
     mentions =
       notifications
       |> Enum.filter(&(&1.activity.data["type"] == "Create"))
-      |> Enum.map(fn notification ->
-        object = Pleroma.Object.normalize(notification.activity, fetch: false)
-
-        if not is_nil(object) do
-          object = update_in(object.data["content"], &format_links/1)
-
-          %{
-            data: notification,
-            object: object,
-            from: User.get_by_ap_id(notification.activity.actor)
-          }
-        end
-      end)
-      |> Enum.filter(& &1)
+      |> Enum.reduce([], &prepare_mention/2)
 
     followers =
       notifications
@@ -151,7 +160,6 @@ defmodule Pleroma.Emails.UserEmail do
 
     unless Enum.empty?(mentions) do
       styling = Config.get([__MODULE__, :styling])
-      logo = Config.get([__MODULE__, :logo])
 
       html_data = %{
         instance: instance_name(),
@@ -162,20 +170,15 @@ defmodule Pleroma.Emails.UserEmail do
         styling: styling
       }
 
-      logo_path =
-        if is_nil(logo) do
-          Path.join(:code.priv_dir(:pleroma), "static/static/logo.svg")
-        else
-          Path.join(Config.get([:instance, :static_dir]), logo)
-        end
+      {logo_path, logo} = logo_path()
 
       new()
       |> to(recipient(user))
       |> from(sender())
       |> subject("Your digest from #{instance_name()}")
       |> put_layout(false)
-      |> render_body("digest.html", html_data)
-      |> attachment(Swoosh.Attachment.new(logo_path, filename: "logo.svg", type: :inline))
+      |> render_body("digest.html", Map.put(html_data, :logo, logo))
+      |> attachment(Swoosh.Attachment.new(logo_path, filename: logo, type: :inline))
     end
   end
 
@@ -227,5 +230,43 @@ defmodule Pleroma.Emails.UserEmail do
     |> from(sender())
     |> subject("Your account archive is ready")
     |> html_body(html_body)
+  end
+
+  @spec mentions_notification_email(User.t(), [Notification.t()]) :: Swoosh.Email.t()
+  def mentions_notification_email(user, mentions) do
+    html_data = %{
+      instance: instance_name(),
+      user: user,
+      mentions: Enum.reduce(mentions, [], &prepare_mention/2),
+      unsubscribe_link: unsubscribe_url(user, "mentions_email"),
+      styling: Config.get([__MODULE__, :styling])
+    }
+
+    now = NaiveDateTime.utc_now()
+
+    {logo_path, logo} = logo_path()
+
+    new()
+    |> to(recipient(user))
+    |> from(sender())
+    |> subject(
+      "[Pleroma] New mentions from #{instance_name()} for #{
+        Timex.format!(now, "{Mfull} {D}, {YYYY} at {h12}:{m} {AM}")
+      }"
+    )
+    |> put_layout(false)
+    |> render_body("mentions.html", Map.put(html_data, :logo, logo))
+    |> attachment(Swoosh.Attachment.new(logo_path, filename: logo, type: :inline))
+  end
+
+  defp logo_path do
+    logo_path =
+      if logo = Config.get([__MODULE__, :logo]) do
+        Path.join(Config.get([:instance, :static_dir]), logo)
+      else
+        Path.join(:code.priv_dir(:pleroma), "static/static/logo.svg")
+      end
+
+    {logo_path, Path.basename(logo_path)}
   end
 end
