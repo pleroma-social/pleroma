@@ -188,4 +188,16 @@ defmodule Pleroma.Web.PleromaAPI.EmojiReactionControllerTest do
 
     assert represented_user["id"] == other_user.id
   end
+
+  describe "/api/v1/pleroma/emoji_reactions" do
+    test "returns json with unicode emojis", %{conn: conn} do
+      emoji =
+        conn
+        |> get("/api/v1/pleroma/emoji_reactions")
+        |> json_response(200)
+
+      assert emoji["cookie"] == "🍪"
+      assert Enum.count(emoji) == 1367
+    end
+  end
 end

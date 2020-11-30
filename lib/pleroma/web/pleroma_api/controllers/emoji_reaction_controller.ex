@@ -91,4 +91,23 @@ defmodule Pleroma.Web.PleromaAPI.EmojiReactionController do
       |> render("show.json", activity: activity, for: user, as: :activity)
     end
   end
+
+  @external_resource "lib/pleroma/web/pleroma_api/controllers/emoji.json"
+
+  @reactions_json File.read!(@external_resource)
+                  |> Jason.decode!()
+                  |> Enum.reduce(%{}, fn {name, codepoint}, acc ->
+                    Map.put(
+                      acc,
+                      String.downcase(name),
+                      [codepoint |> String.to_integer(16)] |> String.Chars.to_string()
+                    )
+                  end)
+                  |> Jason.encode!()
+
+  def emoji_reactions(conn, _params) do
+    conn
+    |> put_resp_content_type("application/json")
+    |> send_resp(200, @reactions_json)
+  end
 end

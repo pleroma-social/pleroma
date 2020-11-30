@@ -77,11 +77,29 @@ defmodule Pleroma.Web.ApiSpec.EmojiReactionOperation do
     }
   end
 
+  def emoji_reactions_operation do
+    %Operation{
+      tags: ["Emoji Reactions"],
+      summary: "List emoji reactions recognized by the server",
+      operationId: "EmojiReactionController.emoji_reactions",
+      responses: %{
+        200 => emoji_reactions_response()
+      }
+    }
+  end
+
   defp array_of_reactions_response do
     Operation.response("Array of Emoji Reactions", "application/json", %Schema{
       type: :array,
       items: emoji_reaction(),
       example: [emoji_reaction().example]
+    })
+  end
+
+  defp emoji_reactions_response do
+    Operation.response("List of emojis by their names", "application/json", %Schema{
+      type: :object,
+      example: %{"cookie" => "🍪", "umbrella" => "☂"}
     })
   end
 
