@@ -102,34 +102,20 @@ defmodule Pleroma.Emoji do
     :ets.insert(@ets, emojis)
   end
 
-  @external_resource "lib/pleroma/emoji-data.txt"
+  @external_resource "lib/pleroma/emoji.json"
 
-  emojis =
-    @external_resource
-    |> File.read!()
-    |> String.split("\n")
-    |> Enum.filter(fn line -> line != "" and not String.starts_with?(line, "#") end)
-    |> Enum.map(fn line ->
-      line
-      |> String.split(";", parts: 2)
-      |> hd()
-      |> String.trim()
-      |> String.split("..")
-      |> case do
-        [number] ->
-          <<String.to_integer(number, 16)::utf8>>
+  @emoji_reactions File.read!(@external_resource)
+                   |> Jason.decode!()
+                   |> Enum.reduce(%{}, fn {name, codepoint}, acc ->
+                     Map.put(
+                       acc,
+                       String.downcase(name),
+                       [codepoint |> String.to_integer(16)] |> String.Chars.to_string()
+                     )
+                   end)
 
-        [first, last] ->
-          String.to_integer(first, 16)..String.to_integer(last, 16)
-          |> Enum.map(&<<&1::utf8>>)
-      end
-    end)
-    |> List.flatten()
-    |> Enum.uniq()
+  # Consider putting the emoji as the key if that's fine with PleromaFE
+  def is_unicode_emoji?(emoji), do: emoji in Map.values(@emoji_reactions)
 
-  for emoji <- emojis do
-    def is_unicode_emoji?(unquote(emoji)), do: true
-  end
-
-  def is_unicode_emoji?(_), do: false
+  def emoji_reactions(), do: @emoji_reactions
 end

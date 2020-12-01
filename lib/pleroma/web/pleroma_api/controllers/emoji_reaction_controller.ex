@@ -6,6 +6,7 @@ defmodule Pleroma.Web.PleromaAPI.EmojiReactionController do
   use Pleroma.Web, :controller
 
   alias Pleroma.Activity
+  alias Pleroma.Emoji
   alias Pleroma.Object
   alias Pleroma.User
   alias Pleroma.Web.CommonAPI
@@ -92,22 +93,9 @@ defmodule Pleroma.Web.PleromaAPI.EmojiReactionController do
     end
   end
 
-  @external_resource "lib/pleroma/web/pleroma_api/controllers/emoji.json"
-
-  @reactions_json File.read!(@external_resource)
-                  |> Jason.decode!()
-                  |> Enum.reduce(%{}, fn {name, codepoint}, acc ->
-                    Map.put(
-                      acc,
-                      String.downcase(name),
-                      [codepoint |> String.to_integer(16)] |> String.Chars.to_string()
-                    )
-                  end)
-                  |> Jason.encode!()
-
   def emoji_reactions(conn, _params) do
     conn
     |> put_resp_content_type("application/json")
-    |> send_resp(200, @reactions_json)
+    |> send_resp(200, Jason.encode!(Emoji.emoji_reactions()))
   end
 end
