@@ -94,8 +94,6 @@ defmodule Pleroma.Web.PleromaAPI.EmojiReactionController do
   end
 
   def emoji_reactions(conn, _params) do
-    conn
-    |> put_resp_content_type("application/json")
-    |> send_resp(200, Jason.encode!(Emoji.emoji_reactions()))
+    json(conn, Emoji.emoji_reactions())
   end
 end
