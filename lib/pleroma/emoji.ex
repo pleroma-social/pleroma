@@ -106,12 +106,9 @@ defmodule Pleroma.Emoji do
 
   @emoji_reactions File.read!(@external_resource)
                    |> Jason.decode!()
-                   |> Enum.reduce(%{}, fn {name, codepoint}, acc ->
-                     Map.put(
-                       acc,
-                       String.downcase(name),
-                       [codepoint |> String.to_integer(16)] |> String.Chars.to_string()
-                     )
+                   |> Map.new(fn {name, codepoint} ->
+                     {String.downcase(name),
+                      [codepoint |> String.to_integer(16)] |> String.Chars.to_string()}
                    end)
 
   # Consider putting the emoji as the key if that's fine with PleromaFE
