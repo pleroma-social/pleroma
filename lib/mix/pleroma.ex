@@ -14,15 +14,16 @@ defmodule Mix.Pleroma do
     :swoosh,
     :timex
   ]
-  @cachex_children ["object", "user", "scrubber"]
+  @cachex_children ["object", "user", "scrubber", "web_resp"]
   @doc "Common functions to be reused in mix tasks"
   def start_pleroma do
     Pleroma.Config.Holder.save_default()
     Pleroma.Config.Oban.warn()
+    Pleroma.Application.limiters_setup()
     Application.put_env(:phoenix, :serve_endpoints, false, persistent: true)
 
-    if Pleroma.Config.get(:env) != :test do
-      Application.put_env(:logger, :console, level: :debug)
+    unless System.get_env("DEBUG") do
+      Logger.remove_backend(:console)
     end
 
     adapter = Application.get_env(:tesla, :adapter)
@@ -95,12 +96,6 @@ defmodule Mix.Pleroma do
       input ->
         String.trim(input)
     end
-  end
-
-  def shell_yes?(message) do
-    if mix_shell?(),
-      do: Mix.shell().yes?("Continue?"),
-      else: shell_prompt(message, "Continue?") in ~w(Yn Y y)
   end
 
   def shell_info(message) do

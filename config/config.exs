@@ -129,7 +129,6 @@ config :pleroma, Pleroma.Web.Endpoint,
     dispatch: [
       {:_,
        [
-         {"/api/fedsocket/v1", Pleroma.Web.FedSockets.IncomingHandler, []},
          {"/api/v1/streaming", Pleroma.Web.MastodonAPI.WebsocketHandler, []},
          {"/websocket", Phoenix.Endpoint.CowboyWebSocket,
           {Phoenix.Transports.WebSocket,
@@ -146,16 +145,6 @@ config :pleroma, Pleroma.Web.Endpoint,
   secure_cookie_flag: true,
   extra_cookie_attrs: [
     "SameSite=Lax"
-  ]
-
-config :pleroma, :fed_sockets,
-  enabled: false,
-  connection_duration: :timer.hours(8),
-  rejection_duration: :timer.minutes(15),
-  fed_socket_fetches: [
-    default: 12_000,
-    interval: 3_000,
-    lazy: false
   ]
 
 # Configures Elixir's Logger
@@ -264,7 +253,8 @@ config :pleroma, :instance,
       length: 16
     ]
   ],
-  show_reactions: true
+  show_reactions: true,
+  password_reset_token_validity: 60 * 60 * 24
 
 config :pleroma, :welcome,
   direct_message: [

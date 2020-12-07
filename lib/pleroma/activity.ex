@@ -194,6 +194,19 @@ defmodule Pleroma.Activity do
     end
   end
 
+  def get_by_id_with_user_actor(id) do
+    case FlakeId.flake_id?(id) do
+      true ->
+        Activity
+        |> where([a], a.id == ^id)
+        |> with_preloaded_user_actor()
+        |> Repo.one()
+
+      _ ->
+        nil
+    end
+  end
+
   def get_by_id_with_object(id) do
     Activity
     |> where(id: ^id)
@@ -356,4 +369,15 @@ defmodule Pleroma.Activity do
     actor = user_actor(activity)
     activity.id in actor.pinned_activities
   end
+
+  @spec get_by_object_ap_id_with_object(String.t()) :: t() | nil
+  def get_by_object_ap_id_with_object(ap_id) when is_binary(ap_id) do
+    ap_id
+    |> Queries.by_object_id()
+    |> with_preloaded_object()
+    |> first()
+    |> Repo.one()
+  end
+
+  def get_by_object_ap_id_with_object(_), do: nil
 end
