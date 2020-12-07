@@ -65,6 +65,15 @@ defmodule Pleroma.Web.ActivityPub.Builder do
     end
   end
 
+  def close_poll(_activity, object) do
+    {:ok,
+     %{
+       "id" => Utils.generate_activity_id(),
+       "type" => "ClosePoll",
+       "object" => object.data["id"]
+     }, []}
+  end
+
   @spec undo(User.t(), Activity.t()) :: {:ok, map(), keyword()}
   def undo(actor, object) do
     {:ok,

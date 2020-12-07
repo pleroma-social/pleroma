@@ -553,7 +553,8 @@ config :pleroma, Oban,
     remote_fetcher: 2,
     attachments_cleanup: 5,
     new_users_digest: 1,
-    mute_expire: 5
+    mute_expire: 5,
+    poll_expiration_notify: 1
   ],
   plugins: [Oban.Plugins.Pruner],
   crontab: [

@@ -164,7 +164,8 @@ defmodule Pleroma.Web.MastodonAPI.StatusController do
   def create(%{assigns: %{user: user}, body_params: %{status: _} = params} = conn, _) do
     params = Map.put(params, :in_reply_to_status_id, params[:in_reply_to_id])
 
-    with {:ok, activity} <- CommonAPI.post(user, params) do
+    with {:ok, activity} <- CommonAPI.post(user, params),
+         _ <- CommonAPI.postprocess(activity) do
       try_render(conn, "show.json",
         activity: activity,
         for: user,

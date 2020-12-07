@@ -245,6 +245,14 @@ defmodule Pleroma.Web.ActivityPub.SideEffects do
   end
 
   # Tasks this handles:
+  # - Set up notification on close poll
+  def handle(%{data: %{"type" => "ClosePoll"}} = object, meta) do
+    Notification.create_notifications(object)
+
+    {:ok, object, meta}
+  end
+
+  # Tasks this handles:
   # - Delete and unpins the create activity
   # - Replace object with Tombstone
   # - Set up notification

@@ -264,6 +264,18 @@ defmodule Pleroma.Web.CommonAPI do
     end
   end
 
+  # postprocess the close poll
+  #
+  def close_poll(activity_id) do
+    with %Activity{} = activity <- Activity.get_by_id(activity_id),
+         %Object{} = object <- Object.normalize(activity),
+         {:ok, poll, _} <- Builder.close_poll(activity, object),
+         meta <- [local: true, do_not_federate: true],
+         {:ok, activity, _} <- Pipeline.common_pipeline(poll, meta) do
+      {:ok, activity}
+    end
+  end
+
   def react_with_emoji(id, user, emoji) do
     with %Activity{} = activity <- Activity.get_by_id(id),
          object <- Object.normalize(activity),
@@ -409,6 +421,25 @@ defmodule Pleroma.Web.CommonAPI do
     with {:ok, draft} <- ActivityDraft.create(user, data) do
       ActivityPub.create(draft.changes, draft.preview?)
     end
+  end
+
+  def postprocess(%Activity{} = activity) do
+    case Object.normalize(activity) do
+      %Object{data: %{"type" => "Question", "closed" => closed_at}} ->
+        Pleroma.Workers.PollExpirationNotify.enqueue(%{
+          activity_id: activity.id,
+          closed_at:
+            Timex.shift(
+              Timex.parse!(closed_at, "{ISO:Extended:Z}"),
+              minutes: 1
+            )
+        })
+
+      _ ->
+        activity
+    end
+
+    activity
   end
 
   def pin(id, %{ap_id: user_ap_id} = user) do

@@ -368,7 +368,7 @@ defmodule Pleroma.Notification do
   end
 
   def create_notifications(%Activity{data: %{"type" => type}} = activity, options)
-      when type in ["Follow", "Like", "Announce", "Move", "EmojiReact", "Flag"] do
+      when type in ["Follow", "Like", "Announce", "Move", "EmojiReact", "Flag", "ClosePoll"] do
     do_create_notifications(activity, options)
   end
 
@@ -418,9 +418,11 @@ defmodule Pleroma.Notification do
       "EmojiReaction" ->
         "pleroma:emoji_reaction"
 
+      "ClosePoll" ->
+        "poll"
+
       "Create" ->
-        activity
-        |> type_from_activity_object()
+        type_from_activity_object(activity)
 
       t ->
         raise "No notification type for activity type #{t}"
@@ -471,7 +473,16 @@ defmodule Pleroma.Notification do
   def get_notified_from_activity(activity, local_only \\ true)
 
   def get_notified_from_activity(%Activity{data: %{"type" => type}} = activity, local_only)
-      when type in ["Create", "Like", "Announce", "Follow", "Move", "EmojiReact", "Flag"] do
+      when type in [
+             "Create",
+             "Like",
+             "Announce",
+             "Follow",
+             "Move",
+             "EmojiReact",
+             "Flag",
+             "ClosePoll"
+           ] do
     potential_receiver_ap_ids = get_potential_receiver_ap_ids(activity)
 
     potential_receivers =
@@ -509,6 +520,10 @@ defmodule Pleroma.Notification do
 
   def get_potential_receiver_ap_ids(%{data: %{"type" => "Flag"}}) do
     User.all_superusers() |> Enum.map(fn user -> user.ap_id end)
+  end
+
+  def get_potential_receiver_ap_ids(%{data: %{"type" => "ClosePoll"}}) do
+    []
   end
 
   def get_potential_receiver_ap_ids(activity) do

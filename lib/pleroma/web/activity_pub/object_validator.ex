@@ -21,6 +21,7 @@ defmodule Pleroma.Web.ActivityPub.ObjectValidator do
   alias Pleroma.Web.ActivityPub.ObjectValidators.AudioVideoValidator
   alias Pleroma.Web.ActivityPub.ObjectValidators.BlockValidator
   alias Pleroma.Web.ActivityPub.ObjectValidators.ChatMessageValidator
+  alias Pleroma.Web.ActivityPub.ObjectValidators.ClosePollValidator
   alias Pleroma.Web.ActivityPub.ObjectValidators.CreateChatMessageValidator
   alias Pleroma.Web.ActivityPub.ObjectValidators.CreateGenericValidator
   alias Pleroma.Web.ActivityPub.ObjectValidators.DeleteValidator
@@ -145,6 +146,16 @@ defmodule Pleroma.Web.ActivityPub.ObjectValidator do
     with {:ok, object} <-
            object
            |> QuestionValidator.cast_and_validate()
+           |> Ecto.Changeset.apply_action(:insert) do
+      object = stringify_keys(object)
+      {:ok, object, meta}
+    end
+  end
+
+  def validate(%{"type" => "ClosePoll"} = object, meta) do
+    with {:ok, object} <-
+           object
+           |> ClosePollValidator.cast_and_validate()
            |> Ecto.Changeset.apply_action(:insert) do
       object = stringify_keys(object)
       {:ok, object, meta}
