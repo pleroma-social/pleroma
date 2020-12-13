@@ -74,9 +74,10 @@ defmodule Mix.Tasks.Pleroma.Config do
     check_configdb(fn ->
       start_pleroma()
 
-      group = maybe_atomize(group)
-
-      dump_group(group)
+      group
+      |> maybe_atomize()
+      |> ConfigDB.get_all_by_group()
+      |> Enum.each(&dump/1)
     end)
   end
 
@@ -101,7 +102,7 @@ defmodule Mix.Tasks.Pleroma.Config do
   def run(["reset", "--force"]) do
     check_configdb(fn ->
       start_pleroma()
-      truncatedb()
+      Pleroma.Config.Versioning.reset()
       shell_info("The ConfigDB settings have been removed from the database.")
     end)
   end
@@ -120,7 +121,7 @@ defmodule Mix.Tasks.Pleroma.Config do
       shell_error("\nTHIS CANNOT BE UNDONE!")
 
       if shell_prompt("Are you sure you want to continue?", "n") in ~w(Yn Y y) do
-        truncatedb()
+        Pleroma.Config.Versioning.reset()
 
         shell_info("The ConfigDB settings have been removed from the database.")
       else
@@ -135,17 +136,16 @@ defmodule Mix.Tasks.Pleroma.Config do
     group = maybe_atomize(group)
     key = maybe_atomize(key)
 
-    with true <- key_exists?(group, key) do
+    config = ConfigDB.get_by_group_and_key(group, key)
+
+    if not is_nil(config) do
       shell_info("The following settings will be removed from ConfigDB:\n")
 
-      group
-      |> ConfigDB.get_by_group_and_key(key)
-      |> dump()
+      dump(config)
 
-      delete_key(group, key)
+      Pleroma.Config.Versioning.new_version(%{group: config.group, key: config.key, delete: true})
     else
-      _ ->
-        shell_error("No settings in ConfigDB for #{inspect(group)}, #{inspect(key)}. Aborting.")
+      shell_error("No settings in ConfigDB for #{inspect(group)}, #{inspect(key)}. Aborting.")
     end
   end
 
@@ -154,12 +154,14 @@ defmodule Mix.Tasks.Pleroma.Config do
 
     group = maybe_atomize(group)
 
-    with true <- group_exists?(group) do
+    configs = ConfigDB.get_all_by_group(group)
+
+    if configs != [] do
       shell_info("The following settings will be removed from ConfigDB:\n")
-      dump_group(group)
-      delete_group(group)
+      Enum.each(configs, &dump/1)
+      Pleroma.Config.Versioning.new_version(%{group: group, key: nil, delete: true})
     else
-      _ -> shell_error("No settings in ConfigDB for #{inspect(group)}. Aborting.")
+      shell_error("No settings in ConfigDB for #{inspect(group)}. Aborting.")
     end
   end
 
@@ -169,21 +171,24 @@ defmodule Mix.Tasks.Pleroma.Config do
     group = maybe_atomize(group)
     key = maybe_atomize(key)
 
-    with true <- key_exists?(group, key) do
+    config = ConfigDB.get_by_group_and_key(group, key)
+
+    if not is_nil(config) do
       shell_info("The following settings will be removed from ConfigDB:\n")
 
-      group
-      |> ConfigDB.get_by_group_and_key(key)
-      |> dump()
+      dump(config)
 
       if shell_prompt("Are you sure you want to continue?", "n") in ~w(Yn Y y) do
-        delete_key(group, key)
+        Pleroma.Config.Versioning.new_version(%{
+          group: config.group,
+          key: config.key,
+          delete: true
+        })
       else
         shell_error("No changes made.")
       end
     else
-      _ ->
-        shell_error("No settings in ConfigDB for #{inspect(group)}, #{inspect(key)}. Aborting.")
+      shell_error("No settings in ConfigDB for #{inspect(group)}, #{inspect(key)}. Aborting.")
     end
   end
 
@@ -192,17 +197,19 @@ defmodule Mix.Tasks.Pleroma.Config do
 
     group = maybe_atomize(group)
 
-    with true <- group_exists?(group) do
+    configs = ConfigDB.get_all_by_group(group)
+
+    if configs != [] do
       shell_info("The following settings will be removed from ConfigDB:\n")
-      dump_group(group)
+      Enum.each(configs, &dump/1)
 
       if shell_prompt("Are you sure you want to continue?", "n") in ~w(Yn Y y) do
-        delete_group(group)
+        Pleroma.Config.Versioning.new_version(%{group: group, key: nil, delete: true})
       else
         shell_error("No changes made.")
       end
     else
-      _ -> shell_error("No settings in ConfigDB for #{inspect(group)}. Aborting.")
+      shell_error("No settings in ConfigDB for #{inspect(group)}. Aborting.")
     end
   end
 
@@ -324,25 +331,6 @@ defmodule Mix.Tasks.Pleroma.Config do
 
   defp dump(_), do: :noop
 
-  defp dump_group(group) when is_atom(group) do
-    group
-    |> ConfigDB.get_all_by_group()
-    |> Enum.each(&dump/1)
-  end
-
-  defp group_exists?(group) do
-    group
-    |> ConfigDB.get_all_by_group()
-    |> Enum.any?()
-  end
-
-  defp key_exists?(group, key) do
-    group
-    |> ConfigDB.get_by_group_and_key(key)
-    |> is_nil
-    |> Kernel.!()
-  end
-
   defp maybe_atomize(arg) when is_atom(arg), do: arg
 
   defp maybe_atomize(":" <> arg), do: maybe_atomize(arg)
@@ -364,26 +352,5 @@ defmodule Mix.Tasks.Pleroma.Config do
           "ConfigDB not enabled. Please check the value of :configurable_from_database in your configuration."
         )
     end
-  end
-
-  defp delete_key(group, key) do
-    check_configdb(fn ->
-      %{group: group, key: key}
-      |> ConfigDB.get_by_params()
-      |> ConfigDB.delete()
-    end)
-  end
-
-  defp delete_group(group) do
-    check_configdb(fn ->
-      group
-      |> ConfigDB.get_all_by_group()
-      |> Enum.each(&ConfigDB.delete/1)
-    end)
-  end
-
-  defp truncatedb do
-    Ecto.Adapters.SQL.query!(Repo, "TRUNCATE config;")
-    Ecto.Adapters.SQL.query!(Repo, "ALTER SEQUENCE config_id_seq RESTART;")
   end
 end

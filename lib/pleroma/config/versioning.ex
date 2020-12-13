@@ -16,9 +16,9 @@ defmodule Pleroma.Config.Versioning do
 
   @type change :: %{
           optional(:delete) => boolean(),
+          optional(:value) => any(),
           group: atom(),
-          key: atom() | nil,
-          value: any()
+          key: atom() | nil
         }
 
   @doc """
@@ -179,6 +179,18 @@ defmodule Pleroma.Config.Versioning do
         ConfigDB.update_or_create(change)
       end)
     end)
+  end
+
+  @doc """
+  Resets config table and creates new empty version.
+  """
+  @spec reset() :: {:ok, map()} | {:error, atom() | tuple(), any(), any()}
+  def reset do
+    truncate_config_table()
+    |> reset_pk_in_config_table()
+    |> set_current_flag_false_for_all_versions()
+    |> insert_new_version()
+    |> Repo.transaction()
   end
 
   @doc """

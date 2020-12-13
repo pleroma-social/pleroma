@@ -137,13 +137,21 @@ defmodule Pleroma.ConfigDB do
   Before modifying records in the database directly, please read "Config versioning" in `docs/dev.md`.
   """
   @spec delete_or_update(map()) :: {:ok, t()} | {:ok, nil} | {:error, Changeset.t()}
-  def delete_or_update(params) do
+  def delete_or_update(%{group: _, key: key} = params) when not is_nil(key) do
     search_opts = Map.take(params, [:group, :key])
 
     with %ConfigDB{} = config <- ConfigDB.get_by_params(search_opts) do
       do_delete_or_update(config, params[:subkeys])
     else
       _ -> {:ok, nil}
+    end
+  end
+
+  def delete_or_update(%{group: group}) do
+    query = from(c in ConfigDB, where: c.group == ^group)
+
+    with {num, _} <- Repo.delete_all(query) do
+      {:ok, num}
     end
   end
 
