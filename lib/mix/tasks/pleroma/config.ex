@@ -273,9 +273,40 @@ defmodule Mix.Tasks.Pleroma.Config do
     file = File.open!(config_path, [:write, :utf8])
     IO.write(file, Pleroma.Config.Loader.config_header())
 
-    ConfigDB
-    |> Repo.all()
-    |> Enum.each(&write_and_delete(&1, file, opts[:delete]))
+    changes =
+      ConfigDB
+      |> Repo.all()
+      |> Enum.reduce([], fn %{group: group} = config, acc ->
+        group_str = inspect(group)
+        value = inspect(config.value, limit: :infinity)
+
+        msg =
+          if group in ConfigDB.groups_without_keys() do
+            IO.write(file, "config #{group_str}, #{value}\r\n\r\n")
+            "config #{group_str} was deleted."
+          else
+            key_str = inspect(config.key)
+            IO.write(file, "config #{group_str}, #{key_str}, #{value}\r\n\r\n")
+            "config #{group_str}, #{key_str} was deleted."
+          end
+
+        if opts[:delete] do
+          shell_info(msg)
+
+          change =
+            config
+            |> Map.take([:group, :key])
+            |> Map.put(:delete, true)
+
+          [change | acc]
+        else
+          acc
+        end
+      end)
+
+    if opts[:delete] and changes != [] do
+      Pleroma.Config.Versioning.new_version(changes)
+    end
 
     :ok = File.close(file)
     System.cmd("mix", ["format", config_path])
@@ -284,30 +315,6 @@ defmodule Mix.Tasks.Pleroma.Config do
       "Database configuration settings have been exported to config/#{env}.exported_from_db.secret.exs"
     )
   end
-
-  defp write_and_delete(config, file, delete?) do
-    config
-    |> write(file)
-    |> delete(delete?)
-  end
-
-  defp write(config, file) do
-    value = inspect(config.value, limit: :infinity)
-
-    IO.write(file, "config #{inspect(config.group)}, #{inspect(config.key)}, #{value}\r\n\r\n")
-
-    config
-  end
-
-  defp delete(config, true) do
-    {:ok, _} = Repo.delete(config)
-
-    shell_info(
-      "config #{inspect(config.group)}, #{inspect(config.key)} was deleted from the ConfigDB."
-    )
-  end
-
-  defp delete(_config, _), do: :ok
 
   defp dump(%ConfigDB{} = config) do
     value = inspect(config.value, limit: :infinity)

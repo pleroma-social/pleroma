@@ -29,9 +29,9 @@ defmodule Mix.Tasks.Pleroma.ConfigTest do
     |> Enum.sort()
   end
 
-  defp insert_config_record(group, key, value) do
+  defp insert_config_record(group \\ nil, key, value) do
     insert(:config,
-      group: group,
+      group: group || :pleroma,
       key: key,
       value: value
     )
@@ -135,7 +135,7 @@ defmodule Mix.Tasks.Pleroma.ConfigTest do
     end
 
     test "config table is truncated before migration" do
-      insert_config_record(:pleroma, :first_setting, key: "value", key2: ["Activity"])
+      insert_config_record(:first_setting, key: "value", key2: ["Activity"])
       assert length(config_records()) == 1
 
       MixTask.run([
@@ -162,9 +162,9 @@ defmodule Mix.Tasks.Pleroma.ConfigTest do
     end
 
     test "settings are migrated to file and deleted from db", %{temp_file: temp_file} do
-      insert_config_record(:pleroma, :setting_first, key: "value", key2: ["Activity"])
-      insert_config_record(:pleroma, :setting_second, key: "value2", key2: [Repo])
-      insert_config_record(:quack, :level, :info)
+      insert_config_record(:setting_first, key: "value", key2: ["Activity"])
+      insert_config_record(:setting_second, key: "value2", key2: [Repo])
+      insert_config_record(:quack, nil, level: :info)
 
       MixTask.run(["migrate_from_db", "--env", "temp", "-d"])
 
@@ -173,14 +173,14 @@ defmodule Mix.Tasks.Pleroma.ConfigTest do
       file = File.read!(temp_file)
       assert file =~ "config :pleroma, :setting_first,"
       assert file =~ "config :pleroma, :setting_second,"
-      assert file =~ "config :quack, :level, :info"
+      assert file =~ "config :quack, level: :info"
     end
 
     test "migrate_from_db with config path in env", %{temp_file: temp_file} do
       clear_config(:release, true)
       clear_config(:config_path, "config/temp.exported_from_db.secret.exs")
 
-      insert(:config, key: :setting_first, value: [key: "value", key2: ["Activity"]])
+      insert_config_record(:setting_first, key: "value", key2: ["Activity"])
 
       MixTask.run(["migrate_from_db", "--env", "temp", "-d"])
 
@@ -273,7 +273,7 @@ defmodule Mix.Tasks.Pleroma.ConfigTest do
     setup do: clear_config(:configurable_from_database, true)
 
     test "dumping a specific group" do
-      insert_config_record(:pleroma, :instance, name: "Pleroma Test")
+      insert_config_record(:instance, name: "Pleroma Test")
 
       insert_config_record(:web_push_encryption, :vapid_details,
         subject: "mailto:administrator@example.com",
@@ -303,8 +303,8 @@ defmodule Mix.Tasks.Pleroma.ConfigTest do
     end
 
     test "dumping a specific key in a group" do
-      insert_config_record(:pleroma, :instance, name: "Pleroma Test")
-      insert_config_record(:pleroma, Pleroma.Captcha, enabled: false)
+      insert_config_record(:instance, name: "Pleroma Test")
+      insert_config_record(Pleroma.Captcha, enabled: false)
 
       MixTask.run(["dump", "pleroma", "Pleroma.Captcha"])
 
@@ -316,8 +316,8 @@ defmodule Mix.Tasks.Pleroma.ConfigTest do
     end
 
     test "dumps all configuration successfully" do
-      insert_config_record(:pleroma, :instance, name: "Pleroma Test")
-      insert_config_record(:pleroma, Pleroma.Captcha, enabled: false)
+      insert_config_record(:instance, name: "Pleroma Test")
+      insert_config_record(Pleroma.Captcha, enabled: false)
 
       MixTask.run(["dump"])
 
@@ -333,7 +333,7 @@ defmodule Mix.Tasks.Pleroma.ConfigTest do
     test "refuses to dump" do
       clear_config(:configurable_from_database, false)
 
-      insert_config_record(:pleroma, :instance, name: "Pleroma Test")
+      insert_config_record(:instance, name: "Pleroma Test")
 
       MixTask.run(["dump"])
 
@@ -348,8 +348,8 @@ defmodule Mix.Tasks.Pleroma.ConfigTest do
     setup do: clear_config(:configurable_from_database, true)
 
     setup do
-      insert_config_record(:pleroma, :instance, name: "Pleroma Test")
-      insert_config_record(:pleroma, Pleroma.Captcha, enabled: false)
+      insert_config_record(:instance, name: "Pleroma Test")
+      insert_config_record(Pleroma.Captcha, enabled: false)
       insert_config_record(:pleroma2, :key2, z: 1)
 
       assert length(config_records()) == 3
