@@ -21,17 +21,6 @@ defmodule Pleroma.Web.ActivityPub.MRF.TagPolicy do
 
   require Pleroma.Constants
 
-  def policy_tags do
-    [
-      "mrf_tag:media-force-nsfw",
-      "mrf_tag:media-strip",
-      "mrf_tag:force-unlisted",
-      "mrf_tag:sandbox",
-      "mrf_tag:disable-remote-subscription",
-      "mrf_tag:disable-any-subscription"
-    ]
-  end
-
   defp process_tag(
          "mrf_tag:media-force-nsfw",
          %{

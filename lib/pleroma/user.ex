@@ -1996,6 +1996,7 @@ defmodule Pleroma.User do
 
   def parse_bio(_, _), do: ""
 
+  @spec tag_names(t()) :: [String.t()]
   def tag_names(%__MODULE__{} = user) do
     {:ok, tags} = Repo.get_assoc(user, :tags)
     Enum.map(tags, & &1.name)
@@ -2003,6 +2004,7 @@ defmodule Pleroma.User do
 
   def tag_names(_), do: []
 
+  @spec tag([String.t()] | String.t() | t(), [String.t()] | String.t()) :: {:ok, [t()]} | t()
   def tag(user_identifiers, tags) when is_list(user_identifiers) do
     Repo.transaction(fn ->
       for user_identifier <- user_identifiers, do: tag(user_identifier, tags)
@@ -2015,9 +2017,10 @@ defmodule Pleroma.User do
   def tag(%User{} = user, tags) do
     tag_names = Pleroma.Tag.normalize_tags(tags)
     Pleroma.Tag.upsert_tags(tag_names)
-    update_tags(user, tag_names)
+    update_user_tags(user, tag_names)
   end
 
+  @spec untag([String.t()] | String.t() | t(), [String.t() | String.t()]) :: {:ok, [t()]} | t()
   def untag(user_identifiers, tags) when is_list(user_identifiers) do
     Repo.transaction(fn ->
       for user_identifier <- user_identifiers, do: untag(user_identifier, tags)
@@ -2041,7 +2044,7 @@ defmodule Pleroma.User do
     preload_tags_and_set_cache(user)
   end
 
-  defp update_tags(%User{} = user, new_tags) do
+  defp update_user_tags(%User{} = user, new_tags) do
     {:ok, user_id} = FlakeId.Ecto.Type.dump(user.id)
 
     tags =

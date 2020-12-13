@@ -149,9 +149,10 @@ defmodule Pleroma.Web.Router do
     pipe_through(:admin_api)
 
     put("/users/disable_mfa", AdminAPIController, :disable_mfa)
-    get("/users/tag", TagController, :list)
-    put("/users/tag", TagController, :tag)
-    delete("/users/tag", TagController, :untag)
+
+    get("/users/tags", TagController, :index)
+    patch("/users/tags", TagController, :update)
+    delete("/users/tags", TagController, :delete)
 
     get("/users/:nickname/permission_group", AdminAPIController, :right_get)
     get("/users/:nickname/permission_group/:permission_group", AdminAPIController, :right_get)

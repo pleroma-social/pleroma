@@ -8,7 +8,15 @@ defmodule Pleroma.Tag do
   import Ecto.Query
 
   alias Pleroma.Repo
-  alias Pleroma.Web.ActivityPub.MRF
+
+  @mrf_tags [
+    "mrf_tag:media-force-nsfw",
+    "mrf_tag:media-strip",
+    "mrf_tag:force-unlisted",
+    "mrf_tag:sandbox",
+    "mrf_tag:disable-remote-subscription",
+    "mrf_tag:disable-any-subscription"
+  ]
 
   @type t :: %__MODULE__{}
 
@@ -43,11 +51,12 @@ defmodule Pleroma.Tag do
   def list_tags do
     from(u in __MODULE__, select: u.name)
     |> Repo.all()
-    |> Kernel.++(MRF.TagPolicy.policy_tags())
+    |> Kernel.++(@mrf_tags)
     |> Enum.uniq()
     |> Enum.sort()
   end
 
+  @spec get_tag_ids([String.t()]) :: [pos_integer()]
   def get_tag_ids(tag_names) do
     names = normalize_tags(tag_names)
 
@@ -59,6 +68,7 @@ defmodule Pleroma.Tag do
     |> Repo.all()
   end
 
+  @spec normalize_tags([String.t()]) :: [String.t()]
   def normalize_tags(tag_names) do
     tag_names
     |> List.wrap()
@@ -66,6 +76,8 @@ defmodule Pleroma.Tag do
   end
 
   defp normalize_tag(tag_name) do
-    String.trim(String.downcase(tag_name))
+    tag_name
+    |> String.downcase()
+    |> String.trim()
   end
 end

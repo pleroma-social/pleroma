@@ -126,32 +126,31 @@ Configuration options:
 
 ## `GET /api/pleroma/admin/users/tag`
 
-### List a tags
+### List tags
 
-- Params: None
-
-- Response:
+* Params: None
+* Response:
 
 ``` json
 ["verify", "mrf_tag:media-force-nsfw"]
 
 ```
 
-## `PUT /api/pleroma/admin/users/tag`
+## `PATCH /api/pleroma/admin/users/tags`
 
 ### Tag a list of users
 
-- Params:
-  - `nicknames` (array)
-  - `tags` (array)
+* Params:
+  * `nicknames` (array)
+  * `tags` (array)
 
-## `DELETE /api/pleroma/admin/users/tag`
+## `DELETE /api/pleroma/admin/users/tags`
 
 ### Untag a list of users
 
-- Params:
-  - `nicknames` (array)
-  - `tags` (array)
+* Params:
+  * `nicknames` (array)
+  * `tags` (array)
 
 ## `GET /api/pleroma/admin/users/:nickname/permission_group`
 

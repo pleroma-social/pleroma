@@ -14,11 +14,11 @@ defmodule Pleroma.Web.ApiSpec.Admin.TagOperation do
     apply(__MODULE__, operation, [])
   end
 
-  def list_operation do
+  def index_operation do
     %Operation{
       tags: ["Admin", "Tags"],
       summary: "List available tags.",
-      operationId: "AdminAPI.TagController.list",
+      operationId: "AdminAPI.TagController.index",
       parameters: admin_api_params(),
       responses: %{
         200 =>
@@ -31,11 +31,11 @@ defmodule Pleroma.Web.ApiSpec.Admin.TagOperation do
     }
   end
 
-  def tag_operation do
+  def update_operation do
     %Operation{
       tags: ["Admin", "Tags"],
       summary: "Adds tags to users.",
-      operationId: "AdminAPI.TagController.tag",
+      operationId: "AdminAPI.TagController.update",
       parameters: admin_api_params(),
       requestBody:
         request_body(
@@ -57,11 +57,11 @@ defmodule Pleroma.Web.ApiSpec.Admin.TagOperation do
     }
   end
 
-  def untag_operation do
+  def delete_operation do
     %Operation{
       tags: ["Admin", "Tags"],
       summary: "Remove tags from users.",
-      operationId: "AdminAPI.TagController.untag",
+      operationId: "AdminAPI.TagController.delete",
       parameters: admin_api_params(),
       requestBody:
         request_body(

@@ -16,6 +16,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Emoji: Support the full Unicode 13.1 set of Emoji for reactions, plus regional indicators.
 - Admin API: Reports now ordered by newest
 
+<details>
+  <summary>API Changes</summary>
+  - **Breaking** Admin API: methods and routes for users tags.
+</details>
+
 ### Added
 
 - Reports now generate notifications for admins and mods.
@@ -40,7 +45,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Mastodon API: User and conversation mutes can now auto-expire if `expires_in` parameter was given while adding the mute.
 - Admin API: An endpoint to manage frontends.
 - Streaming API: Add follow relationships updates.
-- Add `GET /api/pleroma/admin/users/tag` - returns a list of users tags.
+- Admin API: An endpoint to return a list of users tags.
 </details>
 
 ### Fixed

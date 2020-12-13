@@ -15,12 +15,12 @@ defmodule Pleroma.Web.AdminAPI.TagController do
 
   plug(
     OAuthScopesPlug,
-    %{scopes: ["write:accounts"], admin: true} when action in [:tag, :untag]
+    %{scopes: ["write:accounts"], admin: true} when action in [:update, :delete]
   )
 
   plug(
     OAuthScopesPlug,
-    %{scopes: ["read:accounts"], admin: true} when action in [:list]
+    %{scopes: ["read:accounts"], admin: true} when action in [:index]
   )
 
   plug(ApiSpec.CastAndValidate)
@@ -29,13 +29,16 @@ defmodule Pleroma.Web.AdminAPI.TagController do
 
   defdelegate open_api_operation(action), to: ApiSpec.Admin.TagOperation
 
-  def list(%{assigns: %{user: _admin}} = conn, _) do
+  def index(%{assigns: %{user: _admin}} = conn, _) do
     tags = Pleroma.Tag.list_tags()
 
     json(conn, tags)
   end
 
-  def tag(%{assigns: %{user: admin}, body_params: %{nicknames: nicknames, tags: tags}} = conn, _) do
+  def update(
+        %{assigns: %{user: admin}, body_params: %{nicknames: nicknames, tags: tags}} = conn,
+        _
+      ) do
     with {:ok, _} <- User.tag(nicknames, tags) do
       ModerationLog.insert_log(%{
         actor: admin,
@@ -48,7 +51,7 @@ defmodule Pleroma.Web.AdminAPI.TagController do
     end
   end
 
-  def untag(
+  def delete(
         %{assigns: %{user: admin}, body_params: %{nicknames: nicknames, tags: tags}} = conn,
         _
       ) do

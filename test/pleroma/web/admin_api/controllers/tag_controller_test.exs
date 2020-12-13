@@ -12,12 +12,6 @@ defmodule Pleroma.Web.AdminAPI.TagControllerTest do
   alias Pleroma.Repo
   alias Pleroma.User
 
-  setup_all do
-    Tesla.Mock.mock_global(fn env -> apply(HttpRequestMock, :request, [env]) end)
-
-    :ok
-  end
-
   setup do
     admin = insert(:user, is_admin: true)
     token = insert(:oauth_admin_token, user: admin)
@@ -30,7 +24,7 @@ defmodule Pleroma.Web.AdminAPI.TagControllerTest do
     {:ok, %{admin: admin, token: token, conn: conn}}
   end
 
-  describe "GET /api/pleroma/admin/users/tag" do
+  describe "GET /api/pleroma/admin/users/tags" do
     test "it returns user tags and mrf policy tags", %{conn: conn} do
       insert(:tag, name: "x")
       insert(:tag, name: "y")
@@ -39,7 +33,7 @@ defmodule Pleroma.Web.AdminAPI.TagControllerTest do
       response =
         conn
         |> put_req_header("content-type", "application/json")
-        |> get("/api/pleroma/admin/users/tag")
+        |> get("/api/pleroma/admin/users/tags")
         |> json_response_and_validate_schema(200)
 
       assert [
@@ -56,7 +50,7 @@ defmodule Pleroma.Web.AdminAPI.TagControllerTest do
     end
   end
 
-  describe "PUT /api/pleroma/admin/users/tag" do
+  describe "PUT /api/pleroma/admin/users/tags" do
     setup %{conn: conn} do
       user1 = insert(:user, %{tags: [build(:tag, name: "x")]})
       user2 = insert(:user, %{tags: [build(:tag, name: "y")]})
@@ -64,7 +58,7 @@ defmodule Pleroma.Web.AdminAPI.TagControllerTest do
 
       assert conn
              |> put_req_header("content-type", "application/json")
-             |> put("/api/pleroma/admin/users/tag", %{
+             |> patch("/api/pleroma/admin/users/tags", %{
                nicknames: [user1.nickname, user2.nickname],
                tags: ["foo", "bar"]
              })
@@ -102,7 +96,7 @@ defmodule Pleroma.Web.AdminAPI.TagControllerTest do
     end
   end
 
-  describe "DELETE /api/pleroma/admin/users/tag" do
+  describe "DELETE /api/pleroma/admin/users/tags" do
     setup %{conn: conn} do
       user1 = insert(:user, %{tags: [build(:tag, name: "x")]})
       user2 = insert(:user, %{tags: [build(:tag, name: "y"), build(:tag, name: "z")]})
@@ -111,7 +105,7 @@ defmodule Pleroma.Web.AdminAPI.TagControllerTest do
       assert conn
              |> put_req_header("content-type", "application/json")
              |> delete(
-               "/api/pleroma/admin/users/tag",
+               "/api/pleroma/admin/users/tags",
                %{nicknames: [user1.nickname, user2.nickname], tags: ["x", "z"]}
              )
              |> json_response_and_validate_schema(204)
