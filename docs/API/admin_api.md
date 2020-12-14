@@ -124,7 +124,7 @@ Configuration options:
 }
 ```
 
-## `GET /api/pleroma/admin/users/tag`
+## `GET /api/pleroma/admin/users/tags`
 
 ### List tags
 
