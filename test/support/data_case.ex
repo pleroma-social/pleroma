@@ -55,14 +55,35 @@ defmodule Pleroma.DataCase do
     end
 
     if tags[:needs_streamer] do
-      start_supervised(%{
-        id: Pleroma.Web.Streamer.registry(),
-        start:
-          {Registry, :start_link, [[keys: :duplicate, name: Pleroma.Web.Streamer.registry()]]}
-      })
+      start_streamer()
+    end
+
+    if tags[:stubbed_pipeline] do
+      stub_pipeline()
     end
 
     :ok
+  end
+
+  def start_streamer do
+    start_supervised(%{
+      id: Pleroma.Web.Streamer.registry(),
+      start: {Registry, :start_link, [[keys: :duplicate, name: Pleroma.Web.Streamer.registry()]]}
+    })
+  end
+
+  def stub_pipeline do
+    Mox.stub_with(Pleroma.Web.ActivityPub.SideEffectsMock, Pleroma.Web.ActivityPub.SideEffects)
+
+    Mox.stub_with(
+      Pleroma.Web.ActivityPub.ObjectValidatorMock,
+      Pleroma.Web.ActivityPub.ObjectValidator
+    )
+
+    Mox.stub_with(Pleroma.Web.ActivityPub.MRFMock, Pleroma.Web.ActivityPub.MRF)
+    Mox.stub_with(Pleroma.Web.ActivityPub.ActivityPubMock, Pleroma.Web.ActivityPub.ActivityPub)
+    Mox.stub_with(Pleroma.Web.FederatorMock, Pleroma.Web.Federator)
+    Mox.stub_with(Pleroma.ConfigMock, Pleroma.Config)
   end
 
   def ensure_local_uploader(context) do

@@ -125,11 +125,11 @@ defmodule Pleroma.Web.ConnCase do
     end
 
     if tags[:needs_streamer] do
-      start_supervised(%{
-        id: Pleroma.Web.Streamer.registry(),
-        start:
-          {Registry, :start_link, [[keys: :duplicate, name: Pleroma.Web.Streamer.registry()]]}
-      })
+      Pleroma.DataCase.start_streamer()
+    end
+
+    if tags[:stubbed_pipeline] do
+      Pleroma.DataCase.stub_pipeline()
     end
 
     {:ok, conn: Phoenix.ConnTest.build_conn()}
