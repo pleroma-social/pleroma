@@ -10,6 +10,8 @@ defmodule Pleroma.Workers.PurgeExpiredActivityTest do
 
   alias Pleroma.Workers.PurgeExpiredActivity
 
+  @moduletag stubbed_pipeline: true
+
   test "enqueue job" do
     activity = insert(:note_activity)
 

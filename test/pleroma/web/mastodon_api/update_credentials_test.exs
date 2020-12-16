@@ -11,6 +11,8 @@ defmodule Pleroma.Web.MastodonAPI.UpdateCredentialsTest do
   import Mock
   import Pleroma.Factory
 
+  @moduletag stubbed_pipeline: true
+
   setup do: clear_config([:instance, :max_account_fields])
 
   describe "updating credentials" do

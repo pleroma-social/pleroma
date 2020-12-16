@@ -12,6 +12,8 @@ defmodule Pleroma.Web.ActivityPub.Transmogrifier.ChatMessageTest do
   alias Pleroma.Object
   alias Pleroma.Web.ActivityPub.Transmogrifier
 
+  @moduletag stubbed_pipeline: true
+
   describe "handle_incoming" do
     test "handles chonks with attachment" do
       data = %{

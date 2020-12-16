@@ -14,6 +14,8 @@ defmodule Pleroma.Web.MastodonAPI.AccountViewTest do
   import Pleroma.Factory
   import Tesla.Mock
 
+  @moduletag stubbed_pipeline: true
+
   setup do
     mock(fn env -> apply(HttpRequestMock, :request, [env]) end)
     :ok

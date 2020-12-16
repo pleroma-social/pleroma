@@ -13,6 +13,7 @@ defmodule Pleroma.Web.ActivityPub.Transmogrifier.UndoHandlingTest do
 
   import Pleroma.Factory
 
+  @moduletag stubbed_pipeline: true
   test "it works for incoming emoji reaction undos" do
     user = insert(:user)
 

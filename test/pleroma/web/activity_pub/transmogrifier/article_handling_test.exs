@@ -11,6 +11,8 @@ defmodule Pleroma.Web.ActivityPub.Transmogrifier.ArticleHandlingTest do
   alias Pleroma.Object.Fetcher
   alias Pleroma.Web.ActivityPub.Transmogrifier
 
+  @moduletag stubbed_pipeline: true
+
   test "Pterotype (Wordpress Plugin) Article" do
     Tesla.Mock.mock(fn %{url: "https://wedistribute.org/wp-json/pterotype/v1/actor/-blog"} ->
       %Tesla.Env{

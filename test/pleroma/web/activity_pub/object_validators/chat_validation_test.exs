@@ -12,6 +12,8 @@ defmodule Pleroma.Web.ActivityPub.ObjectValidators.ChatValidationTest do
 
   import Pleroma.Factory
 
+  @moduletag stubbed_pipeline: true
+
   describe "chat message create activities" do
     test "it is invalid if the object already exists" do
       user = insert(:user)

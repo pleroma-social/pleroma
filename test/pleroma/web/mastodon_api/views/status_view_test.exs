@@ -22,6 +22,8 @@ defmodule Pleroma.Web.MastodonAPI.StatusViewTest do
   import Tesla.Mock
   import OpenApiSpex.TestAssertions
 
+  @moduletag stubbed_pipeline: true
+
   setup do
     mock(fn env -> apply(HttpRequestMock, :request, [env]) end)
     :ok

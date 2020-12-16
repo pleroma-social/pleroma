@@ -10,6 +10,8 @@ defmodule Pleroma.User.WelcomeChatMessageTest do
 
   import Pleroma.Factory
 
+  @moduletag stubbed_pipeline: true
+
   setup do: clear_config([:welcome])
 
   describe "post_message/1" do

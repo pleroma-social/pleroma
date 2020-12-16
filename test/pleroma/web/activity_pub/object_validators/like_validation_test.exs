@@ -12,6 +12,8 @@ defmodule Pleroma.Web.ActivityPub.ObjectValidators.LikeValidationTest do
 
   import Pleroma.Factory
 
+  @moduletag stubbed_pipeline: true
+
   describe "likes" do
     setup do
       user = insert(:user)

@@ -16,6 +16,8 @@ defmodule Pleroma.Web.PleromaAPI.ChatViewTest do
 
   import Pleroma.Factory
 
+  @moduletag stubbed_pipeline: true
+
   test "it represents a chat" do
     user = insert(:user)
     recipient = insert(:user)

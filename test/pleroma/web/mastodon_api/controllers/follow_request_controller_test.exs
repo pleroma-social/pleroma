@@ -10,6 +10,8 @@ defmodule Pleroma.Web.MastodonAPI.FollowRequestControllerTest do
 
   import Pleroma.Factory
 
+  @moduletag stubbed_pipeline: true
+
   describe "locked accounts" do
     setup do
       user = insert(:user, is_locked: true)

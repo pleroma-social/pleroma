@@ -10,6 +10,8 @@ defmodule Pleroma.StatsTest do
   alias Pleroma.Stats
   alias Pleroma.Web.CommonAPI
 
+  @moduletag stubbed_pipeline: true
+
   describe "user count" do
     test "it ignores internal users" do
       _user = insert(:user, local: true)

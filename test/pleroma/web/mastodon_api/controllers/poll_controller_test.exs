@@ -9,6 +9,11 @@ defmodule Pleroma.Web.MastodonAPI.PollControllerTest do
   alias Pleroma.Web.CommonAPI
 
   import Pleroma.Factory
+  import Mox
+
+  setup :set_mox_from_context
+
+  @moduletag stubbed_pipeline: true
 
   describe "GET /api/v1/polls/:id" do
     setup do: oauth_access(["read:statuses"])
@@ -65,6 +70,8 @@ defmodule Pleroma.Web.MastodonAPI.PollControllerTest do
 
       object = Object.normalize(activity)
 
+      # Calling this will run a vote in Cachex.fetch, which doesn't have access
+      # to our mocks unless we run in global mode.
       conn =
         conn
         |> put_req_header("content-type", "application/json")

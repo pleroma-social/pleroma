@@ -11,6 +11,8 @@ defmodule Pleroma.Web.PleromaAPI.NotificationControllerTest do
 
   import Pleroma.Factory
 
+  @moduletag stubbed_pipeline: true
+
   describe "POST /api/v1/pleroma/notifications/read" do
     setup do: oauth_access(["write:notifications"])
 

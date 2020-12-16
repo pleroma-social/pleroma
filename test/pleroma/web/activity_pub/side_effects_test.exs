@@ -23,6 +23,8 @@ defmodule Pleroma.Web.ActivityPub.SideEffectsTest do
   import Mock
   import Pleroma.Factory
 
+  @moduletag stubbed_pipeline: true
+
   describe "handle_after_transaction" do
     test "it streams out notifications and streams" do
       author = insert(:user, local: true)

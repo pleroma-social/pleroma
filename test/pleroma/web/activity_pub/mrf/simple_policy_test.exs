@@ -9,6 +9,8 @@ defmodule Pleroma.Web.ActivityPub.MRF.SimplePolicyTest do
   alias Pleroma.Web.ActivityPub.MRF.SimplePolicy
   alias Pleroma.Web.CommonAPI
 
+  @moduletag stubbed_pipeline: true
+
   setup do:
           clear_config(:mrf_simple,
             media_removal: [],

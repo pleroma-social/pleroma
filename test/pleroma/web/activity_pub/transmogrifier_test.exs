@@ -18,6 +18,8 @@ defmodule Pleroma.Web.ActivityPub.TransmogrifierTest do
   import Pleroma.Factory
   import ExUnit.CaptureLog
 
+  @moduletag stubbed_pipeline: true
+
   setup_all do
     Tesla.Mock.mock_global(fn env -> apply(HttpRequestMock, :request, [env]) end)
     :ok

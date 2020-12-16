@@ -10,6 +10,8 @@ defmodule Pleroma.Web.ActivityPub.MRF.HellthreadPolicyTest do
 
   alias Pleroma.Web.CommonAPI
 
+  @moduletag stubbed_pipeline: true
+
   setup do
     user = insert(:user)
 

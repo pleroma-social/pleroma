@@ -11,6 +11,8 @@ defmodule Pleroma.Web.ActivityPub.Transmogrifier.UserUpdateHandlingTest do
 
   import Pleroma.Factory
 
+  @moduletag stubbed_pipeline: true
+
   test "it works for incoming update activities" do
     user = insert(:user, local: false)
 

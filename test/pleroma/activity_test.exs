@@ -11,6 +11,8 @@ defmodule Pleroma.ActivityTest do
   alias Pleroma.ThreadMute
   import Pleroma.Factory
 
+  @moduletag stubbed_pipeline: true
+
   setup_all do
     Tesla.Mock.mock_global(fn env -> apply(HttpRequestMock, :request, [env]) end)
     :ok

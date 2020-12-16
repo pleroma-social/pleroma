@@ -13,6 +13,8 @@ defmodule Pleroma.Web.AdminAPI.StatusControllerTest do
   alias Pleroma.User
   alias Pleroma.Web.CommonAPI
 
+  @moduletag stubbed_pipeline: true
+
   setup do
     admin = insert(:user, is_admin: true)
     token = insert(:oauth_admin_token, user: admin)

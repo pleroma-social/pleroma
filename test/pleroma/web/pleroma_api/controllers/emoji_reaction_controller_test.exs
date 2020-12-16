@@ -13,6 +13,8 @@ defmodule Pleroma.Web.PleromaAPI.EmojiReactionControllerTest do
 
   import Pleroma.Factory
 
+  @moduletag stubbed_pipeline: true
+
   test "PUT /api/v1/pleroma/statuses/:id/reactions/:emoji", %{conn: conn} do
     user = insert(:user)
     other_user = insert(:user)

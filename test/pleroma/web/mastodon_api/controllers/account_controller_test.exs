@@ -14,6 +14,8 @@ defmodule Pleroma.Web.MastodonAPI.AccountControllerTest do
 
   import Pleroma.Factory
 
+  @moduletag stubbed_pipeline: true
+
   describe "account fetching" do
     test "works by id" do
       %User{id: user_id} = insert(:user)

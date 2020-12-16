@@ -11,6 +11,8 @@ defmodule Pleroma.Chat.MessageReferenceTest do
 
   import Pleroma.Factory
 
+  @moduletag stubbed_pipeline: true
+
   describe "messages" do
     test "it returns the last message in a chat" do
       user = insert(:user)

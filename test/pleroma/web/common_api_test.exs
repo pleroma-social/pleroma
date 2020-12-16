@@ -25,6 +25,8 @@ defmodule Pleroma.Web.CommonAPITest do
 
   require Pleroma.Constants
 
+  @moduletag stubbed_pipeline: true
+
   setup do: clear_config([:instance, :safe_dm_mentions])
   setup do: clear_config([:instance, :limit])
   setup do: clear_config([:instance, :max_pinned_statuses])

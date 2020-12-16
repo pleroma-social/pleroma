@@ -3,11 +3,13 @@
 # SPDX-License-Identifier: AGPL-3.0-only
 
 defmodule Pleroma.Web.PleromaAPI.EmojiPackControllerTest do
-  use Pleroma.Web.ConnCase, async: false
+  use Pleroma.Web.ConnCase
 
   import Mock
   import Tesla.Mock
   import Pleroma.Factory
+
+  @moduletag stubbed_pipeline: true
 
   @emoji_path Path.join(
                 Pleroma.Config.get!([:instance, :static_dir]),

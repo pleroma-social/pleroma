@@ -14,6 +14,8 @@ defmodule Pleroma.ObjectTest do
   alias Pleroma.Tests.ObanHelpers
   alias Pleroma.Web.CommonAPI
 
+  @moduletag stubbed_pipeline: true
+
   setup do
     mock(fn env -> apply(HttpRequestMock, :request, [env]) end)
     :ok

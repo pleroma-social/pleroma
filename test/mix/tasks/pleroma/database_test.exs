@@ -14,6 +14,8 @@ defmodule Mix.Tasks.Pleroma.DatabaseTest do
 
   import Pleroma.Factory
 
+  @moduletag stubbed_pipeline: true
+
   setup_all do
     Mix.shell(Mix.Shell.Process)
 

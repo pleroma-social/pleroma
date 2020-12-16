@@ -26,6 +26,8 @@ defmodule Pleroma.Web.ActivityPub.ActivityPubControllerTest do
 
   require Pleroma.Constants
 
+  @moduletag stubbed_pipeline: true
+
   setup_all do
     Tesla.Mock.mock_global(fn env -> apply(HttpRequestMock, :request, [env]) end)
     :ok

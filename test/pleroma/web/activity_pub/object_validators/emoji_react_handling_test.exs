@@ -11,6 +11,8 @@ defmodule Pleroma.Web.ActivityPub.ObjectValidators.EmojiReactHandlingTest do
 
   import Pleroma.Factory
 
+  @moduletag stubbed_pipeline: true
+
   describe "EmojiReacts" do
     setup do
       user = insert(:user)

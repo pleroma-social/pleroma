@@ -12,6 +12,8 @@ defmodule Pleroma.Web.ActivityPub.Transmogrifier.AudioHandlingTest do
 
   import Pleroma.Factory
 
+  @moduletag stubbed_pipeline: true
+
   test "it works for incoming listens" do
     _user = insert(:user, ap_id: "http://mastodon.example.org/users/admin")
 

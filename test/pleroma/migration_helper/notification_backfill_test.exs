@@ -13,6 +13,8 @@ defmodule Pleroma.MigrationHelper.NotificationBackfillTest do
 
   import Pleroma.Factory
 
+  @moduletag stubbed_pipeline: true
+
   describe "fill_in_notification_types" do
     test "it fills in missing notification types" do
       user = insert(:user)

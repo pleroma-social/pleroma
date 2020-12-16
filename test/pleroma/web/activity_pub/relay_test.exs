@@ -14,6 +14,8 @@ defmodule Pleroma.Web.ActivityPub.RelayTest do
   import Pleroma.Factory
   import Mock
 
+  @moduletag stubbed_pipeline: true
+
   test "gets an actor for the relay" do
     user = Relay.get_actor()
     assert user.ap_id == "#{Pleroma.Web.Endpoint.url()}/relay"

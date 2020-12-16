@@ -11,6 +11,8 @@ defmodule Pleroma.Web.PleromaAPI.UserImportControllerTest do
   import Pleroma.Factory
   import Mock
 
+  @moduletag stubbed_pipeline: true
+
   setup do
     Tesla.Mock.mock(fn env -> apply(HttpRequestMock, :request, [env]) end)
     :ok

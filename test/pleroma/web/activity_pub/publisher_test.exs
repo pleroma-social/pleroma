@@ -18,6 +18,8 @@ defmodule Pleroma.Web.ActivityPub.PublisherTest do
 
   @as_public "https://www.w3.org/ns/activitystreams#Public"
 
+  @moduletag stubbed_pipeline: true
+
   setup do
     mock(fn env -> apply(HttpRequestMock, :request, [env]) end)
     :ok

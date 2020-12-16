@@ -12,6 +12,8 @@ defmodule Pleroma.Web.MastodonAPI.NotificationControllerTest do
 
   import Pleroma.Factory
 
+  @moduletag stubbed_pipeline: true
+
   test "does NOT render account/pleroma/relationship by default" do
     %{user: user, conn: conn} = oauth_access(["read:notifications"])
     other_user = insert(:user)

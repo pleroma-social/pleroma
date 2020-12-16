@@ -11,6 +11,8 @@ defmodule Pleroma.Web.MastodonAPI.TimelineControllerTest do
   alias Pleroma.User
   alias Pleroma.Web.CommonAPI
 
+  @moduletag stubbed_pipeline: true
+
   setup do
     mock(fn env -> apply(HttpRequestMock, :request, [env]) end)
     :ok

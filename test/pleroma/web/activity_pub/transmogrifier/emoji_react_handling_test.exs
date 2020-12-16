@@ -12,6 +12,8 @@ defmodule Pleroma.Web.ActivityPub.Transmogrifier.EmojiReactHandlingTest do
 
   import Pleroma.Factory
 
+  @moduletag stubbed_pipeline: true
+
   test "it works for incoming emoji reactions" do
     user = insert(:user)
     other_user = insert(:user, local: false)

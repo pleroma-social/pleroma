@@ -10,6 +10,8 @@ defmodule Pleroma.Web.ActivityPub.UserViewTest do
   alias Pleroma.Web.ActivityPub.UserView
   alias Pleroma.Web.CommonAPI
 
+  @moduletag stubbed_pipeline: true
+
   test "Renders a user, including the public key" do
     user = insert(:user)
     {:ok, user} = User.ensure_keys_present(user)

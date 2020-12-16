@@ -10,6 +10,7 @@ defmodule Pleroma.Web.ActivityPub.Transmogrifier.BlockHandlingTest do
   alias Pleroma.Web.ActivityPub.Transmogrifier
 
   import Pleroma.Factory
+  @moduletag stubbed_pipeline: true
 
   test "it works for incoming blocks" do
     user = insert(:user)

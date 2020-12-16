@@ -15,6 +15,8 @@ defmodule Pleroma.Web.Push.ImplTest do
   alias Pleroma.Web.Push.Impl
   alias Pleroma.Web.Push.Subscription
 
+  @moduletag stubbed_pipeline: true
+
   setup do
     Tesla.Mock.mock(fn
       %{method: :post, url: "https://example.com/example/1234"} ->

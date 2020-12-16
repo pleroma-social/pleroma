@@ -10,6 +10,8 @@ defmodule Pleroma.Web.ActivityPub.ObjectViewTest do
   alias Pleroma.Web.ActivityPub.ObjectView
   alias Pleroma.Web.CommonAPI
 
+  @moduletag stubbed_pipeline: true
+
   test "renders a note object" do
     note = insert(:note)
 

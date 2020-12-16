@@ -17,7 +17,7 @@ defmodule Pleroma.Web.StreamerTest do
   alias Pleroma.Web.Streamer
   alias Pleroma.Web.StreamerView
 
-  @moduletag needs_streamer: true, capture_log: true
+  @moduletag needs_streamer: true, capture_log: true, stubbed_pipeline: true
 
   setup do: clear_config([:instance, :skip_thread_containment])
 

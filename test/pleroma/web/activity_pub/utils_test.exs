@@ -16,6 +16,8 @@ defmodule Pleroma.Web.ActivityPub.UtilsTest do
 
   require Pleroma.Constants
 
+  @moduletag stubbed_pipeline: true
+
   describe "fetch the latest Follow" do
     test "fetches the latest Follow activity" do
       %Activity{data: %{"type" => "Follow"}} = activity = insert(:follow_activity)

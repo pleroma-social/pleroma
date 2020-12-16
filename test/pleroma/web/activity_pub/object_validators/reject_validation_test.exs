@@ -11,6 +11,8 @@ defmodule Pleroma.Web.ActivityPub.ObjectValidators.RejectValidationTest do
 
   import Pleroma.Factory
 
+  @moduletag stubbed_pipeline: true
+
   setup do
     follower = insert(:user)
     followed = insert(:user, local: false)

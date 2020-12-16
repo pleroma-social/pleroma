@@ -13,6 +13,8 @@ defmodule Pleroma.Web.MastodonAPI.MastodonAPITest do
 
   import Pleroma.Factory
 
+  @moduletag stubbed_pipeline: true
+
   describe "follow/3" do
     test "returns error when followed user is deactivated" do
       follower = insert(:user)

@@ -11,6 +11,8 @@ defmodule Pleroma.Conversation.ParticipationTest do
   alias Pleroma.User
   alias Pleroma.Web.CommonAPI
 
+  @moduletag stubbed_pipeline: true
+
   test "getting a participation will also preload things" do
     user = insert(:user)
     other_user = insert(:user)

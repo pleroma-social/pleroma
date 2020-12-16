@@ -14,6 +14,8 @@ defmodule Pleroma.Web.PleromaAPI.ChatMessageReferenceViewTest do
 
   import Pleroma.Factory
 
+  @moduletag stubbed_pipeline: true
+
   test "it displays a chat message" do
     user = insert(:user)
     recipient = insert(:user)

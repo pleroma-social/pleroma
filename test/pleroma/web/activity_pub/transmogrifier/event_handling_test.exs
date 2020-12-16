@@ -7,6 +7,7 @@ defmodule Pleroma.Web.ActivityPub.Transmogrifier.EventHandlingTest do
   use Pleroma.DataCase
 
   alias Pleroma.Object.Fetcher
+  @moduletag stubbed_pipeline: true
 
   test "Mobilizon Event object" do
     Tesla.Mock.mock(fn

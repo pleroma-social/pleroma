@@ -12,6 +12,8 @@ defmodule Pleroma.Web.ActivityPub.Transmogrifier.AnnounceHandlingTest do
 
   import Pleroma.Factory
 
+  @moduletag stubbed_pipeline: true
+
   test "it works for incoming honk announces" do
     user = insert(:user, ap_id: "https://honktest/u/test", local: false)
     other_user = insert(:user)

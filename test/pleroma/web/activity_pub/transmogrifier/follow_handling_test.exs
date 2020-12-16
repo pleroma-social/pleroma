@@ -15,6 +15,8 @@ defmodule Pleroma.Web.ActivityPub.Transmogrifier.FollowHandlingTest do
   import Ecto.Query
   import Mock
 
+  @moduletag stubbed_pipeline: true
+
   setup_all do
     Tesla.Mock.mock_global(fn env -> apply(HttpRequestMock, :request, [env]) end)
     :ok

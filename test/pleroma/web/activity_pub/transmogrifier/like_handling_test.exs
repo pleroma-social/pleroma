@@ -11,6 +11,8 @@ defmodule Pleroma.Web.ActivityPub.Transmogrifier.LikeHandlingTest do
 
   import Pleroma.Factory
 
+  @moduletag stubbed_pipeline: true
+
   test "it works for incoming likes" do
     user = insert(:user)
 

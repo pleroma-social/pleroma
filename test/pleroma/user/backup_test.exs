@@ -16,6 +16,8 @@ defmodule Pleroma.User.BackupTest do
   alias Pleroma.Web.CommonAPI
   alias Pleroma.Workers.BackupWorker
 
+  @moduletag stubbed_pipeline: true
+
   setup do
     clear_config([Pleroma.Upload, :uploader])
     clear_config([Backup, :limit_days])

@@ -14,6 +14,8 @@ defmodule Pleroma.Web.AdminAPI.ChatControllerTest do
   alias Pleroma.Repo
   alias Pleroma.Web.CommonAPI
 
+  @moduletag stubbed_pipeline: true
+
   defp admin_setup do
     admin = insert(:user, is_admin: true)
     token = insert(:oauth_admin_token, user: admin)

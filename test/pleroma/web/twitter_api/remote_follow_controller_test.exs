@@ -14,6 +14,8 @@ defmodule Pleroma.Web.TwitterAPI.RemoteFollowControllerTest do
   import Pleroma.Factory
   import Ecto.Query
 
+  @moduletag stubbed_pipeline: true
+
   setup do
     Tesla.Mock.mock(fn env -> apply(HttpRequestMock, :request, [env]) end)
     :ok

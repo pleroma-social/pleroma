@@ -22,6 +22,8 @@ defmodule Pleroma.Web.ActivityPub.ActivityPubTest do
   import Pleroma.Factory
   import Tesla.Mock
 
+  @moduletag stubbed_pipeline: true
+
   setup do
     mock(fn env -> apply(HttpRequestMock, :request, [env]) end)
     :ok

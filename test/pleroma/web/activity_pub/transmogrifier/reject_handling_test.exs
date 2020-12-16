@@ -12,6 +12,8 @@ defmodule Pleroma.Web.ActivityPub.Transmogrifier.RejectHandlingTest do
 
   import Pleroma.Factory
 
+  @moduletag stubbed_pipeline: true
+
   test "it fails for incoming rejects which cannot be correlated" do
     follower = insert(:user)
     followed = insert(:user, is_locked: true)

@@ -13,6 +13,8 @@ defmodule Pleroma.Web.PleromaAPI.ChatControllerTest do
 
   import Pleroma.Factory
 
+  @moduletag stubbed_pipeline: true
+
   describe "POST /api/v1/pleroma/chats/:id/messages/:message_id/read" do
     setup do: oauth_access(["write:chats"])
 

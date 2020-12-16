@@ -11,6 +11,8 @@ defmodule Pleroma.Web.AdminAPI.RelayControllerTest do
   alias Pleroma.Repo
   alias Pleroma.User
 
+  @moduletag stubbed_pipeline: true
+
   setup_all do
     Tesla.Mock.mock_global(fn env -> apply(HttpRequestMock, :request, [env]) end)
 

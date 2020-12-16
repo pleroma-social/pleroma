@@ -13,6 +13,8 @@ defmodule Pleroma.Object.FetcherTest do
   import Mock
   import Tesla.Mock
 
+  @moduletag stubbed_pipeline: true
+
   setup do
     mock(fn
       %{method: :get, url: "https://mastodon.example.org/users/userisgone"} ->

@@ -19,6 +19,8 @@ defmodule Pleroma.Web.MastodonAPI.StatusControllerTest do
 
   import Pleroma.Factory
 
+  @moduletag stubbed_pipeline: true
+
   setup do: clear_config([:instance, :federating])
   setup do: clear_config([:instance, :allow_relay])
   setup do: clear_config([:rich_media, :enabled])

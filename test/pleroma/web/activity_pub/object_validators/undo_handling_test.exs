@@ -11,6 +11,8 @@ defmodule Pleroma.Web.ActivityPub.ObjectValidators.UndoHandlingTest do
 
   import Pleroma.Factory
 
+  @moduletag stubbed_pipeline: true
+
   describe "Undos" do
     setup do
       user = insert(:user)

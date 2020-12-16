@@ -13,6 +13,8 @@ defmodule Pleroma.Web.PleromaAPI.AccountControllerTest do
   import Pleroma.Factory
   import Swoosh.TestAssertions
 
+  @moduletag stubbed_pipeline: true
+
   describe "POST /api/v1/pleroma/accounts/confirmation_resend" do
     setup do
       {:ok, user} =

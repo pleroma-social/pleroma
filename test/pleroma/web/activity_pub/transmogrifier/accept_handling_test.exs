@@ -11,6 +11,8 @@ defmodule Pleroma.Web.ActivityPub.Transmogrifier.AcceptHandlingTest do
 
   import Pleroma.Factory
 
+  @moduletag stubbed_pipeline: true
+
   test "it works for incoming accepts which were pre-accepted" do
     follower = insert(:user)
     followed = insert(:user)
