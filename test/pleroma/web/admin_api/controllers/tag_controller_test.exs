@@ -33,7 +33,7 @@ defmodule Pleroma.Web.AdminAPI.TagControllerTest do
       response =
         conn
         |> put_req_header("content-type", "application/json")
-        |> get("/api/pleroma/admin/users/tags")
+        |> get("/api/pleroma/admin/user_tags")
         |> json_response_and_validate_schema(200)
 
       assert [

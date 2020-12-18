@@ -150,7 +150,7 @@ defmodule Pleroma.Web.Router do
 
     put("/users/disable_mfa", AdminAPIController, :disable_mfa)
 
-    get("/users/tags", TagController, :index)
+    get("/user_tags", TagController, :index)
     patch("/users/tags", TagController, :update)
     delete("/users/tags", TagController, :delete)
 
