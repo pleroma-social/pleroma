@@ -43,12 +43,12 @@ defmodule Pleroma.InstallerWeb.Forms.CredentialsForm do
     |> validate_required([:username, :database, :hostname, :rum_enabled])
   end
 
-  @spec generate(Ecto.Changeset.t()) ::
+  @spec create_psql_user(Ecto.Changeset.t()) ::
           {:ok, String.t(), Ecto.Changeset.t()}
           | {:error, Ecto.Changeset.t()}
           | {:error, term()}
           | {:error, :file.posix()}
-  def generate(changeset) do
+  def create_psql_user(changeset) do
     changeset =
       if get_change(changeset, :password) do
         changeset
@@ -58,10 +58,10 @@ defmodule Pleroma.InstallerWeb.Forms.CredentialsForm do
         )
       end
 
-    do_generate(changeset)
+    do_create_psql_user(changeset)
   end
 
-  defp do_generate(changeset) do
+  defp do_create_psql_user(changeset) do
     case apply_action(changeset, :create) do
       {:ok, struct} ->
         credentials =
@@ -69,20 +69,30 @@ defmodule Pleroma.InstallerWeb.Forms.CredentialsForm do
           |> Map.from_struct()
           |> Map.to_list()
 
-        result_psql =
+        psql =
           EEx.eval_file(
             "installer/templates/sample_psql.eex",
             credentials
           )
 
-        psql_path =
-          Pleroma.Application.config_path() |> Path.dirname() |> Path.join("setup_db.psql")
+        Pleroma.Config.put(:db_credentials, changeset)
 
-        Logger.warn("Writing the postgres script to #{psql_path}.")
+        with {_, 0} <- System.cmd("echo", [psql, "|", "sudo", "-Hu", "postgres", "psql"]) do
+          :ok
+        else
+          _ ->
+            psql_path =
+              Pleroma.Application.config_path() |> Path.dirname() |> Path.join("setup_db.psql")
 
-        case File.write(psql_path, result_psql) do
-          :ok -> {:ok, psql_path, changeset}
-          error -> error
+            Logger.warn("Writing the postgres script to #{psql_path}.")
+
+            case File.write(psql_path, psql) do
+              :ok ->
+                {:ok, psql_path}
+
+              error ->
+                error
+            end
         end
 
       error ->

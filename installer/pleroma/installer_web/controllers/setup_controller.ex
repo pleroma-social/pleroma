@@ -22,20 +22,17 @@ defmodule Pleroma.InstallerWeb.SetupController do
     )
   end
 
-  def create_psql_file(conn, params) do
+  def create_psql_user(conn, params) do
     changeset = CredentialsForm.changeset(params["credentials_form"])
 
     token = params["token"]
 
-    case CredentialsForm.generate(changeset) do
-      {:ok, psql_path, updated} ->
-        Pleroma.Config.put(:db_credentials, updated)
+    case CredentialsForm.create_psql_user(changeset) do
+      :ok ->
+        redirect(conn, to: Routes.setup_path(conn, :save_generated_credentials, token: token))
 
-        with {_, 0} <- System.cmd("sudo", ["-Hu", "postgres", "psql", "-f", psql_path]) do
-          redirect(conn, to: Routes.setup_path(conn, :save_generated_credentials, token: token))
-        else
-          _ -> render(conn, "run_psql.html", token: token, psql_path: psql_path)
-        end
+      {:ok, psql_path} ->
+        render(conn, "run_psql.html", token: token, psql_path: psql_path)
 
       {:error, error} ->
         render(conn, "credentials_setup.html",

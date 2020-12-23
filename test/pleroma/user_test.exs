@@ -545,7 +545,7 @@ defmodule Pleroma.UserTest do
       ObanHelpers.perform_all()
 
       assert_email_sent(
-        from: Pleroma.Config.Helpers.sender(),
+        from: Pleroma.Helpers.ConfigHelper.sender(),
         to: {user.name, user.email},
         subject: "Your account is awaiting approval"
       )

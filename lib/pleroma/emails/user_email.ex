@@ -95,12 +95,12 @@ defmodule Pleroma.Emails.UserEmail do
   def approval_pending_email(user) do
     html_body = """
     <h3>Awaiting Approval</h3>
-    <p>Your account at #{instance_name()} is being reviewed by staff. You will receive another email once your account is approved.</p>
+    <p>Your account at #{ConfigHelper.instance_name()} is being reviewed by staff. You will receive another email once your account is approved.</p>
     """
 
     new()
     |> to(recipient(user))
-    |> from(sender())
+    |> from(ConfigHelper.sender())
     |> subject("Your account is awaiting approval")
     |> html_body(html_body)
   end
