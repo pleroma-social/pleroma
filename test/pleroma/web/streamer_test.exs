@@ -746,6 +746,28 @@ defmodule Pleroma.Web.StreamerTest do
   describe "direct streams" do
     setup do: oauth_access(["read"])
 
+    test "it sends conversation update to the 'direct' stream, for self-dms", %{
+      user: user,
+      token: oauth_token
+    } do
+      Streamer.get_topic_and_add_socket("direct", user, oauth_token)
+
+      {:ok, _create_activity} =
+        CommonAPI.post(user, %{
+          status: "hey @#{user.nickname}",
+          visibility: "direct"
+        })
+
+      assert_receive {:text, received_event}
+
+      assert %{"event" => "conversation", "payload" => received_payload} =
+               Jason.decode!(received_event)
+
+      assert %{"last_status" => last_status} = Jason.decode!(received_payload)
+      [participation] = Participation.for_user(user)
+      assert last_status["pleroma"]["direct_conversation_id"] == participation.id
+    end
+
     test "it sends conversation update to the 'direct' stream", %{user: user, token: oauth_token} do
       another_user = insert(:user)
 
