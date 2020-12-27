@@ -10,89 +10,76 @@ defmodule Pleroma.InstallerWeb.SetupController do
 
   plug(:authenticate)
 
-  def index(conn, params) do
-    render(conn, "index.html", token: params["token"])
-  end
-
-  def credentials_setup(conn, params) do
-    render(conn, "credentials_setup.html",
-      credentials: CredentialsForm.defaults(),
-      token: params["token"],
-      error: nil
-    )
-  end
-
-  def create_psql_user(conn, params) do
-    changeset = CredentialsForm.changeset(params["credentials_form"])
-
-    token = params["token"]
-
-    case CredentialsForm.create_psql_user(changeset) do
-      :ok ->
-        redirect(conn, to: Routes.setup_path(conn, :save_generated_credentials, token: token))
-
-      {:ok, psql_path} ->
-        render(conn, "run_psql.html", token: token, psql_path: psql_path)
-
-      {:error, error} ->
-        render(conn, "credentials_setup.html",
-          credentials: changeset,
-          error: error,
-          token: token
-        )
-    end
-  end
-
-  def save_generated_credentials(conn, params) do
-    changeset = Pleroma.Config.get(:db_credentials)
-    Pleroma.Config.delete(:db_credentials)
-    save_credentials_changeset(conn, changeset, params["token"])
+  def index(conn, _) do
+    render(conn, "index.html")
   end
 
   def credentials(conn, params) do
-    render(conn, "credentials.html",
+    setup_db = params["setup_db"] == "true"
+
+    conn
+    |> put_session(:setup_db, setup_db)
+    |> render("credentials.html",
       credentials: CredentialsForm.defaults(),
       connection_error: false,
       error: nil,
-      token: params["token"]
+      setup_db: setup_db
     )
   end
 
-  defp save_credentials_changeset(conn, changeset, token) do
-    case CredentialsForm.save(changeset) do
+  def save_credentials(conn, params) do
+    setup_db? = get_session(conn, :setup_db)
+
+    changeset = CredentialsForm.changeset(params["credentials_form"])
+
+    check_connection_and_write_config(conn, changeset, setup_db?)
+  end
+
+  defp check_connection_and_write_config(conn, changeset, setup_db? \\ false) do
+    case CredentialsForm.check_connection_and_write_config(changeset, setup_db?) do
       :ok ->
-        redirect(conn, to: Routes.setup_path(conn, :config, token: token))
+        redirect(conn, to: Routes.setup_path(conn, :migrations))
+
+      {:ok, psql_path} ->
+        render(conn, "run_psql.html", psql_path: psql_path)
 
       {:error, %Ecto.Changeset{} = changeset} ->
         render(conn, "credentials.html",
           credentials: changeset,
-          connection_error: false,
           error: nil,
-          token: token
+          setup_db: setup_db?
         )
 
       {:error, %DBConnection.ConnectionError{}} ->
         render(conn, "credentials.html",
           credentials: changeset,
-          connection_error: true,
-          error: nil,
-          token: token
+          error:
+            "Pleroma can't connect to database with these credentials. Please check them and try one more time.",
+          setup_db: setup_db?
         )
 
       {:error, error} ->
         render(conn, "credentials.html",
           credentials: changeset,
           error: error,
-          connection_error: false,
-          token: token
+          setup_db: setup_db?
         )
     end
   end
 
-  def save_credentials(conn, params) do
-    changeset = CredentialsForm.changeset(params["credentials_form"])
+  def save_generated_credentials(conn, _) do
+    changeset = Pleroma.Config.get(:credentials)
+    Pleroma.Config.delete(:credentials)
+    check_connection_and_write_config(conn, changeset)
+  end
 
-    save_credentials_changeset(conn, changeset, params["token"])
+  def migrations(conn, _) do
+    Task.start(fn -> CredentialsForm.migrations() end)
+    render(conn, "migrations.html")
+  end
+
+  def run_migrations(conn, params) do
+    json(conn, %{url: Routes.setup_path(conn, :config, token: params["token"])})
   end
 
   def config(conn, params) do
@@ -126,12 +113,17 @@ defmodule Pleroma.InstallerWeb.SetupController do
   defp authenticate(conn, _) do
     token = Pleroma.Config.get(:installer_token)
 
-    if conn.query_params["token"] == token do
-      conn
-    else
-      conn
-      |> text("Token is invalid")
-      |> halt()
+    cond do
+      get_session(conn, :token) == token ->
+        conn
+
+      conn.query_params["token"] == token ->
+        put_session(conn, :token, token)
+
+      true ->
+        conn
+        |> text("Token is invalid")
+        |> halt()
     end
   end
 end

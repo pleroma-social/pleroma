@@ -8,8 +8,8 @@
         <li>uuid-ossp</li>
         <li>rum (if you are going to use rum indexes)</li>
       </ul>
-      <a class="button" href="<%= Routes.setup_path(@conn, :credentials, token: @token) %>">I have configured PotgreSQL</a>
-      <a class="button button-outline" href="<%= Routes.setup_path(@conn, :credentials_setup, token: @token) %>">I haven't configured PostgreSQL</a>
+      <a class="button" href="<%= Routes.setup_path(@conn, :credentials) %>">I have configured PostgreSQL</a>
+      <a class="button button-outline" href="<%= Routes.setup_path(@conn, :credentials, setup_db: true) %>">I haven't configured PostgreSQL</a>
     </div>
   </div>
 </div>

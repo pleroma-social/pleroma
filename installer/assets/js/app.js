@@ -32,4 +32,12 @@ window.onload = function () {
       }
     });
   }
+
+  let migrations = document.getElementById('migrations')
+
+  if (migrations) {
+    setTimeout(function () {
+      window.location = "/config";
+    }, 10000);
+  }
 }

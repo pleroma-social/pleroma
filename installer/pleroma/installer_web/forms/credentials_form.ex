@@ -7,6 +7,8 @@ defmodule Pleroma.InstallerWeb.Forms.CredentialsForm do
 
   import Ecto.Changeset
 
+  alias Pleroma.Config
+
   require Logger
 
   @primary_key false
@@ -22,7 +24,7 @@ defmodule Pleroma.InstallerWeb.Forms.CredentialsForm do
 
   @spec defaults() :: Ecto.Changeset.t()
   def defaults do
-    env = Pleroma.Config.get(:env)
+    env = Config.get(:env)
 
     %__MODULE__{}
     |> cast(
@@ -43,12 +45,43 @@ defmodule Pleroma.InstallerWeb.Forms.CredentialsForm do
     |> validate_required([:username, :database, :hostname, :rum_enabled])
   end
 
-  @spec create_psql_user(Ecto.Changeset.t()) ::
-          {:ok, String.t(), Ecto.Changeset.t()}
-          | {:error, Ecto.Changeset.t()}
-          | {:error, term()}
-          | {:error, :file.posix()}
-  def create_psql_user(changeset) do
+  defp to_keyword(struct) do
+    struct
+    |> Map.from_struct()
+    |> Map.to_list()
+  end
+
+  def check_connection_and_write_config(changeset, setup_db?) do
+    if setup_db? do
+      changeset
+      |> setup()
+      |> do_check_connection_and_write_config()
+    else
+      with {:ok, struct} <- apply_action(changeset, :create) do
+        struct
+        |> to_keyword()
+        |> do_check_connection_and_write_config()
+      end
+    end
+  end
+
+  defp do_check_connection_and_write_config(credentials) when is_list(credentials) do
+    # we try to connect to default database
+    with {:ok, _} <- Pleroma.Repo.start_link(Keyword.put(credentials, :database, "postgres")),
+         {:ok, _} <- Pleroma.Repo.query("SELECT 1"),
+         :ok <- create_database(credentials),
+         :ok <- Pleroma.Repo.stop(),
+         config_path <- Pleroma.Application.config_path(),
+         :ok <- write_credentials_to_config_file(credentials, config_path) do
+      config_path
+      |> Config.Reader.read!()
+      |> Application.put_all_env()
+    end
+  end
+
+  defp do_check_connection_and_write_config(result), do: result
+
+  defp setup(changeset) do
     changeset =
       if get_change(changeset, :password) do
         changeset
@@ -58,86 +91,42 @@ defmodule Pleroma.InstallerWeb.Forms.CredentialsForm do
         )
       end
 
-    do_create_psql_user(changeset)
-  end
+    with {:ok, struct} <- apply_action(changeset, :create) do
+      credentials = to_keyword(struct)
 
-  defp do_create_psql_user(changeset) do
-    case apply_action(changeset, :create) do
-      {:ok, struct} ->
-        credentials =
-          struct
-          |> Map.from_struct()
-          |> Map.to_list()
+      psql =
+        EEx.eval_file(
+          "installer/templates/sample_psql.eex",
+          credentials
+        )
 
-        psql =
-          EEx.eval_file(
-            "installer/templates/sample_psql.eex",
-            credentials
-          )
+      case System.cmd("echo", [psql, "|", "sudo", "-Hu", "postgres", "psql"]) do
+        {_, 0} ->
+          credentials
 
-        Pleroma.Config.put(:db_credentials, changeset)
+        _ ->
+          psql_path =
+            Pleroma.Application.config_path() |> Path.dirname() |> Path.join("setup_db.psql")
 
-        with {_, 0} <- System.cmd("echo", [psql, "|", "sudo", "-Hu", "postgres", "psql"]) do
-          :ok
-        else
-          _ ->
-            psql_path =
-              Pleroma.Application.config_path() |> Path.dirname() |> Path.join("setup_db.psql")
+          Logger.warn("Writing the postgres script to #{psql_path}.")
 
-            Logger.warn("Writing the postgres script to #{psql_path}.")
+          case File.write(psql_path, psql) do
+            :ok ->
+              Config.put(:credentials_changeset, changeset)
+              {:ok, psql_path}
 
-            case File.write(psql_path, psql) do
-              :ok ->
-                {:ok, psql_path}
-
-              error ->
-                error
-            end
-        end
-
-      error ->
-        error
+            error ->
+              error
+          end
+      end
     end
   end
 
-  @spec save(Ecto.Changeset.t()) ::
-          :ok
-          | {:error, Ecto.Changeset.t()}
-          | {:error, %DBConnection.ConnectionError{}}
-          | {:error, term()}
-          | {:error, :file.posix()}
-  def save(changeset) do
-    case apply_action(changeset, :create) do
-      {:ok, struct} ->
-        struct
-        |> Map.from_struct()
-        |> Map.to_list()
-        |> do_save()
-
-      error ->
-        error
-    end
-  end
-
-  defp do_save(credentials) do
-    # we try to connect to default database
-    {:ok, _} = Pleroma.Repo.start_link(Keyword.put(credentials, :database, "postgres"))
-
-    with {:ok, _} <- Pleroma.Repo.query("SELECT 1"),
-         :ok <- create_database(credentials),
-         # we stop repo with default database and reconnect to newly created
-         :ok <- Pleroma.Repo.stop(),
-         {:ok, _} <- Pleroma.Repo.start_link(credentials),
-         #  :ok <- create_extensions(credentials),
+  def migrations do
+    with {:ok, _} <- Pleroma.Repo.start_link(),
          :ok <- run_migrations(),
-         :ok <- run_rum_migrations(credentials),
-         config_path <- Pleroma.Application.config_path(),
-         :ok <- write_credentials_to_config_file(credentials, config_path) do
+         :ok <- run_rum_migrations() do
       Pleroma.Repo.stop()
-
-      config_path
-      |> Config.Reader.read!()
-      |> Application.put_all_env()
     end
   end
 
@@ -168,8 +157,8 @@ defmodule Pleroma.InstallerWeb.Forms.CredentialsForm do
 
   defp run_migrations, do: Mix.Tasks.Pleroma.Ecto.Migrate.run()
 
-  defp run_rum_migrations(credentials) do
-    if credentials[:rum_enabled] do
+  defp run_rum_migrations() do
+    if Config.get([:database, :rum_enabled]) do
       Mix.Tasks.Pleroma.Ecto.Migrate.run([
         "--migrations-path",
         "priv/repo/optional_migrations/rum_indexing/"
