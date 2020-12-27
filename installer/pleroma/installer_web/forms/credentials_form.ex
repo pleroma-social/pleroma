@@ -7,8 +7,6 @@ defmodule Pleroma.InstallerWeb.Forms.CredentialsForm do
 
   import Ecto.Changeset
 
-  alias Pleroma.Config
-
   require Logger
 
   @primary_key false
@@ -24,7 +22,7 @@ defmodule Pleroma.InstallerWeb.Forms.CredentialsForm do
 
   @spec defaults() :: Ecto.Changeset.t()
   def defaults do
-    env = Config.get(:env)
+    env = Pleroma.Config.get(:env)
 
     %__MODULE__{}
     |> cast(
@@ -112,7 +110,7 @@ defmodule Pleroma.InstallerWeb.Forms.CredentialsForm do
 
           case File.write(psql_path, psql) do
             :ok ->
-              Config.put(:credentials_changeset, changeset)
+              Pleroma.Config.put(:credentials_changeset, changeset)
               {:ok, psql_path}
 
             error ->
@@ -158,7 +156,7 @@ defmodule Pleroma.InstallerWeb.Forms.CredentialsForm do
   defp run_migrations, do: Mix.Tasks.Pleroma.Ecto.Migrate.run()
 
   defp run_rum_migrations() do
-    if Config.get([:database, :rum_enabled]) do
+    if Pleroma.Config.get([:database, :rum_enabled]) do
       Mix.Tasks.Pleroma.Ecto.Migrate.run([
         "--migrations-path",
         "priv/repo/optional_migrations/rum_indexing/"
