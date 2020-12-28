@@ -390,6 +390,12 @@ config :pleroma, :mrf_keyword,
   federated_timeline_removal: [],
   replace: []
 
+config :pleroma, :mrf_hashtag,
+  sensitive: ["nsfw"],
+  reject: [],
+  federated_timeline_removal: [],
+  replace: []
+
 config :pleroma, :mrf_subchain, match_actor: %{}
 
 config :pleroma, :mrf_activity_expiration, days: 365
