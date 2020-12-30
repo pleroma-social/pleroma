@@ -915,12 +915,12 @@ defmodule Pleroma.Web.ActivityPub.Transmogrifier do
     Map.put(object, "conversation", object["context"])
   end
 
-  def set_sensitive(%{"sensitive" => _} = object) do
+  def set_sensitive(%{"sensitive" => sensitive} = object) when is_boolean(sensitive) do
     object
   end
 
   def set_sensitive(object) do
-    tags = object["tag"] || []
+    tags = Object.hashtags(%Object{data: object})
     Map.put(object, "sensitive", "nsfw" in tags)
   end
 

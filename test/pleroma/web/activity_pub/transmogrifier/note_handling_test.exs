@@ -39,7 +39,6 @@ defmodule Pleroma.Web.ActivityPub.Transmogrifier.NoteHandlingTest do
       {:ok, %Activity{data: data, local: false}} = Transmogrifier.handle_incoming(data)
       object = Object.normalize(data["object"])
 
-      assert "test" in Object.tags(object)
       assert Object.hashtags(object) == ["test"]
     end
 
@@ -193,7 +192,7 @@ defmodule Pleroma.Web.ActivityPub.Transmogrifier.NoteHandlingTest do
                "href" => "http://mastodon.example.org/tags/moo",
                "name" => "#moo",
                "type" => "Hashtag"
-             } == object.data["tag"]
+             } == Enum.at(object.data["tag"], 1)
     end
 
     test "it works for incoming notices with contentMap" do
