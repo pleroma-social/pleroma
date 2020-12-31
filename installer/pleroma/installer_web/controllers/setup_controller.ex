@@ -11,75 +11,79 @@ defmodule Pleroma.InstallerWeb.SetupController do
   plug(:authenticate)
 
   def index(conn, _) do
-    render(conn, "index.html")
-  end
+    env = Pleroma.Config.get(:env)
 
-  def credentials(conn, params) do
-    setup_db = params["setup_db"] == "true"
-
-    conn
-    |> put_session(:setup_db, setup_db)
-    |> render("credentials.html",
-      credentials: CredentialsForm.defaults(),
-      connection_error: false,
-      error: nil,
-      setup_db: setup_db
+    render(conn, "index.html",
+      credentials:
+        CredentialsForm.changeset(%{
+          username: "pleroma",
+          password: "",
+          database: "pleroma_#{env}",
+          hostname: "localhost"
+        }),
+      error: nil
     )
   end
 
   def save_credentials(conn, params) do
-    setup_db? = get_session(conn, :setup_db)
-
     changeset = CredentialsForm.changeset(params["credentials_form"])
 
-    check_connection_and_write_config(conn, changeset, setup_db?)
-  end
-
-  defp check_connection_and_write_config(conn, changeset, setup_db? \\ false) do
-    case CredentialsForm.check_connection_and_write_config(changeset, setup_db?) do
+    case CredentialsForm.save_credentials(changeset) do
       :ok ->
         redirect(conn, to: Routes.setup_path(conn, :migrations))
 
       {:ok, psql_path} ->
-        render(conn, "run_psql.html", psql_path: psql_path)
+        render(conn, "run_psql.html", psql_path: psql_path, error: nil)
 
       {:error, %Ecto.Changeset{} = changeset} ->
-        render(conn, "credentials.html",
+        render(conn, "index.html",
           credentials: changeset,
-          error: nil,
-          setup_db: setup_db?
+          error: nil
         )
 
       {:error, %DBConnection.ConnectionError{}} ->
-        render(conn, "credentials.html",
+        render(conn, "index.html",
           credentials: changeset,
           error:
-            "Pleroma can't connect to database with these credentials. Please check them and try one more time.",
-          setup_db: setup_db?
+            "Pleroma can't connect to the database with these credentials. Please check them and try one more time."
         )
 
       {:error, error} ->
-        render(conn, "credentials.html",
+        render(conn, "index.html",
           credentials: changeset,
-          error: error,
-          setup_db: setup_db?
+          error: inspect(error)
         )
     end
   end
 
-  def save_generated_credentials(conn, _) do
-    changeset = Pleroma.Config.get(:credentials)
-    Pleroma.Config.delete(:credentials)
-    check_connection_and_write_config(conn, changeset)
+  def check_database_and_write_config(conn, _) do
+    case CredentialsForm.check_database_and_write_config() do
+      :ok ->
+        redirect(conn, to: Routes.setup_path(conn, :migrations))
+
+      {:error, %DBConnection.ConnectionError{}} ->
+        render(conn, "run_psql.html",
+          error:
+            "Pleroma can't connect to the database with these credentials. Please check them and try one more time."
+        )
+
+      {:error, error} ->
+        render(conn, "run_psql.html", error: inspect(error))
+    end
   end
 
   def migrations(conn, _) do
-    Task.start(fn -> CredentialsForm.migrations() end)
     render(conn, "migrations.html")
   end
 
-  def run_migrations(conn, params) do
-    json(conn, %{url: Routes.setup_path(conn, :config, token: params["token"])})
+  def run_migrations(conn, _) do
+    response =
+      case CredentialsForm.migrations() do
+        :ok -> "ok"
+        _ -> "Error occuried while migrations were run."
+      end
+
+    json(conn, response)
   end
 
   def config(conn, params) do
@@ -89,24 +93,27 @@ defmodule Pleroma.InstallerWeb.SetupController do
   def save_config(conn, params) do
     changeset = ConfigForm.changeset(params["config_form"])
 
-    token = params["token"]
-    Pleroma.Application.start_repo()
+    # Pleroma.Application.start_repo()
 
     case ConfigForm.save(changeset) do
       :ok ->
         Pleroma.Config.delete(:installer_token)
         Pleroma.Application.stop_installer_and_start_pleroma()
 
+        CredentialsForm.installer_repo()
+        |> Pleroma.Config.get()
+        |> Supervisor.stop()
+
         redirect(conn, external: Pleroma.Web.Endpoint.url())
 
       {:error, %Ecto.Changeset{} = changeset} ->
-        render(conn, "config.html", config: changeset, token: token)
+        render(conn, "config.html", config: changeset)
 
       {:error, :config_file_not_found} ->
-        render(conn, "config.html", error: :config_file_not_found, token: token)
+        render(conn, "config.html", error: :config_file_not_found)
 
       {:error, error} ->
-        render(conn, "config.html", error: error, token: token)
+        render(conn, "config.html", error: error)
     end
   end
 

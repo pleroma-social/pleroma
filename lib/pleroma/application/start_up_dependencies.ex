@@ -107,7 +107,8 @@ defmodule Pleroma.Application.StartUpDependencies do
     end)
   end
 
-  defp add_cachex_deps(application_deps) do
+  @spec cachex_deps() :: [tuple()]
+  def cachex_deps do
     captcha_clean_up_interval =
       [Pleroma.Captcha, :seconds_valid]
       |> Config.get!()
@@ -129,6 +130,10 @@ defmodule Pleroma.Application.StartUpDependencies do
       {"chat_message_id_idempotency_key",
        expiration: cachex_expiration(:timer.minutes(2), :timer.seconds(60)), limit: 500_000}
     ]
+  end
+
+  defp add_cachex_deps(application_deps) do
+    cachex_deps()
     |> Enum.reduce(application_deps, fn cachex_init_args, acc ->
       [cachex_spec(cachex_init_args) | acc]
     end)

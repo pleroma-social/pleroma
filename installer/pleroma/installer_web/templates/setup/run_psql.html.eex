@@ -1,12 +1,19 @@
 <div class="container">
   <div class="row">
     <div class="column">
-      <p>Run following command to setup PostgreSQL:</p>
-      <pre><code>
-      sudo -Hu postgres psql -f <%= @psql_path %>
-      </code></pre>
+      <%= if @error do %>
+        <p style="color: red;"><%= @error %></p>
+        <p>Are you sure psql file was executed?</p>
 
-      <a class="button" href="<%= Routes.setup_path(@conn, :save_generated_credentials) %>">Next</a>
+        <a class="button" href="<%= Routes.setup_path(@conn, :check_database_and_write_config) %>">Try one more time</a>
+        <a class="button" href="<%= Routes.setup_path(@conn, :index) %>">Start over</a>
+      <% else %>
+        <p>Run following command to setup PostgreSQL:</p>
+        <pre><code>
+        sudo -Hu postgres psql -f <%= @psql_path %>
+        </code></pre>
+        <a class="button" href="<%= Routes.setup_path(@conn, :check_database_and_write_config) %>">Next</a>
+      <% end %>
     </div>
   </div>
 </div>

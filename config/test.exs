@@ -51,7 +51,7 @@ config :pleroma, Pleroma.Repo,
   username: "postgres",
   password: "postgres",
   database: "pleroma_test",
-  hostname: System.get_env("DB_HOST") || "localhost",
+  hostname: System.get_env("DB_HOST", "localhost"),
   pool: Ecto.Adapters.SQL.Sandbox,
   pool_size: 50
 
@@ -144,6 +144,8 @@ config :pleroma, :cachex, provider: Pleroma.CachexMock
 config :pleroma, :side_effects,
   ap_streamer: Pleroma.Web.ActivityPub.ActivityPubMock,
   logger: Pleroma.LoggerMock
+
+config :pleroma, :installer, system: Pleroma.Installer.SystemMock
 
 if File.exists?("./config/test.secret.exs") do
   import_config "test.secret.exs"

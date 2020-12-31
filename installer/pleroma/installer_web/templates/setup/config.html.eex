@@ -24,8 +24,8 @@
       <div class="row">
         <div class="column">
           <label>Domain</label>
-          <%= text_input f, :endpoint_url_host, placeholder: "pleroma.com" %>
-          <%= error_tag f, :endpoint_url_host %>
+          <%= text_input f, :endpoint_url, placeholder: "https://pleroma.com" %>
+          <%= error_tag f, :endpoint_url %>
         </div>
       </div>
     </div>

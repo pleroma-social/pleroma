@@ -25,6 +25,8 @@ defmodule Pleroma.InstallerWeb.ConnCase do
       Ecto.Adapters.SQL.Sandbox.mode(Pleroma.Repo, {:shared, self()})
     end
 
-    %{conn: Phoenix.ConnTest.build_conn()}
+    {:ok, _} = start_supervised(Pleroma.InstallerWeb.Endpoint)
+
+    [conn: Phoenix.ConnTest.build_conn()]
   end
 end

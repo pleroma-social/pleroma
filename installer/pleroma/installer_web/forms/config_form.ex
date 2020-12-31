@@ -38,6 +38,7 @@ defmodule Pleroma.InstallerWeb.Forms.ConfigForm do
     field(:instance_notify_email)
     field(:instance_static_dir, :string)
 
+    field(:endpoint_url)
     field(:endpoint_url_host)
     field(:endpoint_url_port, :integer, default: 443)
     field(:endpoint_url_scheme, :string, default: "https")
@@ -87,19 +88,28 @@ defmodule Pleroma.InstallerWeb.Forms.ConfigForm do
     |> validate_required(keys)
     |> validate_format(:instance_email, Pleroma.User.email_regex())
     |> validate_format(:instance_notify_email, Pleroma.User.email_regex())
-    |> maybe_update_scheme()
+    |> validate_change(:endpoint_url, fn :endpoint_url, url ->
+      case URI.parse(url) do
+        %{scheme: nil} -> [endpoint_url: "url must have scheme"]
+        %{host: nil} -> [endpoint_url: "url bad format"]
+        _ -> []
+      end
+    end)
+    |> set_url_fields()
     |> add_endpoint_secret()
     |> add_endpoint_signing_salt()
     |> add_joken_default_signer()
     |> add_web_push_keys()
   end
 
-  defp maybe_update_scheme(changeset) do
-    if Pleroma.Config.get(:env) != :prod do
-      change(changeset, endpoint_url_scheme: "http")
-    else
-      changeset
-    end
+  defp set_url_fields(%{changes: %{endpoint_url: url}} = changeset) do
+    uri = URI.parse(url)
+
+    change(changeset,
+      endpoint_url_host: uri.host,
+      endpoint_url_port: uri.port,
+      endpoint_url_scheme: uri.scheme
+    )
   end
 
   defp add_endpoint_secret(changeset) do

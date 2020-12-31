@@ -1,7 +1,7 @@
 <div class="container">
   <div class="row">
     <div class="column" id="migrations">
-      <p>The database is almost ready. Migrations are run.</p>
+      <p>The database is almost ready. Migrations are running.</p>
     </div>
   </div>
 </div>

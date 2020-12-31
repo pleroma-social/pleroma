@@ -18,13 +18,14 @@ defmodule Pleroma.InstallerWeb.Router do
 
     get("/", SetupController, :index)
 
-    get("/credentials", SetupController, :credentials)
     post("/credentials", SetupController, :save_credentials)
 
+    get("/check_database_and_write_config", SetupController, :check_database_and_write_config)
+
     get("/migrations", SetupController, :migrations)
+    get("/run_migrations", SetupController, :run_migrations)
 
     get("/config", SetupController, :config)
     post("/config", SetupController, :save_config)
-    get("/save_generated_credentials", SetupController, :save_generated_credentials)
   end
 end

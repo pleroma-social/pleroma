@@ -46,19 +46,11 @@ defmodule Pleroma.DataCase do
   end
 
   def clear_cachex do
-    Pleroma.Supervisor
-    |> Supervisor.which_children()
-    |> Enum.each(fn
-      {name, _, _, [Cachex]} ->
-        name
-        |> to_string
-        |> String.trim_leading("cachex_")
-        |> Kernel.<>("_cache")
-        |> String.to_existing_atom()
-        |> Cachex.clear()
-
-      _ ->
-        nil
+    Pleroma.Application.StartUpDependencies.cachex_deps()
+    |> Enum.each(fn {name, _} ->
+      "#{name}_cache"
+      |> String.to_existing_atom()
+      |> Cachex.clear()
     end)
   end
 

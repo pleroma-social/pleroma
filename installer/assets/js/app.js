@@ -10,6 +10,8 @@ import css from "../css/app.css"
 // Import dependencies
 //
 import "phoenix_html"
+import "phoenix"
+import { Ajax } from "phoenix"
 
 // Import local files
 //
@@ -36,8 +38,12 @@ window.onload = function () {
   let migrations = document.getElementById('migrations')
 
   if (migrations) {
-    setTimeout(function () {
-      window.location = "/config";
-    }, 10000);
+    Ajax.request("get", "/run_migrations", "application/json", "", 30000, "Kakaka", (resp) => {
+      if (resp.status == 200) {
+        window.location = "/config";
+      } else {
+        "kakakak";
+      }
+    });
   }
 }
