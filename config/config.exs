@@ -686,6 +686,8 @@ config :pleroma, Pleroma.Web.Plugs.RemoteIp,
     "192.168.0.0/16"
   ]
 
+config :pleroma, Pleroma.Web.Plugs.StoreUserIpPlug, enabled: false
+
 config :pleroma, :static_fe, enabled: false
 
 # Example of frontend configuration

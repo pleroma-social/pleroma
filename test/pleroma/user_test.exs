@@ -2271,4 +2271,11 @@ defmodule Pleroma.UserTest do
     user = insert(:user, ap_id: "https://lain.com/users/lain", nickname: "lain")
     assert User.get_host(user) == "lain.com"
   end
+
+  test "update_last_known_ip/2" do
+    %User{id: user_id} = user = insert(:user, last_known_ip: {1, 2, 3, 4})
+
+    assert {:ok, %User{id: ^user_id, last_known_ip: {5, 4, 3, 2}}} =
+             User.update_last_known_ip(user, {5, 4, 3, 2})
+  end
 end

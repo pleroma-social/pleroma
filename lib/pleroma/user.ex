@@ -146,6 +146,7 @@ defmodule Pleroma.User do
     field(:inbox, :string)
     field(:shared_inbox, :string)
     field(:accepts_chat_messages, :boolean, default: nil)
+    field(:last_known_ip, Pleroma.EctoType.IpAddress)
 
     embeds_one(
       :notification_settings,
@@ -2456,5 +2457,13 @@ defmodule Pleroma.User do
 
   def get_host(%User{ap_id: ap_id} = _user) do
     URI.parse(ap_id).host
+  end
+
+  def update_last_known_ip(%User{last_known_ip: ip} = user, ip), do: {:ok, user}
+
+  def update_last_known_ip(%User{} = user, ip) when is_tuple(ip) do
+    user
+    |> change(last_known_ip: ip)
+    |> update_and_set_cache()
   end
 end

@@ -2844,7 +2844,7 @@ config :pleroma, :config_description, [
       %{
         key: :enabled,
         type: :boolean,
-        description: "Enable/disable the plug. Default: disabled."
+        description: "Enable/disable the plug. Default: enabled."
       },
       %{
         key: :headers,
@@ -2865,6 +2865,21 @@ config :pleroma, :config_description, [
         description: """
           A list of reserved IP subnets in CIDR notation which should be ignored if found in `headers`. Defaults to `["127.0.0.0/8", "::1/128", "fc00::/7", "10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16"]`
         """
+      }
+    ]
+  },
+  %{
+    group: :pleroma,
+    key: Pleroma.Web.Plugs.StoreUserIpPlug,
+    type: :group,
+    description: """
+    Stores the user's last known IP address in the database if enabled. IP addresses are shown in AdminAPI.
+    """,
+    children: [
+      %{
+        key: :enabled,
+        type: :boolean,
+        description: "Enable/disable the plug. Default: disabled."
       }
     ]
   },
