@@ -963,7 +963,8 @@ defmodule Pleroma.Web.AdminAPI.UserControllerTest do
       "approval_pending" => false,
       "url" => user.ap_id,
       "registration_reason" => nil,
-      "actor_type" => "Person"
+      "actor_type" => "Person",
+      "last_known_ip" => nil
     }
     |> Map.merge(attrs)
   end

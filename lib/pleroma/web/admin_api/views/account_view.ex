@@ -80,7 +80,8 @@ defmodule Pleroma.Web.AdminAPI.AccountView do
       "approval_pending" => user.approval_pending,
       "url" => user.uri || user.ap_id,
       "registration_reason" => user.registration_reason,
-      "actor_type" => user.actor_type
+      "actor_type" => user.actor_type,
+      "last_known_ip" => user.last_known_ip
     }
   end
 
