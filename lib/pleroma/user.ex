@@ -1700,7 +1700,8 @@ defmodule Pleroma.User do
       fields: [],
       raw_fields: [],
       is_discoverable: false,
-      also_known_as: []
+      also_known_as: [],
+      last_known_ip: nil
     })
   end
 
