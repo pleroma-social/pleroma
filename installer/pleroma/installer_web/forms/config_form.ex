@@ -7,30 +7,20 @@ defmodule Pleroma.InstallerWeb.Forms.ConfigForm do
 
   import Ecto.Changeset
 
-  @instance [
-    :instance_name,
-    :instance_email,
-    :instance_notify_email,
-    :instance_static_dir
-  ]
-
-  @endpoint [
+  @to_file [
+    :endpoint_url_scheme,
     :endpoint_url_host,
     :endpoint_url_port,
     :endpoint_http_ip,
-    :endpoint_http_port
-  ]
-
-  @to_file [
-    :endpoint_url_scheme,
+    :endpoint_http_port,
     :endpoint_secret_key_base,
     :endpoint_signing_salt,
     :joken_default_signer,
     :configurable_from_database
-    | @endpoint
   ]
 
   @primary_key false
+  @callbacks Pleroma.Config.get([:installer, :callbacks], Pleroma.Installer.Callbacks)
 
   embedded_schema do
     field(:instance_name)
@@ -40,8 +30,8 @@ defmodule Pleroma.InstallerWeb.Forms.ConfigForm do
 
     field(:endpoint_url)
     field(:endpoint_url_host)
-    field(:endpoint_url_port, :integer, default: 443)
-    field(:endpoint_url_scheme, :string, default: "https")
+    field(:endpoint_url_port, :integer)
+    field(:endpoint_url_scheme, :string)
     field(:endpoint_http_ip)
     field(:endpoint_http_port, :integer)
     field(:endpoint_secret_key_base)
@@ -58,36 +48,26 @@ defmodule Pleroma.InstallerWeb.Forms.ConfigForm do
     field(:indexable, :boolean, default: true)
   end
 
-  @spec defaults() :: Ecto.Changeset.t()
-  def defaults do
-    Ecto.Changeset.change(%__MODULE__{},
-      instance_static_dir: "instance/static",
-      endpoint_url_port: 443,
-      endpoint_http_ip: "127.0.0.1",
-      endpoint_http_port: 4000,
-      local_uploads_dir: "uploads"
-    )
-  end
-
   @spec changeset(map()) :: Ecto.Changeset.t()
   def changeset(attrs \\ %{}) do
-    keys =
-      @instance ++
-        @endpoint ++
-        [
-          :local_uploads_dir,
-          :configurable_from_database,
-          :indexable
-        ]
+    keys = [
+      :instance_name,
+      :instance_email,
+      :instance_notify_email,
+      :instance_static_dir,
+      :endpoint_url,
+      :endpoint_http_ip,
+      :endpoint_http_port,
+      :local_uploads_dir,
+      :configurable_from_database,
+      :indexable
+    ]
 
     %__MODULE__{}
     |> cast(
       attrs,
       keys
     )
-    |> validate_required(keys)
-    |> validate_format(:instance_email, Pleroma.User.email_regex())
-    |> validate_format(:instance_notify_email, Pleroma.User.email_regex())
     |> validate_change(:endpoint_url, fn :endpoint_url, url ->
       case URI.parse(url) do
         %{scheme: nil} -> [endpoint_url: "url must have scheme"]
@@ -100,6 +80,9 @@ defmodule Pleroma.InstallerWeb.Forms.ConfigForm do
     |> add_endpoint_signing_salt()
     |> add_joken_default_signer()
     |> add_web_push_keys()
+    |> validate_required(keys)
+    |> validate_format(:instance_email, Pleroma.User.email_regex())
+    |> validate_format(:instance_notify_email, Pleroma.User.email_regex())
   end
 
   defp set_url_fields(%{changes: %{endpoint_url: url}} = changeset) do
@@ -111,6 +94,8 @@ defmodule Pleroma.InstallerWeb.Forms.ConfigForm do
       endpoint_url_scheme: uri.scheme
     )
   end
+
+  defp set_url_fields(changeset), do: changeset
 
   defp add_endpoint_secret(changeset) do
     change(changeset, endpoint_secret_key_base: crypt(64))
@@ -146,53 +131,62 @@ defmodule Pleroma.InstallerWeb.Forms.ConfigForm do
           | {:error, :config_file_not_found}
           | {:error, :file.posix()}
   def save(changeset) do
-    config_path = Pleroma.Application.config_path()
+    with {:ok, struct} <- apply_action(changeset, :insert) do
+      # on this step we expect that config file was already created and contains database credentials,
+      # so if file doesn't exist we return error
+      config_path = Pleroma.Application.config_path()
 
-    # on this step we expect that config file was already created and contains database credentials,
-    # so if file doesn't exist we return error
-    if File.exists?(config_path) do
-      struct = apply_action(changeset, :create)
+      if File.exists?(config_path) do
+        config =
+          struct
+          |> Map.from_struct()
+          |> Map.to_list()
 
-      case struct do
-        {:ok, struct} ->
-          config =
-            struct
-            |> Map.from_struct()
-            |> Map.to_list()
-
-          with :ok <- do_save(config, config_path) do
-            generate_robots_txt(config)
-          end
-
-        error ->
-          error
+        with :ok <- do_save(config, config_path) do
+          generate_robots_txt(config)
+        end
+      else
+        {:error, :config_file_not_found}
       end
-    else
-      {:error, :config_file_not_found}
     end
   end
 
   defp do_save(config, config_path) do
-    if config[:configurable_from_database] do
-      save_to_file_and_database(config, config_path)
-    else
-      save_to_file(config, config_path)
+    config
+    |> save_to_file(config_path)
+    |> maybe_save_to_database()
+  end
+
+  defp save_to_file(config, config_path) do
+    {keys, template} =
+      if config[:configurable_from_database] do
+        {@to_file, "installer/templates/config_part.eex"}
+      else
+        keys =
+          [
+            :local_uploads_dir,
+            :web_push_encryption_public_key,
+            :web_push_encryption_private_key,
+            :instance_name,
+            :instance_email,
+            :instance_notify_email,
+            :instance_static_dir
+          ] ++ @to_file
+
+        {keys, "installer/templates/config_full.eex"}
+      end
+
+    assigns = Keyword.take(config, keys)
+
+    content = EEx.eval_file(template, assigns)
+
+    with :ok <- @callbacks.write_config(config_path, content) do
+      config
     end
   end
 
-  defp generate_robots_txt(config) do
-    templates_dir = Application.app_dir(:pleroma, "priv") <> "/templates"
-
-    Mix.Tasks.Pleroma.Instance.write_robots_txt(
-      config[:instance_static_dir],
-      config[:indexable],
-      templates_dir
-    )
-  end
-
-  defp save_to_file_and_database(config, config_path) do
-    with :ok <-
-           write_to_file(config, @to_file, "installer/templates/config_part.eex", config_path) do
+  defp maybe_save_to_database(config) when is_list(config) do
+    if config[:configurable_from_database] do
       web_push = [
         subject: "mailto:" <> config[:instance_email],
         public_key: config[:web_push_encryption_public_key],
@@ -203,7 +197,11 @@ defmodule Pleroma.InstallerWeb.Forms.ConfigForm do
         %{
           group: :pleroma,
           key: :instance,
-          value: Keyword.take(config, @instance)
+          value:
+            Keyword.take(
+              config,
+              [:instance_name, :instance_email, :instance_notify_email, :instance_static_dir]
+            )
         },
         %{
           group: :web_push_encryption,
@@ -217,29 +215,23 @@ defmodule Pleroma.InstallerWeb.Forms.ConfigForm do
         }
       ]
 
-      {:ok, _} = Pleroma.Config.Versioning.new_version(changes)
-
+      with {:ok, _} <- Pleroma.Config.Versioning.new_version(changes) do
+        :ok
+      end
+    else
       :ok
     end
   end
 
-  defp save_to_file(config, config_path) do
-    keys =
-      [
-        :local_uploads_dir,
-        :web_push_encryption_public_key,
-        :web_push_encryption_private_key
-        | @instance
-      ] ++ @to_file
+  defp maybe_save_to_database(result), do: result
 
-    write_to_file(config, keys, "installer/templates/config_full.eex", config_path)
-  end
+  defp generate_robots_txt(config) do
+    templates_dir = Application.app_dir(:pleroma, "priv") <> "/templates"
 
-  defp write_to_file(config, keys, template, config_path) do
-    assigns = Keyword.take(config, keys)
-
-    evaluated = EEx.eval_file(template, assigns)
-
-    File.write(config_path, ["\n", evaluated], [:append])
+    Mix.Tasks.Pleroma.Instance.write_robots_txt(
+      config[:instance_static_dir],
+      config[:indexable],
+      templates_dir
+    )
   end
 end

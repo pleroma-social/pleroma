@@ -145,7 +145,7 @@ config :pleroma, :side_effects,
   ap_streamer: Pleroma.Web.ActivityPub.ActivityPubMock,
   logger: Pleroma.LoggerMock
 
-config :pleroma, :installer, system: Pleroma.Installer.SystemMock
+config :pleroma, :installer, callbacks: Pleroma.Installer.CallbacksMock
 
 if File.exists?("./config/test.secret.exs") do
   import_config "test.secret.exs"

@@ -68,7 +68,7 @@ defmodule Pleroma.Application do
       Supervisor.start_link(children, strategy: :one_for_one, name: Pleroma.Supervisor)
 
     if @env == :test or File.exists?(Pleroma.Application.config_path()) do
-      {:ok, _} = start_repo()
+      {:ok, _} = DynamicSupervisor.start_child(@dynamic_supervisor, Pleroma.Repo)
       :ok = start_pleroma()
     else
       DynamicSupervisor.start_child(
@@ -104,11 +104,6 @@ defmodule Pleroma.Application do
     Pleroma.Application.Environment.load_from_db_and_update()
 
     Pleroma.Application.StartUpDependencies.start_all(@env)
-  end
-
-  @spec start_repo() :: DynamicSupervisor.on_start_child()
-  def start_repo do
-    DynamicSupervisor.start_child(@dynamic_supervisor, Pleroma.Repo)
   end
 
   @spec stop_installer_and_start_pleroma() :: {:ok, pid()}

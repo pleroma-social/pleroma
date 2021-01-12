@@ -32,9 +32,6 @@ defmodule Pleroma.InstallerWeb.SetupController do
       :ok ->
         redirect(conn, to: Routes.setup_path(conn, :migrations))
 
-      {:ok, psql_path} ->
-        render(conn, "run_psql.html", psql_path: psql_path, error: nil)
-
       {:error, %Ecto.Changeset{} = changeset} ->
         render(conn, "index.html",
           credentials: changeset,
@@ -47,6 +44,9 @@ defmodule Pleroma.InstallerWeb.SetupController do
           error:
             "Pleroma can't connect to the database with these credentials. Please check them and try one more time."
         )
+
+      {:error, :psql_file_execution, psql_path} ->
+        render(conn, "run_psql.html", psql_path: psql_path, error: nil)
 
       {:error, error} ->
         render(conn, "index.html",
@@ -86,34 +86,45 @@ defmodule Pleroma.InstallerWeb.SetupController do
     json(conn, response)
   end
 
-  def config(conn, params) do
-    render(conn, "config.html", config: ConfigForm.defaults(), token: params["token"])
+  def config(conn, _) do
+    render(conn, "config.html",
+      config:
+        ConfigForm.changeset(%{
+          instance_static_dir: "instance/static",
+          endpoint_url_port: 443,
+          endpoint_http_ip: "127.0.0.1",
+          endpoint_http_port: 4000,
+          local_uploads_dir: "uploads"
+        }),
+      error: nil
+    )
   end
 
   def save_config(conn, params) do
     changeset = ConfigForm.changeset(params["config_form"])
 
-    # Pleroma.Application.start_repo()
-
     case ConfigForm.save(changeset) do
       :ok ->
         Pleroma.Config.delete(:installer_token)
-        Pleroma.Application.stop_installer_and_start_pleroma()
 
-        CredentialsForm.installer_repo()
-        |> Pleroma.Config.get()
-        |> Supervisor.stop()
+        if Pleroma.Config.get(:env) != :test do
+          Pleroma.Application.stop_installer_and_start_pleroma()
+
+          CredentialsForm.installer_repo()
+          |> Pleroma.Config.get()
+          |> Supervisor.stop()
+        end
 
         redirect(conn, external: Pleroma.Web.Endpoint.url())
 
       {:error, %Ecto.Changeset{} = changeset} ->
-        render(conn, "config.html", config: changeset)
+        render(conn, "config.html", config: changeset, error: "Some values have incorrect values.")
 
       {:error, :config_file_not_found} ->
-        render(conn, "config.html", error: :config_file_not_found)
+        render(conn, "config.html", config: changeset, error: "Something went wrong.")
 
       {:error, error} ->
-        render(conn, "config.html", error: error)
+        render(conn, "config.html", config: changeset, error: inspect(error))
     end
   end
 
@@ -121,10 +132,10 @@ defmodule Pleroma.InstallerWeb.SetupController do
     token = Pleroma.Config.get(:installer_token)
 
     cond do
-      get_session(conn, :token) == token ->
+      token && get_session(conn, :token) == token ->
         conn
 
-      conn.query_params["token"] == token ->
+      token && conn.query_params["token"] == token ->
         put_session(conn, :token, token)
 
       true ->

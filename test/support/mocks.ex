@@ -29,4 +29,4 @@ Mox.defmock(Pleroma.ConfigMock, for: Pleroma.Config.Getting)
 
 Mox.defmock(Pleroma.LoggerMock, for: Pleroma.Logging)
 
-Mox.defmock(Pleroma.Installer.SystemMock, for: Pleroma.Installer.System)
+Mox.defmock(Pleroma.Installer.CallbacksMock, for: Pleroma.Installer.Callbacks)
