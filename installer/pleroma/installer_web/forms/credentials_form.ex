@@ -78,7 +78,8 @@ defmodule Pleroma.InstallerWeb.Forms.CredentialsForm do
       credentials
     else
       {_, exit_status} when is_integer(exit_status) ->
-        # psql file saved, but something is wrong with system call, so we let the user to run it manually
+        # psql file saved, but something is wrong with system call,
+        # so we let the user to run it manually
         # temporarily save the credentials
         Config.put(:credentials, credentials)
         Logger.warn("Writing the postgres script to #{psql_path}.")

@@ -132,7 +132,7 @@ defmodule Pleroma.InstallerWeb.Forms.ConfigForm do
           | {:error, :file.posix()}
   def save(changeset) do
     with {:ok, struct} <- apply_action(changeset, :insert) do
-      # on this step we expect that config file was already created and contains database credentials,
+      # we expect that config file was already created and contains database credentials,
       # so if file doesn't exist we return error
       config_path = Pleroma.Application.config_path()
 
