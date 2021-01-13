@@ -30,18 +30,22 @@ defmodule Pleroma.InstallerWeb.Forms.CredentialsForm do
   def installer_repo, do: @repo
 
   @spec changeset(map()) :: Ecto.Changeset.t()
-  def changeset(attrs \\ %{}) do
+  def changeset(attrs \\ %{}, opts \\ []) do
     %__MODULE__{}
     |> cast(attrs, [:username, :password, :database, :hostname, :rum_enabled])
-    |> maybe_add_password()
+    |> maybe_add_password(opts)
     |> validate_required([:username, :database, :hostname, :rum_enabled, :password])
   end
 
-  defp maybe_add_password(%{changes: %{password: _}} = changeset), do: changeset
+  defp maybe_add_password(%{changes: %{password: _}} = changeset, _), do: changeset
 
-  defp maybe_add_password(changeset) do
-    generated = :crypto.strong_rand_bytes(64) |> Base.encode64() |> binary_part(0, 64)
-    change(changeset, password: generated)
+  defp maybe_add_password(changeset, opts) do
+    if opts[:generate_password] do
+      generated = :crypto.strong_rand_bytes(64) |> Base.encode64() |> binary_part(0, 64)
+      change(changeset, password: generated)
+    else
+      changeset
+    end
   end
 
   @spec save_credentials(Ecto.Changeset.t()) ::
@@ -73,8 +77,9 @@ defmodule Pleroma.InstallerWeb.Forms.CredentialsForm do
 
     psql_path = "/tmp/setup_db.psql"
 
-    with :ok <- @callbacks.write_psql_file(psql_path, psql),
+    with :ok <- @callbacks.write(psql_path, psql),
          {_, 0} <- @callbacks.execute_psql_file(psql_path) do
+      Config.put(:credentials, credentials)
       credentials
     else
       {_, exit_status} when is_integer(exit_status) ->
@@ -95,13 +100,9 @@ defmodule Pleroma.InstallerWeb.Forms.CredentialsForm do
   end
 
   defp check_database_connection_and_extensions(credentials) when is_list(credentials) do
-    config = Keyword.put(credentials, :name, @repo)
-
-    with {:ok, repo} <- @callbacks.start_repo(config),
-         _ <- @callbacks.put_dynamic_repo(repo),
+    with {:ok, _} <- @callbacks.start_dynamic_repo(credentials),
          {:ok, _} <- @callbacks.check_connection(),
          :ok <- @callbacks.check_extensions(credentials[:rum_enabled]) do
-      Config.put(@repo, repo)
       credentials
     end
   end
@@ -114,12 +115,17 @@ defmodule Pleroma.InstallerWeb.Forms.CredentialsForm do
     config = EEx.eval_file("installer/templates/credentials.eex", credentials)
 
     with :ok <- File.write(config_path, config) do
-      Config.delete(:credentials)
-
       updated_config = Keyword.merge(Repo.config(), credentials)
 
       Config.put(Repo, updated_config)
       Config.put([:database, :rum_enabled], credentials[:rum_enabled])
+
+      @repo
+      |> Process.whereis()
+      |> case do
+        repo when is_pid(repo) -> Supervisor.stop(repo)
+        _ -> :ok
+      end
     end
   end
 
@@ -135,9 +141,13 @@ defmodule Pleroma.InstallerWeb.Forms.CredentialsForm do
         path
       end
 
-    case @callbacks.run_migrations(paths, @repo) do
-      [] -> {:error, :migration_error}
-      _ -> :ok
+    credentials = Config.get(:credentials)
+
+    with {:ok, _} <- @callbacks.start_dynamic_repo(credentials) do
+      case @callbacks.run_migrations(paths, @repo) do
+        [] -> {:error, :migration_error}
+        _ -> :ok
+      end
     end
   end
 end

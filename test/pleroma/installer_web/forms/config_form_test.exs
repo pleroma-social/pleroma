@@ -5,22 +5,32 @@ defmodule Pleroma.InstallerWeb.Forms.ConfigFormTest do
 
   alias Pleroma.InstallerWeb.Forms.ConfigForm
 
+  @test_config "config/test_installer.secret.exs"
+
+  setup do: clear_config(:config_path_in_test, @test_config)
   setup :verify_on_exit!
+  setup :config
+
+  defp config(_) do
+    config =
+      ConfigForm.changeset(%{
+        instance_name: "name",
+        instance_email: "email@example.com",
+        instance_notify_email: "notify@example.com",
+        instance_static_dir: "instance/static/",
+        endpoint_url: "https://example.com",
+        endpoint_http_ip: "127.0.0.1",
+        endpoint_http_port: 4000,
+        local_uploads_dir: "uploads",
+        configurable_from_database: true,
+        indexable: true
+      })
+
+    [config: config]
+  end
 
   describe "changeset/1" do
-    test "valid attrs" do
-      changeset =
-        ConfigForm.changeset(%{
-          endpoint_url: "https://example.com",
-          instance_name: "name",
-          instance_email: "email@example.com",
-          instance_notify_email: "notify@example.com",
-          instance_static_dir: "instance/static/",
-          local_uploads_dir: "uploads",
-          endpoint_http_ip: "127.0.0.1",
-          endpoint_http_port: 4000
-        })
-
+    test "valid attrs", %{config: config} do
       assert match?(
                %{
                  endpoint_url: "https://example.com",
@@ -35,10 +45,10 @@ defmodule Pleroma.InstallerWeb.Forms.ConfigFormTest do
                  endpoint_http_ip: "127.0.0.1",
                  endpoint_http_port: 4000
                },
-               changeset.changes
+               config.changes
              )
 
-      assert changeset.valid?
+      assert config.valid?
     end
 
     test "not valid attrs" do
@@ -57,43 +67,21 @@ defmodule Pleroma.InstallerWeb.Forms.ConfigFormTest do
     end
   end
 
+  test "config file doesn't exists", %{config: config} do
+    assert {:error, :config_file_not_found} = ConfigForm.save(config)
+  end
+
   describe "save/1" do
     setup do
-      tmp_path = "/tmp/generated_files/"
-      File.mkdir_p!(tmp_path)
+      File.touch!(@test_config)
 
-      config =
-        ConfigForm.changeset(%{
-          instance_name: "name",
-          instance_email: "email@example.com",
-          instance_notify_email: "notify@example.com",
-          instance_static_dir: "instance/static/",
-          endpoint_url: "http://example.com",
-          endpoint_http_ip: "127.0.0.1",
-          endpoint_http_port: 4000,
-          local_uploads_dir: "uploads",
-          configurable_from_database: true,
-          indexable: true
-        })
-
-      config_file = tmp_path <> "test.secret.exs"
-
-      :ok = File.touch(config_file)
-
-      on_exit(fn -> File.rm_rf!(tmp_path) end)
-
-      [config: config, config_file: config_file]
+      on_exit(fn -> File.rm!(@test_config) end)
     end
 
-    test "config file doesn't exists", %{config: config} do
-      assert {:error, :config_file_not_found} = ConfigForm.save(config)
-    end
-
-    test "saving config into file", %{config: config, config_file: config_file} do
-      clear_config(:config_path_in_test, config_file)
-
-      expect(Pleroma.Installer.CallbacksMock, :write_config, fn path, content ->
-        File.write(path, ["\n", content], [:append])
+    test "saving config into file", %{config: config} do
+      Pleroma.Installer.CallbacksMock
+      |> expect(:write, fn path, content, modes ->
+        Pleroma.Installer.Callbacks.write(path, content, modes)
       end)
 
       ExUnit.CaptureIO.capture_io(fn ->
@@ -103,8 +91,8 @@ defmodule Pleroma.InstallerWeb.Forms.ConfigFormTest do
           |> ConfigForm.save()
       end) =~ "Writing instance/static/robots.txt"
 
-      content = File.read!(config_file)
-      assert content =~ "url: [host: \"example.com\", scheme: \"http\", port: 80]"
+      content = File.read!(@test_config)
+      assert content =~ "url: [host: \"example.com\", scheme: \"https\", port: 443]"
       assert content =~ "http: [ip: {127, 0, 0, 1}, port: 4000]"
       assert content =~ "configurable_from_database: false"
 
@@ -115,19 +103,19 @@ defmodule Pleroma.InstallerWeb.Forms.ConfigFormTest do
       assert content =~ "config :pleroma, Pleroma.Uploaders.Local, uploads: \"uploads\""
     end
 
-    test "saving config into file and database", %{config: config, config_file: config_file} do
-      clear_config(:config_path_in_test, config_file)
-
-      expect(Pleroma.Installer.CallbacksMock, :write_config, fn path, content ->
-        File.write(path, ["\n", content], [:append])
+    test "saving config into file and database", %{config: config} do
+      Pleroma.Installer.CallbacksMock
+      |> expect(:start_dynamic_repo, fn _ -> {:ok, nil} end)
+      |> expect(:write, fn path, content, modes ->
+        Pleroma.Installer.Callbacks.write(path, content, modes)
       end)
 
       ExUnit.CaptureIO.capture_io(fn ->
         :ok = ConfigForm.save(config)
       end) =~ "Writing instance/static/robots.txt"
 
-      content = File.read!(config_file)
-      assert content =~ "url: [host: \"example.com\", scheme: \"http\", port: 80]"
+      content = File.read!(@test_config)
+      assert content =~ "url: [host: \"example.com\", scheme: \"https\", port: 443]"
       assert content =~ "http: [ip: {127, 0, 0, 1}, port: 4000]"
       assert content =~ "configurable_from_database: true"
 

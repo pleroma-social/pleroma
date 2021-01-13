@@ -180,7 +180,7 @@ defmodule Pleroma.InstallerWeb.Forms.ConfigForm do
 
     content = EEx.eval_file(template, assigns)
 
-    with :ok <- @callbacks.write_config(config_path, content) do
+    with :ok <- @callbacks.write(config_path, ["\n", content], [:append]) do
       config
     end
   end
@@ -215,8 +215,19 @@ defmodule Pleroma.InstallerWeb.Forms.ConfigForm do
         }
       ]
 
-      with {:ok, _} <- Pleroma.Config.Versioning.new_version(changes) do
-        :ok
+      config = Pleroma.Config.get(:credentials)
+
+      with {:ok, _} <- @callbacks.start_dynamic_repo(config),
+           {:ok, _} <- Pleroma.Config.Versioning.new_version(changes) do
+        repo =
+          Pleroma.InstallerWeb.Forms.CredentialsForm.installer_repo()
+          |> Process.whereis()
+
+        if repo do
+          Supervisor.stop(repo)
+        end
+
+        Pleroma.Config.delete(:credentials)
       end
     else
       :ok

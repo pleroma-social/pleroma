@@ -26,7 +26,7 @@ defmodule Pleroma.InstallerWeb.SetupController do
   end
 
   def save_credentials(conn, params) do
-    changeset = CredentialsForm.changeset(params["credentials_form"])
+    changeset = CredentialsForm.changeset(params["credentials_form"], generate_password: true)
 
     case CredentialsForm.save_credentials(changeset) do
       :ok ->
@@ -109,10 +109,6 @@ defmodule Pleroma.InstallerWeb.SetupController do
 
         if Pleroma.Config.get(:env) != :test do
           Pleroma.Application.stop_installer_and_start_pleroma()
-
-          CredentialsForm.installer_repo()
-          |> Pleroma.Config.get()
-          |> Supervisor.stop()
         end
 
         redirect(conn, external: Pleroma.Web.Endpoint.url())

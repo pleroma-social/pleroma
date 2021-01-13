@@ -11,8 +11,9 @@ defmodule Pleroma.InstallerWeb.SetupControllerTest do
 
   @token "secret_token"
   @psql_path "/tmp/setup_db.psql"
-  @test_config "config/test.secret.exs"
+  @test_config "config/test_installer.secret.exs"
 
+  setup do: clear_config(:config_path_in_test, @test_config)
   setup do: clear_config(:installer_token, @token)
 
   defp token(%{conn: conn}), do: [conn: init_test_session(conn, %{token: @token})]
@@ -74,7 +75,7 @@ defmodule Pleroma.InstallerWeb.SetupControllerTest do
     end
 
     test "file save error", %{conn: conn, credentials: credentials} do
-      expect(CallbacksMock, :write_psql_file, fn _, _ -> {:error, :enospc} end)
+      expect(CallbacksMock, :write, fn _, _ -> {:error, :enospc} end)
 
       capture_log(fn ->
         assert conn
@@ -90,7 +91,7 @@ defmodule Pleroma.InstallerWeb.SetupControllerTest do
       clear_config(:credentials)
 
       CallbacksMock
-      |> expect(:write_psql_file, fn _, _ -> :ok end)
+      |> expect(:write, fn _, _ -> :ok end)
       |> expect(:execute_psql_file, fn _ -> {"", 1} end)
 
       capture_log(fn ->
@@ -107,10 +108,9 @@ defmodule Pleroma.InstallerWeb.SetupControllerTest do
 
     test "db connection error", %{conn: conn, credentials: credentials} do
       CallbacksMock
-      |> expect(:write_psql_file, fn _, _ -> :ok end)
+      |> expect(:write, fn _, _ -> :ok end)
       |> expect(:execute_psql_file, fn _ -> {"", 0} end)
-      |> expect(:start_repo, fn _ -> {:ok, nil} end)
-      |> expect(:put_dynamic_repo, fn repo -> repo end)
+      |> expect(:start_dynamic_repo, fn _ -> {:ok, nil} end)
       |> expect(:check_connection, fn -> {:error, %DBConnection.ConnectionError{}} end)
 
       capture_log(fn ->
@@ -130,10 +130,9 @@ defmodule Pleroma.InstallerWeb.SetupControllerTest do
 
     setup do
       CallbacksMock
-      |> expect(:write_psql_file, fn _, _ -> :ok end)
+      |> expect(:write, fn _, _ -> :ok end)
       |> expect(:execute_psql_file, fn _ -> {"", 0} end)
-      |> expect(:start_repo, fn _ -> {:ok, nil} end)
-      |> expect(:put_dynamic_repo, fn repo -> repo end)
+      |> expect(:start_dynamic_repo, fn _ -> {:ok, nil} end)
       |> expect(:check_connection, fn -> {:ok, nil} end)
       |> expect(:check_extensions, fn _ -> :ok end)
 
@@ -170,9 +169,7 @@ defmodule Pleroma.InstallerWeb.SetupControllerTest do
     setup do: clear_config(:credentials)
 
     setup do
-      CallbacksMock
-      |> expect(:start_repo, fn _ -> {:ok, nil} end)
-      |> expect(:put_dynamic_repo, fn repo -> repo end)
+      expect(CallbacksMock, :start_dynamic_repo, fn _ -> {:ok, nil} end)
 
       :ok
     end
@@ -218,14 +215,18 @@ defmodule Pleroma.InstallerWeb.SetupControllerTest do
     setup :token
 
     test "with error", %{conn: conn} do
-      expect(CallbacksMock, :run_migrations, fn _, _ -> [] end)
+      CallbacksMock
+      |> expect(:start_dynamic_repo, fn _ -> {:ok, nil} end)
+      |> expect(:run_migrations, fn _, _ -> [] end)
 
       assert conn |> get("/run_migrations") |> json_response(200) ==
                "Error occuried while migrations were run."
     end
 
     test "success", %{conn: conn} do
-      expect(CallbacksMock, :run_migrations, fn _, _ -> [1] end)
+      CallbacksMock
+      |> expect(:start_dynamic_repo, fn _ -> {:ok, nil} end)
+      |> expect(:run_migrations, fn _, _ -> [1] end)
 
       assert conn |> get("/run_migrations") |> json_response(200) == "ok"
     end
@@ -285,7 +286,7 @@ defmodule Pleroma.InstallerWeb.SetupControllerTest do
 
     test "file write error", %{conn: conn} do
       File.touch(@test_config)
-      expect(CallbacksMock, :write_config, fn _, _ -> {:error, :enospc} end)
+      expect(CallbacksMock, :write, fn _, _, _ -> {:error, :enospc} end)
 
       assert conn
              |> post("/config", %{
@@ -310,7 +311,9 @@ defmodule Pleroma.InstallerWeb.SetupControllerTest do
 
       File.touch(@test_config)
 
-      expect(CallbacksMock, :write_config, fn _, _ -> :ok end)
+      CallbacksMock
+      |> expect(:start_dynamic_repo, fn _ -> {:ok, nil} end)
+      |> expect(:write, fn _, _, _ -> :ok end)
 
       static_dir = Pleroma.Config.get([:instance, :static_dir])
 
@@ -345,11 +348,12 @@ defmodule Pleroma.InstallerWeb.SetupControllerTest do
 
     setup do
       CallbacksMock
-      |> expect(:write_psql_file, fn psql_path, psql ->
+      |> expect(:write, fn psql_path, psql ->
         File.write(psql_path, psql)
       end)
-      |> expect(:start_repo, fn config -> Repo.start_link(config) end)
-      |> expect(:put_dynamic_repo, fn repo -> Repo.put_dynamic_repo(repo) end)
+      |> expect(:start_dynamic_repo, 2, fn credentials ->
+        Pleroma.Installer.Callbacks.start_dynamic_repo(credentials)
+      end)
       |> expect(:check_connection, fn -> {:ok, nil} end)
       |> expect(:check_extensions, fn rum_enabled? ->
         Pleroma.Installer.Callbacks.check_extensions(rum_enabled?)
@@ -389,6 +393,9 @@ defmodule Pleroma.InstallerWeb.SetupControllerTest do
                dynamic_repo: Pleroma.InstallerWeb.Forms.CredentialsForm.installer_repo()
              )
              |> Enum.reject(fn {dir, _, _} -> dir == :up end) == []
+
+      assert Pleroma.Config.get(:credentials) ==
+               credentials |> Map.put(:pool_size, 2) |> Keyword.new()
     end
 
     test "execution psql file error", %{conn: conn, credentials: credentials} do
@@ -404,16 +411,12 @@ defmodule Pleroma.InstallerWeb.SetupControllerTest do
 
       refute File.exists?(@test_config)
 
-      assert Pleroma.Config.get(:credentials) ==
-               credentials |> Map.put(:pool_size, 2) |> Keyword.new()
-
       assert File.exists?(@psql_path)
       System.cmd("psql", ["-f", @psql_path])
 
       assert conn |> get("/check_database_and_write_config") |> redirected_to() =~
                "/migrations"
 
-      refute Pleroma.Config.get(:credentials)
       assert File.exists?(@test_config)
 
       capture_log(fn ->
@@ -425,6 +428,9 @@ defmodule Pleroma.InstallerWeb.SetupControllerTest do
                dynamic_repo: Pleroma.InstallerWeb.Forms.CredentialsForm.installer_repo()
              )
              |> Enum.reject(fn {dir, _, _} -> dir == :up end) == []
+
+      assert Pleroma.Config.get(:credentials) ==
+               credentials |> Map.put(:pool_size, 2) |> Keyword.new()
     end
   end
 end

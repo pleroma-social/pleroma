@@ -2,23 +2,30 @@ defmodule Pleroma.Installer.Callbacks do
   alias Pleroma.Repo
 
   @callback execute_psql_file(Path.t()) :: {String.t(), non_neg_integer()}
-  @callback write_psql_file(Path.t(), iodata()) :: :ok | {:error, :file.posix()}
-  @callback start_repo(keyword()) :: :ok | {:error, {:already_started, pid()}} | {:error, term()}
-  @callback put_dynamic_repo(atom() | pid()) :: atom() | pid()
+  @callback write(Path.t(), iodata()) :: :ok | {:error, :file.posix()}
+  @callback write(Path.t(), iodata(), [atom()]) :: :ok | {:error, :file.posix()}
+  @callback start_dynamic_repo(keyword()) ::
+              {:ok, pid()} | {:error, {:already_started, pid()}} | {:error, term()}
   @callback check_connection() :: {:ok, term()} | {:error, term()}
   @callback run_migrations([Path.t()], atom()) :: [non_neg_integer()]
   @callback check_extensions(boolean()) :: :ok | {:error, term()}
-  @callback write_config(Path.t(), iodata()) :: :ok | {:error, :file.posix()}
+
+  defdelegate write(path, content, modes \\ []), to: File
 
   def execute_psql_file(file_path) do
-    System.cmd("sudo", ["-Hu", "postgres", "psql", "-f", file_path])
+    [command, args] = Pleroma.Config.get([:installer, :psql_cmd_args])
+    System.cmd(command, args ++ [file_path])
   end
 
-  def write_psql_file(path, data), do: File.write(path, data)
+  def start_dynamic_repo(config) do
+    config =
+      Keyword.put(config, :name, Pleroma.InstallerWeb.Forms.CredentialsForm.installer_repo())
 
-  def start_repo(config), do: Repo.start_link(config)
-
-  def put_dynamic_repo(repo), do: Repo.put_dynamic_repo(repo)
+    with {:ok, pid} = result <- Repo.start_link(config) do
+      Repo.put_dynamic_repo(pid)
+      result
+    end
+  end
 
   def check_connection, do: Repo.query("SELECT 1")
 
@@ -50,6 +57,4 @@ defmodule Pleroma.Installer.Callbacks do
       end
     end
   end
-
-  def write_config(path, content), do: File.write(path, ["\n", content], [:append])
 end
